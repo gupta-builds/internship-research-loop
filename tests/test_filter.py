@@ -69,3 +69,18 @@ def test_zapply_readme_parses_and_filters():
     # plain-text row with no markdown link (regex's name_plain branch, untested until now)
     assert by_company["Activision Blizzard SPARX"].url == ""
     assert matches(by_company["Activision Blizzard SPARX"], PROFILE) is False
+
+
+def test_zapply_readme_handles_3_column_table_variant():
+    """Regression test: the real README has a 3-column (Name|Year|Note) table
+    alongside the usual 4-column (Name|Status|Year|Note) ones. A fixed-position
+    parser misreads the Note text as the Year field for this table, silently
+    dropping real matches (caught live against CodePath/Forage before phase 3)."""
+    text = (FIXTURES / "zapply_readme.md").read_text()
+    listings = parse_zapply_readme(text)
+    by_company = {l.company: l for l in listings}
+
+    assert by_company["CodePath"].target_year == ["All student"]
+    assert by_company["Forage"].target_year == ["All student"]
+    assert matches(by_company["CodePath"], PROFILE) is True
+    assert matches(by_company["Forage"], PROFILE) is True

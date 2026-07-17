@@ -19,3 +19,12 @@
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Keploy API Fellowship](https://fellowship.keploy.io/)                                                                                                      | ✅ Open            | All student         | A training program for you to get into the world of APIs and API Testing with Keploy and help others grow with APIs                              |
 | [Paragon One Career Bootcamp](https://www.paragonone.com/externships/career-bootcamp)                                                                       | ?                | All Students        | Cohort-based externship program                                                                                                                  |
+
+## Special Programs & Resources
+
+![Unique programs, workshops, and student resources.](images/uci-section-spr.png)
+
+| Name                                                            | Year        | Note                                                                                                                             |
+| ---------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [CodePath](https://www.codepath.org/plan-your-codepath)         | All student | Free online courses in web dev, mobile, cyber, etc. Also provide resume help, mentorship, interview prep, recruiting event, etc. |
+| [Forage](https://www.theforage.com/)                            | All student | 5-6 hour virtual work experience programs. Featuring JPMC, Lyft, Visa, EA, SAP, etc.                                              |

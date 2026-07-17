@@ -46,31 +46,44 @@ def normalize_josegael(raw: dict) -> Listing:
     )
 
 
-_ROW_RE = re.compile(
-    r"^\|\s*(?:\[(?P<name_linked>[^\]]+)\]\((?P<url>[^)]+)\)|(?P<name_plain>[^|]+?))\s*\|"
-    r"\s*(?P<status>[^|]*)\|\s*(?P<year>[^|]*)\|"
-)
+_LINK_RE = re.compile(r"^\[([^\]]+)\]\(([^)]+)\)")
+
+
+def _split_row(line: str) -> list:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
 def parse_zapply_readme(text: str) -> list:
-    """Extract table rows from the zapplyjobs README (no JSON feed, markdown table only)."""
+    """Extract table rows from the zapplyjobs README (no JSON feed, markdown table only).
+
+    Column positions are read from each table's own header row rather than
+    assumed fixed — the README has at least two layouts in the wild (most
+    tables are Name|Status|Year|Note, but "Special Programs & Resources" is
+    Name|Year|Note with no Status column). A fixed-position parser silently
+    misparses the 3-column table's Note text into the Year field.
+    """
     rows = []
+    name_idx = year_idx = None
     for line in text.splitlines():
         if not line.startswith("|"):
+            name_idx = year_idx = None  # table ended; next table gets its own header
             continue
-        m = _ROW_RE.match(line)
-        if not m:
+        cells = _split_row(line)
+        if all(set(c) <= {"-"} for c in cells if c):
+            continue  # separator row (e.g. |---|---|---|)
+        if "Name" in cells and "Year" in cells:
+            name_idx, year_idx = cells.index("Name"), cells.index("Year")
             continue
-        name = (m.group("name_linked") or m.group("name_plain") or "").strip()
-        if name in ("", "Name") or set(name) <= {"-", " "}:
-            continue  # header / separator rows
+        if name_idx is None or len(cells) <= max(name_idx, year_idx):
+            continue  # no header seen yet for this table, or a short/malformed row
+
+        name_cell = cells[name_idx]
+        m = _LINK_RE.match(name_cell)
+        company, url = (m.group(1), m.group(2)) if m else (name_cell, "")
+        if not company:
+            continue
         rows.append(
-            Listing(
-                company=name,
-                title=name,
-                url=m.group("url") or "",
-                source="zapplyjobs",
-                target_year=[m.group("year").strip()],
-            )
+            Listing(company=company, title=company, url=url, source="zapplyjobs",
+                    target_year=[cells[year_idx]])
         )
     return rows
