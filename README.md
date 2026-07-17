@@ -9,14 +9,15 @@ Implementation Plan.md`.
 
 ## Status
 
-Phase 1 (ingestion + filter + identity), phase 2 (vault_writer's template +
-four-check write gate, tested against a throwaway vault), and phase 3's code
-(schema-drift check, git push-with-retry, two-tier run log, run_pipeline.py
-orchestration) are built and tested. `.github/workflows/run.yml` — the
-scheduled trigger that actually writes into `gupta-builds/Jarvis` — is held
-back from the default branch until `JARVIS_PUSH_TOKEN` (a fine-grained PAT
-scoped to that repo, `contents:write` only) exists as a repo secret, since
-pushing the workflow activates its hourly cron immediately.
+Phases 1–3 are live. `.github/workflows/run.yml` runs hourly against the real
+`gupta-builds/Jarvis` repo — schema-drift check, fetch, filter, dedup,
+validate, write, push (retry-safe against the vault's own independent
+auto-commit cycle), with `state/seen_ids.json` only updated after a confirmed
+push. First live run (2026-07-17) wrote 137 real dossiers into
+`10_Areas/Career/Internships/List/Dossiers/`; a follow-up run correctly
+recognized all 137 as already-seen and wrote zero duplicates. Per the plan's
+build order: watch the Run Log rollup for a full week before tightening the
+cadence past hourly.
 
 ## Local dev
 
