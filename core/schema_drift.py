@@ -1,0 +1,61 @@
+"""Schema-drift check. Runs before the scheduled pipeline touches feeds for
+real: fetches one real entry per source and confirms the fields the
+normalizers/parser actually depend on are still present. Halts (raises)
+rather than letting a silently renamed/vanished upstream field produce
+malformed or emptied-out results.
+"""
+import requests
+
+from ingestion.normalize import parse_zapply_readme
+from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT, ZAPPLY_README_URL
+
+# Every field normalize_simplify/normalize_josegael read, not just the ones
+# that would KeyError — a renamed "category" wouldn't crash (normalize_*
+# falls back to .get(..., "")), it would just silently reject everything in
+# the filter layer forever, which is exactly the drift this check exists for.
+SIMPLIFY_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "terms", "locations", "date_posted"}
+JOSEGAEL_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "locations", "target_year", "date_posted"}
+
+
+class SchemaDriftError(Exception):
+    pass
+
+
+def _check_json_source(name: str, url: str, required_keys: set, http_get) -> None:
+    resp = http_get(url, timeout=TIMEOUT)
+    resp.raise_for_status()
+    data = resp.json()
+    if not isinstance(data, list) or not data:
+        raise SchemaDriftError(f"{name}: expected a non-empty JSON list, got {type(data).__name__}")
+    missing = required_keys - set(data[0].keys())
+    if missing:
+        raise SchemaDriftError(
+            f"{name}: missing expected keys {sorted(missing)} (entry keys: {sorted(data[0].keys())})"
+        )
+
+
+def check_simplify_schema(http_get=None) -> None:
+    _check_json_source("SimplifyJobs", SIMPLIFY_URL, SIMPLIFY_REQUIRED_KEYS, http_get or requests.get)
+
+
+def check_josegael_schema(http_get=None) -> None:
+    _check_json_source("Jose-Gael-Cruz-Lopez", JOSEGAEL_URL, JOSEGAEL_REQUIRED_KEYS, http_get or requests.get)
+
+
+def check_zapply_schema(http_get=None) -> None:
+    """Reuses the real parser rather than a separate header-shape check, so
+    this check and the real pipeline can never silently diverge."""
+    resp = (http_get or requests.get)(ZAPPLY_README_URL, timeout=TIMEOUT)
+    resp.raise_for_status()
+    rows = parse_zapply_readme(resp.text)
+    if not rows:
+        raise SchemaDriftError("zapplyjobs: README parsed to zero rows — table structure likely changed")
+
+
+def check_all(http_get=None) -> None:
+    """Runs all three checks in order; raises SchemaDriftError from whichever
+    fails first. Callers should treat any exception here as "halt the run,
+    write nothing" per the plan's fail-closed design."""
+    check_simplify_schema(http_get)
+    check_josegael_schema(http_get)
+    check_zapply_schema(http_get)

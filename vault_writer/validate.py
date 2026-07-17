@@ -49,9 +49,9 @@ def check_required_fields(listing, uid: str) -> ValidationResult:
     return ValidationResult(True, "required_fields")
 
 
-def check_url_live(url: str, http_head=requests.head, timeout: int = 10) -> ValidationResult:
+def check_url_live(url: str, http_head=None, timeout: int = 10) -> ValidationResult:
     try:
-        resp = http_head(url, timeout=timeout, allow_redirects=True)
+        resp = (http_head or requests.head)(url, timeout=timeout, allow_redirects=True)
     except requests.RequestException as exc:
         return ValidationResult(False, "url_liveness", f"request failed: {exc}")
     if 200 <= resp.status_code < 400:
@@ -107,7 +107,7 @@ def check_format_compliance(markdown: str) -> ValidationResult:
     return ValidationResult(True, "format_compliance")
 
 
-def validate(listing, uid: str, markdown: str, seen_ids, http_head=requests.head) -> ValidationResult:
+def validate(listing, uid: str, markdown: str, seen_ids, http_head=None) -> ValidationResult:
     """Runs all four checks in the plan's order, fail-closed on the first failure.
     Short-circuits for real (no HEAD request if required fields are already
     missing) — each check only runs once the previous one has passed."""

@@ -9,10 +9,14 @@ Implementation Plan.md`.
 
 ## Status
 
-Phase 1 (ingestion + filter + identity, tested against fixtures) and phase 2
-(vault_writer's template + four-check write gate, tested against a throwaway
-vault) complete. Phase 3 (wired to the real vault via a scheduled GitHub Actions
-run) not started — see Build Order in the spec.
+Phase 1 (ingestion + filter + identity), phase 2 (vault_writer's template +
+four-check write gate, tested against a throwaway vault), and phase 3's code
+(schema-drift check, git push-with-retry, two-tier run log, run_pipeline.py
+orchestration) are built and tested. `.github/workflows/run.yml` — the
+scheduled trigger that actually writes into `gupta-builds/Jarvis` — is held
+back from the default branch until `JARVIS_PUSH_TOKEN` (a fine-grained PAT
+scoped to that repo, `contents:write` only) exists as a repo secret, since
+pushing the workflow activates its hourly cron immediately.
 
 ## Local dev
 

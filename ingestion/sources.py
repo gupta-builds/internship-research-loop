@@ -1,5 +1,5 @@
-"""Fetch raw listings from each source. Not called by tests — those run against
-tests/fixtures/ directly. Wired into the scheduled workflow in a later phase.
+"""Fetch raw listings from each source. Used both by the scheduled pipeline
+and (with http_get injected) by tests — no live network calls in the suite.
 """
 import requests
 
@@ -12,19 +12,23 @@ ZAPPLY_README_URL = "https://raw.githubusercontent.com/zapplyjobs/underclassmen-
 TIMEOUT = 30
 
 
-def fetch_simplify() -> list:
-    resp = requests.get(SIMPLIFY_URL, timeout=TIMEOUT)
+def fetch_simplify(http_get=None) -> list:
+    # http_get resolved at call time, not bound as a default at import time —
+    # a `default=requests.get` here would capture the pre-patch function
+    # object, silently defeating `patch("requests.get", ...)` in tests (and
+    # letting them hit the real network instead of failing loudly).
+    resp = (http_get or requests.get)(SIMPLIFY_URL, timeout=TIMEOUT)
     resp.raise_for_status()
     return [normalize_simplify(raw) for raw in resp.json()]
 
 
-def fetch_josegael() -> list:
-    resp = requests.get(JOSEGAEL_URL, timeout=TIMEOUT)
+def fetch_josegael(http_get=None) -> list:
+    resp = (http_get or requests.get)(JOSEGAEL_URL, timeout=TIMEOUT)
     resp.raise_for_status()
     return [normalize_josegael(raw) for raw in resp.json()]
 
 
-def fetch_zapply() -> list:
-    resp = requests.get(ZAPPLY_README_URL, timeout=TIMEOUT)
+def fetch_zapply(http_get=None) -> list:
+    resp = (http_get or requests.get)(ZAPPLY_README_URL, timeout=TIMEOUT)
     resp.raise_for_status()
     return parse_zapply_readme(resp.text)
