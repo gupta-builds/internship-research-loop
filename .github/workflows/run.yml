@@ -1,0 +1,42 @@
+name: run
+on:
+  schedule:
+    - cron: '0 * * * *'  # hourly to start — sources update ~30min, tighten later once a week of clean runs builds confidence
+  workflow_dispatch: {}   # manual trigger, for verifying end-to-end before/while trusting the schedule
+
+permissions:
+  contents: write  # commit state/seen_ids.json + logs/runs.jsonl back to this repo
+  issues: write    # gh issue create on schema-drift / push-failure / systemic write-gate rejection
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout internship-research-loop
+        uses: actions/checkout@v4
+
+      - name: Checkout gupta-builds/Jarvis
+        uses: actions/checkout@v4
+        with:
+          repository: gupta-builds/Jarvis
+          token: ${{ secrets.JARVIS_PUSH_TOKEN }}
+          path: jarvis-checkout
+          fetch-depth: 0  # full history — a shallow clone can fail `git pull --rebase`
+                          # if the vault's own auto-commit cycle has diverged by more than one commit
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "internship-research-loop bot"
+          git config --global user.email "actions@users.noreply.github.com"
+
+      - name: Run pipeline
+        env:
+          JARVIS_DIR: ${{ github.workspace }}/jarvis-checkout
+          GH_TOKEN: ${{ github.token }}
+        run: python run_pipeline.py
