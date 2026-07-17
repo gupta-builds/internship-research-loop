@@ -2,3 +2,10 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+# The scheduled workflow checks out gupta-builds/Jarvis into this path (a
+# nested git repo). Without this, `git add -A` on this repo's own root
+# records it as a gitlink (mode 160000) with no .gitmodules to back it —
+# harmless to Jarvis, but corrupts this repo's own history and breaks
+# actions/checkout's post-job submodule cleanup ("No url found for
+# submodule path 'jarvis-checkout' in .gitmodules").
+jarvis-checkout/
