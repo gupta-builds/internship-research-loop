@@ -14,6 +14,15 @@ def _load(name):
     return json.loads((FIXTURES / name).read_text())
 
 
+@pytest.mark.parametrize("fixture_name", ["simplifyjobs.json", "josegael.json"])
+def test_fixture_has_both_match_and_reject_cases(fixture_name):
+    """Guards against silent test evaporation: pytest.mark.parametrize collects
+    zero tests (no error) if a _case label typo empties one of the lists above."""
+    cases = [r["_case"] for r in _load(fixture_name)]
+    assert any(c.startswith("should-match") for c in cases), f"{fixture_name}: no should-match case"
+    assert any(c.startswith("should-reject") for c in cases), f"{fixture_name}: no should-reject case"
+
+
 @pytest.mark.parametrize(
     "raw",
     [r for r in _load("simplifyjobs.json") if r["_case"].startswith("should-match")],
@@ -57,3 +66,6 @@ def test_zapply_readme_parses_and_filters():
 
     assert matches(by_company["Dropbox SWE intern"], PROFILE) is False
     assert matches(by_company["EA Pathfinder"], PROFILE) is False
+    # plain-text row with no markdown link (regex's name_plain branch, untested until now)
+    assert by_company["Activision Blizzard SPARX"].url == ""
+    assert matches(by_company["Activision Blizzard SPARX"], PROFILE) is False

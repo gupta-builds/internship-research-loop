@@ -1,6 +1,7 @@
 """Map each source's raw shape to one internal Listing dataclass."""
 import re
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -13,8 +14,8 @@ class Listing:
     terms: list = field(default_factory=list)
     locations: list = field(default_factory=list)
     target_year: list = field(default_factory=list)
-    date_posted: int = None
-    raw_id: str = None  # upstream id, present for JSON sources; None for zapplyjobs
+    date_posted: Optional[int] = None
+    raw_id: Optional[str] = None  # upstream id, present for JSON sources; None for zapplyjobs
 
 
 def normalize_simplify(raw: dict) -> Listing:

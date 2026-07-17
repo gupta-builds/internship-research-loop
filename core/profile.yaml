@@ -7,5 +7,10 @@ terms: ["Summer 2027"]
 # Real category values observed on SimplifyJobs/Summer2026-Internships (dev/.github/scripts/listings.json),
 # not the generic names in the original transcript — confirmed by fetching live data 2026-07-16.
 categories: ["Software", "Software Engineering", "AI/ML/Data", "Data Science, AI & Machine Learning"]
-locations_allow: ["United States", "Remote"]
+# Rejects a SimplifyJobs listing outright if any of these terms are present, even
+# alongside an allowed term (multi-term/rotational postings spanning both cycles).
+# locations_allow was dropped: the plan never specified a matching rule for it
+# (substring vs exact, multi-location arrays, sources without location data), and
+# guessing one risks silently dropping real matches. Revisit once phase 3 shows
+# real per-listing locations data from a live run.
 exclude_terms: ["Summer 2026", "Fall 2026", "Spring 2026"]

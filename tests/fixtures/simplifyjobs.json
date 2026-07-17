@@ -54,6 +54,24 @@
     "degrees": []
   },
   {
+    "_case": "should-reject: category Software, terms include Summer 2027 AND excluded Summer 2026 (rotational posting spanning both cycles — exclude_terms wins over the allowlist)",
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "KLA",
+    "id": "fd5d3c48-0c2b-4c54-924a-e8e7f3789c6b",
+    "title": "Application Engineer Intern",
+    "active": true,
+    "terms": ["Winter 2026", "Spring 2026", "Summer 2026", "Fall 2026", "Winter 2027", "Spring 2027", "Summer 2027", "Fall 2027"],
+    "date_updated": 1767136607,
+    "date_posted": 1767136607,
+    "url": "https://kla.wd1.myworkdayjobs.com/Search/job/Milpitas-CA/Application-Engineer-Intern_2532180-1",
+    "locations": ["Milpitas, CA"],
+    "company_url": "https://simplify.jobs/c/KLA",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
     "_case": "should-reject: category Software but terms only Summer 2026 (excluded term, wrong cycle)",
     "source": "Simplify",
     "category": "Software",

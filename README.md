@@ -9,9 +9,10 @@ Implementation Plan.md`.
 
 ## Status
 
-Phase 1 (ingestion + filter + identity, tested against fixtures) complete.
-Phase 2 (vault_writer, throwaway vault) and phase 3 (wired to the real vault) not
-started yet — see Build Order in the spec.
+Phase 1 (ingestion + filter + identity, tested against fixtures) and phase 2
+(vault_writer's template + four-check write gate, tested against a throwaway
+vault) complete. Phase 3 (wired to the real vault via a scheduled GitHub Actions
+run) not started — see Build Order in the spec.
 
 ## Local dev
 

@@ -26,8 +26,11 @@ def matches(listing, profile: dict) -> bool:
 
 
 def _matches_simplify(listing, profile: dict) -> bool:
-    wanted_terms = {_norm(t) for t in profile["terms"]}
     have_terms = {_norm(t) for t in listing.terms}
+    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
+    if have_terms & excluded_terms:
+        return False  # reject even if an allowed term is also present (multi-term/rotational postings)
+    wanted_terms = {_norm(t) for t in profile["terms"]}
     if not (wanted_terms & have_terms):
         return False
     allowed_categories = {_norm(c) for c in profile["categories"]}

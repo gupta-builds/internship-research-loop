@@ -42,9 +42,8 @@ _DupeKeyLoader.add_constructor(
 
 
 def check_required_fields(listing, uid: str) -> ValidationResult:
-    values = {"uid": uid, "company": listing.company, "title": listing.title,
-              "url": listing.url, "source": listing.source}
-    missing = [name for name, val in values.items() if not val]
+    values = {"uid": uid, **{f: getattr(listing, f) for f in REQUIRED_LISTING_FIELDS if f != "uid"}}
+    missing = [name for name in REQUIRED_LISTING_FIELDS if not values[name]]
     if missing:
         return ValidationResult(False, "required_fields", f"missing/empty: {', '.join(missing)}")
     return ValidationResult(True, "required_fields")

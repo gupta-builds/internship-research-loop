@@ -9,6 +9,7 @@
 | [Dropbox SWE intern](https://www.gem.com/form?formID=f77f2fea-f137-435d-b221-84320d3dfde4)                                                                                | ✅ Open            | Sophomore           | Express interest                                                                                                             |
 | [NASA](https://intern.nasa.gov/)                                                                                                                                          | ✅ Open year-round | All student         | Many job postings specify that Freshman and Sophomore are accepted                                                           |
 | [EA Pathfinder](https://ea.gr8people.com/jobs?page=1&inp1377=2&keyword=pathfinder)                                                                                        | ?                  | Freshman, Sophomore | 12-week internship open to SWE, PM, etc.                                                                                     |
+| Activision Blizzard SPARX                                                                                                                                                 | ?                  | Sophomore           |                                                                                                                               |
 
 ## Fellowships
 
