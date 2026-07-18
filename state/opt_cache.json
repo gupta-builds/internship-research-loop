@@ -1,0 +1,32 @@
+{
+  "SimplifyJobs:02a3daa8-78be-409a-bd55-b630dfae60c1": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:0d8819e9-06a6-4bf6-9c18-a00012e17263": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:579783d3-3f59-4f31-b459-43426edc1bd6": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:668cc2ce-ddbc-4d16-9c40-c27e83c81d93": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:7df6766d-b43b-464c-a03e-68387c5ffb37": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:fa7fbaf4-50b2-4148-af69-22df652b6fd5": {
+    "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  }
+}
