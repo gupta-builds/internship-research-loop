@@ -1,14 +1,21 @@
-"""Layer 3 — compute a stable dedup key for a Listing.
+"""Layer 3 — stable dedup keys for a Listing.
 
-JSON sources (SimplifyJobs, Jose-Gael-Cruz-Lopez) carry a stable upstream id;
-use it directly as the primary key. zapplyjobs has no id, so its key falls
-back to a content hash of normalized company+role+link.
+Both remaining sources carry a stable upstream id, so the uid is simply
+source:raw_id. (The content-hash fallback existed only for zapplyjobs,
+removed as a source 2026-07-18.)
+
+cross_source_key() is the secondary dedup identity: the same program listed
+by two different sources gets two different uids but one company+title key.
 """
-import hashlib
+import re
 
 
 def compute_uid(listing) -> str:
-    if listing.raw_id:
-        return f"{listing.source}:{listing.raw_id}"
-    key = f"{listing.company.strip().lower()}|{listing.title.strip().lower()}|{listing.url.strip().lower()}"
-    return f"{listing.source}:" + hashlib.sha256(key.encode()).hexdigest()[:16]
+    if not listing.raw_id:
+        raise ValueError(f"listing from {listing.source} has no upstream id: {listing.company!r}")
+    return f"{listing.source}:{listing.raw_id}"
+
+
+def cross_source_key(company: str, title: str) -> str:
+    norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+    return f"{norm(company)}|{norm(title)}"

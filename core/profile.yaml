@@ -1,7 +1,7 @@
 # Layer 2 filter config — see Research Loop Implementation Plan for rationale.
 grad_year: 2028
 class_year: junior
-eligible_class_tags: [Junior, "3rd year", "All student(s)"]  # matched as case-insensitive substrings against target_year entries
+eligible_class_tags: [Junior, "3rd year"]  # matched as case-insensitive substrings against target_year entries
 accept_unrestricted: true  # postings with no class-year field at all still match
 terms: ["Summer 2027"]
 # Real category values observed on SimplifyJobs/Summer2026-Internships (dev/.github/scripts/listings.json),
@@ -15,3 +15,7 @@ exclude_terms: ["Summer 2026", "Fall 2026", "Spring 2026"]
 # data or ambiguous strings ('Multiple Locations', 'Virtual', bare 'Remote') still
 # match; only affirmatively non-US listings (Canada/UK/'Remote in Germany') drop.
 locations_allow: us_remote
+# Real live values use the apostrophe form ("Bachelor's" 5450, ("Master's","PhD")
+# 592, ("PhD",) 586, empty 4676 — fetched 2026-07-18). Permissive: empty degrees
+# data passes; non-empty must intersect this list.
+degrees_allow: ["Bachelor's"]

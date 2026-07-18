@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from core.filter import load_profile, location_eligible, matches
-from ingestion.normalize import normalize_josegael, normalize_simplify, parse_zapply_readme
+from core.filter import _matches_josegael, degrees_eligible, load_profile, location_eligible, matches
+from ingestion.normalize import normalize_josegael, normalize_simplify
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PROFILE = load_profile()
@@ -55,20 +55,49 @@ def test_josegael_should_reject(raw):
     assert matches(normalize_josegael(raw), PROFILE) is False, raw["_case"]
 
 
-def test_zapply_readme_parses_and_filters():
-    text = (FIXTURES / "zapply_readme.md").read_text()
-    listings = parse_zapply_readme(text)
-    by_company = {l.company: l for l in listings}
+# --- degrees gate (real live values, fetched 2026-07-18: apostrophe forms) ---
 
-    assert matches(by_company["NASA"], PROFILE) is True
-    assert matches(by_company["Keploy API Fellowship"], PROFILE) is True
-    assert matches(by_company["Paragon One Career Bootcamp"], PROFILE) is True
+@pytest.mark.parametrize(
+    "degrees,expected",
+    [
+        ([], True),  # 4676 live entries carry no degrees data — permissive pass
+        (["Bachelor's"], True),
+        (["Bachelor's", "Master's"], True),
+        (["Master's", "PhD"], False),
+        (["PhD"], False),
+        (["Master's"], False),
+        (["Associate's"], False),
+    ],
+)
+def test_degrees_eligible(degrees, expected):
+    assert degrees_eligible(degrees, PROFILE) is expected
 
-    assert matches(by_company["Dropbox SWE intern"], PROFILE) is False
-    assert matches(by_company["EA Pathfinder"], PROFILE) is False
-    # plain-text row with no markdown link (regex's name_plain branch, untested until now)
-    assert by_company["Activision Blizzard SPARX"].url == ""
-    assert matches(by_company["Activision Blizzard SPARX"], PROFILE) is False
+
+def test_active_false_rejects_any_source():
+    raw = next(r for r in _load("simplifyjobs.json") if r["_case"].startswith("should-match"))
+    assert matches(normalize_simplify({**raw, "active": False}), PROFILE) is False
+
+
+# --- JGCL season regression (real feed entries verbatim; _matches_josegael
+# tested directly because every wrong-season entry in the live feed is also
+# active:false, and the active gate in matches() would mask the season rule) ---
+
+def test_josegael_season_rejects_wrong_cycles_real_entries():
+    by_id = {r["id"]: r for r in _load("josegael.json")}
+    partiful = normalize_josegael(by_id["partiful-campus-growth-manager-spring-2026"])
+    assert partiful.terms == ["Spring"]  # season reaches Listing.terms — the dropped-field fix
+    assert _matches_josegael(partiful, PROFILE) is False
+
+    womentech = normalize_josegael(by_id["c2d3e4f5-6a7b-8c9d-0e1f-a2b3c4d5e6f7"])
+    assert womentech.terms == ["Summer 2026"]
+    assert _matches_josegael(womentech, PROFILE) is False
+
+
+def test_josegael_yearless_summer_passes_real_mlh_entry():
+    raw = next(r for r in _load("josegael.json") if r["id"] == "mlh-fellowship-summer-2026")
+    listing = normalize_josegael(raw)
+    assert listing.terms == ["Summer"]
+    assert matches(listing, PROFILE) is True  # active true, Junior-eligible, year-less season
 
 
 # Every string below was observed verbatim in live feed data 2026-07-17 —
@@ -116,16 +145,3 @@ def test_matches_rejects_foreign_only_listing_end_to_end():
     assert matches(listing, PROFILE) is False
 
 
-def test_zapply_readme_handles_3_column_table_variant():
-    """Regression test: the real README has a 3-column (Name|Year|Note) table
-    alongside the usual 4-column (Name|Status|Year|Note) ones. A fixed-position
-    parser misreads the Note text as the Year field for this table, silently
-    dropping real matches (caught live against CodePath/Forage before phase 3)."""
-    text = (FIXTURES / "zapply_readme.md").read_text()
-    listings = parse_zapply_readme(text)
-    by_company = {l.company: l for l in listings}
-
-    assert by_company["CodePath"].target_year == ["All student"]
-    assert by_company["Forage"].target_year == ["All student"]
-    assert matches(by_company["CodePath"], PROFILE) is True
-    assert matches(by_company["Forage"], PROFILE) is True

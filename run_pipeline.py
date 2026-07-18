@@ -21,16 +21,16 @@ from core.run_log import (
     load_recent_runs,
     should_run_weekly_rollup,
 )
+from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
-from ingestion.sources import fetch_josegael, fetch_simplify, fetch_zapply
+from ingestion.sources import fetch_josegael, fetch_simplify
 from vault_writer.validate import validate
-from vault_writer.writer import render_dossier, write_dossier
+from vault_writer.writer import render_dossier, scan_dossiers, write_dossier
 
 SOURCES = (
     ("SimplifyJobs", fetch_simplify),
     ("Jose-Gael-Cruz-Lopez", fetch_josegael),
-    ("zapplyjobs", fetch_zapply),
 )
 
 RUN_LOG_MD_SUBPATH = Path("10_Areas/Career/Internships/List/Run Log.md")
@@ -61,8 +61,6 @@ def build_matched_reason(listing, profile: dict) -> str:
         return f"{term}, {listing.category}" if listing.category else term
     if listing.source == "Jose-Gael-Cruz-Lopez":
         return "Junior-eligible" if listing.target_year else "unrestricted (no class-year field)"
-    if listing.source == "zapplyjobs":
-        return "All-student eligible"
     return "matched"
 
 
@@ -96,14 +94,21 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
     the Jarvis checkout. Does NOT push and does NOT mutate seen_ids — the
     caller must only do that after a confirmed push. Returns
     (written_uids: list[str], rejections: list[dict])."""
+    # Cross-source dedup truth is the files actually in the checkout (they
+    # diverged from seen_ids after the 2026-07-18 manual cleanup), plus
+    # whatever this run writes — first source in SOURCES order wins.
+    dossier_keys = {
+        cross_source_key(fm.get("company", ""), fm.get("title", "")) for fm in scan_dossiers(jarvis_dir)
+    }
     written_uids = []
     rejections = []
     for uid, listing in new_listings:
         markdown = render_dossier(listing, uid, date_found, build_matched_reason(listing, profile))
-        result = validate(listing, uid, markdown, seen_ids, http_head=http_head)
+        result = validate(listing, uid, markdown, seen_ids, http_head=http_head, dossier_keys=dossier_keys)
         if result.passed:
             write_dossier(jarvis_dir, uid, markdown)
             written_uids.append(uid)
+            dossier_keys.add(cross_source_key(listing.company, listing.title))
         else:
             rejections.append({"uid": uid, "check": result.check, "reason": result.reason})
     return written_uids, rejections

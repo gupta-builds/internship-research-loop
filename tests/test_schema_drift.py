@@ -9,7 +9,6 @@ from core.schema_drift import (
     check_all,
     check_josegael_schema,
     check_simplify_schema,
-    check_zapply_schema,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -40,11 +39,6 @@ def josegael_raw():
     return _strip_case_keys(json.loads((FIXTURES / "josegael.json").read_text()))
 
 
-@pytest.fixture
-def zapply_text():
-    return (FIXTURES / "zapply_readme.md").read_text()
-
-
 # --- happy path, one per source ---
 
 def test_simplify_schema_passes_on_real_shape(simplify_raw):
@@ -55,11 +49,6 @@ def test_simplify_schema_passes_on_real_shape(simplify_raw):
 def test_josegael_schema_passes_on_real_shape(josegael_raw):
     http_get = Mock(return_value=_json_response(josegael_raw))
     check_josegael_schema(http_get=http_get)  # does not raise
-
-
-def test_zapply_schema_passes_on_real_shape(zapply_text):
-    http_get = Mock(return_value=_text_response(zapply_text))
-    check_zapply_schema(http_get=http_get)  # does not raise
 
 
 # --- drift: a field the normalizer depends on vanishes ---
@@ -100,18 +89,9 @@ def test_simplify_schema_detects_wrong_shape():
         check_simplify_schema(http_get=http_get)
 
 
-def test_zapply_schema_detects_missing_table(zapply_text):
-    """If the whole table structure disappears (e.g. converted to a different
-    format upstream), the real parser returns zero rows — that's the signal."""
-    prose_only = "# Underclassmen Internships\n\nThis repo moved to a spreadsheet, see the link below.\n"
-    http_get = Mock(return_value=_text_response(prose_only))
-    with pytest.raises(SchemaDriftError, match="zero rows"):
-        check_zapply_schema(http_get=http_get)
-
-
 # --- check_all halts on the first failure ---
 
-def test_check_all_raises_on_first_failing_source(simplify_raw, josegael_raw, zapply_text):
+def test_check_all_raises_on_first_failing_source(simplify_raw, josegael_raw):
     responses = {
         "simplify": _json_response([]),  # drifted
     }
@@ -123,23 +103,40 @@ def test_check_all_raises_on_first_failing_source(simplify_raw, josegael_raw, za
 
     with pytest.raises(SchemaDriftError):
         check_all(http_get=http_get)
-    assert call_count["n"] == 1  # halted before ever checking josegael/zapply
+    assert call_count["n"] == 1  # halted before ever checking josegael
 
 
-def test_check_all_passes_when_all_three_are_healthy(simplify_raw, josegael_raw, zapply_text):
+def test_check_all_passes_when_both_are_healthy(simplify_raw, josegael_raw):
     call_log = []
 
     def http_get(url, timeout):
         call_log.append(url)
-        from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, ZAPPLY_README_URL
+        from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL
 
         if url == SIMPLIFY_URL:
             return _json_response(simplify_raw)
         if url == JOSEGAEL_URL:
             return _json_response(josegael_raw)
-        if url == ZAPPLY_README_URL:
-            return _text_response(zapply_text)
         raise AssertionError(f"unexpected url: {url}")
 
     check_all(http_get=http_get)  # does not raise
-    assert len(call_log) == 3
+    assert len(call_log) == 2
+
+
+# --- the permissive-default fields: renamed upstream, they'd silently make
+# every listing pass their checks — drift must catch them (2026-07-18) ---
+
+@pytest.mark.parametrize("key", ["active", "degrees"])
+def test_simplify_schema_detects_dropped_permissive_field(simplify_raw, key):
+    drifted = [{k: v for k, v in r.items() if k != key} for r in simplify_raw]
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match=key):
+        check_simplify_schema(http_get=http_get)
+
+
+@pytest.mark.parametrize("key", ["active", "season"])
+def test_josegael_schema_detects_dropped_permissive_field(josegael_raw, key):
+    drifted = [{k: v for k, v in r.items() if k != key} for r in josegael_raw]
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match=key):
+        check_josegael_schema(http_get=http_get)

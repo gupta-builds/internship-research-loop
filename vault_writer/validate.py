@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import requests
 import yaml
 
+from core.identity import cross_source_key
+
 REQUIRED_LISTING_FIELDS = ("company", "title", "url", "source", "uid")
 REQUIRED_FRONTMATTER_FIELDS = (
     "uid", "company", "title", "url", "source", "category", "terms", "locations",
@@ -65,6 +67,16 @@ def check_not_duplicate(uid: str, seen_ids) -> ValidationResult:
     return ValidationResult(True, "not_duplicate")
 
 
+def check_cross_source_duplicate(listing, dossier_keys) -> ValidationResult:
+    """Same program via two sources = two different uids but one normalized
+    company+title key (MLH Fellowship landed twice pre-cleanup). Routine
+    rejection, not systemic — first source in write order wins."""
+    key = cross_source_key(listing.company, listing.title)
+    if key in dossier_keys:
+        return ValidationResult(False, "cross_source_duplicate", f"company+title already in vault: {key}")
+    return ValidationResult(True, "cross_source_duplicate")
+
+
 def check_format_compliance(markdown: str) -> ValidationResult:
     lines = markdown.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -107,17 +119,22 @@ def check_format_compliance(markdown: str) -> ValidationResult:
     return ValidationResult(True, "format_compliance")
 
 
-def validate(listing, uid: str, markdown: str, seen_ids, http_head=None) -> ValidationResult:
-    """Runs all four checks in the plan's order, fail-closed on the first failure.
+def validate(listing, uid: str, markdown: str, seen_ids, http_head=None, dossier_keys=frozenset()) -> ValidationResult:
+    """Runs all checks in the plan's order, fail-closed on the first failure.
     Short-circuits for real (no HEAD request if required fields are already
-    missing) — each check only runs once the previous one has passed."""
+    missing) — each check only runs once the previous one has passed.
+    cross_source_duplicate runs before url_liveness: it's free, the HEAD
+    request isn't."""
     result = check_required_fields(listing, uid)
     if not result.passed:
         return result
-    result = check_url_live(listing.url, http_head=http_head)
+    result = check_not_duplicate(uid, seen_ids)
     if not result.passed:
         return result
-    result = check_not_duplicate(uid, seen_ids)
+    result = check_cross_source_duplicate(listing, dossier_keys)
+    if not result.passed:
+        return result
+    result = check_url_live(listing.url, http_head=http_head)
     if not result.passed:
         return result
     result = check_format_compliance(markdown)

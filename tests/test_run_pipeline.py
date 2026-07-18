@@ -10,7 +10,7 @@ from core.filter import load_profile
 from core.git_ops import GitPushError
 from core.identity import compute_uid
 from core.schema_drift import SchemaDriftError
-from ingestion.normalize import normalize_josegael, normalize_simplify, parse_zapply_readme
+from ingestion.normalize import normalize_josegael, normalize_simplify
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PROFILE = load_profile()
@@ -28,20 +28,14 @@ def _josegael_raw():
     return _strip_case_keys(json.loads((FIXTURES / "josegael.json").read_text()))
 
 
-def _zapply_text():
-    return (FIXTURES / "zapply_readme.md").read_text()
-
-
 def _fake_http_get(url, timeout=None):
-    from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, ZAPPLY_README_URL
+    from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL
 
     resp = Mock(status_code=200)
     if url == SIMPLIFY_URL:
         resp.json.return_value = _simplify_raw()
     elif url == JOSEGAEL_URL:
         resp.json.return_value = _josegael_raw()
-    elif url == ZAPPLY_README_URL:
-        resp.text = _zapply_text()
     else:
         raise AssertionError(f"unexpected url: {url}")
     return resp
@@ -70,19 +64,14 @@ def test_build_matched_reason_per_source():
     josegael_junior = normalize_josegael(_josegael_raw()[0])
     assert run_pipeline.build_matched_reason(josegael_junior, PROFILE) == "Junior-eligible"
 
-    zapply = parse_zapply_readme(_zapply_text())[0]
-    assert run_pipeline.build_matched_reason(zapply, PROFILE) == "All-student eligible"
-
 
 def test_fetch_and_filter_counts_and_matches():
     results = run_pipeline.fetch_and_filter(PROFILE, http_get=_fake_http_get)
     assert results["SimplifyJobs"]["fetch_count"] == len(_simplify_raw())
     assert results["Jose-Gael-Cruz-Lopez"]["fetch_count"] == len(_josegael_raw())
-    assert results["zapplyjobs"]["fetch_count"] == len(parse_zapply_readme(_zapply_text()))
     # every fixture set has at least one should-match case
     assert len(results["SimplifyJobs"]["matched"]) > 0
     assert len(results["Jose-Gael-Cruz-Lopez"]["matched"]) > 0
-    assert len(results["zapplyjobs"]["matched"]) > 0
 
 
 def test_dedup_new_splits_new_vs_already_seen():
@@ -138,6 +127,55 @@ def test_validate_and_write_rejects_dead_url(tmp_path):
     assert rejections[0]["check"] == "url_liveness"
     dossiers_dir = tmp_path / "10_Areas/Career/Internships/List/Dossiers"
     assert not list(dossiers_dir.glob("*.md")) if dossiers_dir.exists() else True
+
+
+def test_validate_and_write_rejects_cross_source_duplicate(tmp_path):
+    """Same program via two sources (two distinct uids, one company+title) —
+    the second write must be rejected by the cross_source_duplicate gate.
+    MLH Fellowship landed twice this way before the 2026-07-18 cleanup."""
+    listing = normalize_simplify(_simplify_raw()[0])
+    twin_raw = {**_simplify_raw()[0], "id": "a-different-upstream-id"}
+    twin = normalize_josegael({  # same company+title arriving via JGCL
+        "id": "jgcl-twin", "company_name": listing.company, "title": listing.title,
+        "url": listing.url, "season": "Summer", "active": True,
+        "target_year": ["Junior (3rd year)"],
+    })
+    del twin_raw
+
+    written, rejections = run_pipeline.validate_and_write(
+        [(compute_uid(listing), listing), (compute_uid(twin), twin)],
+        PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live,
+    )
+
+    assert written == [compute_uid(listing)]
+    assert len(rejections) == 1
+    assert rejections[0]["check"] == "cross_source_duplicate"
+
+
+def test_validate_and_write_seeds_dedup_keys_from_existing_vault_files(tmp_path):
+    """Keys come from the dossier files actually in the checkout — a listing
+    whose company+title already sits in the vault (even under another uid,
+    written by an earlier run) is rejected, not re-written."""
+    listing = normalize_simplify(_simplify_raw()[0])
+    first_uid = compute_uid(listing)
+    run_pipeline.validate_and_write(
+        [(first_uid, listing)], PROFILE, tmp_path, seen_ids=set(),
+        date_found="2026-07-18", http_head=_fake_http_head_all_live,
+    )
+
+    twin = normalize_josegael({
+        "id": "jgcl-twin", "company_name": listing.company, "title": listing.title,
+        "url": listing.url, "season": "Summer", "active": True,
+        "target_year": ["Junior (3rd year)"],
+    })
+    written, rejections = run_pipeline.validate_and_write(
+        [(compute_uid(twin), twin)], PROFILE, tmp_path, seen_ids={first_uid},
+        date_found="2026-07-18", http_head=_fake_http_head_all_live,
+    )
+
+    assert written == []
+    assert rejections[0]["check"] == "cross_source_duplicate"
 
 
 def test_file_github_issue_calls_gh_with_expected_args():

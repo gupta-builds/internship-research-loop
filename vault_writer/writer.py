@@ -79,6 +79,22 @@ def slugify_uid(uid: str) -> str:
     return slug
 
 
+def scan_dossiers(vault_root) -> list:
+    """Frontmatter dicts of every dossier file actually present in the vault
+    checkout. File existence is the truth here, deliberately not
+    seen_ids.json — the two diverged permanently after the 2026-07-18 manual
+    vault cleanup (110 dossiers deleted outside the pipeline, uids kept)."""
+    dossiers_dir = Path(vault_root) / DOSSIER_SUBPATH
+    out = []
+    for path in sorted(dossiers_dir.glob("*.md")) if dossiers_dir.is_dir() else []:
+        m = re.match(r"^---\n(.*?)\n---\n", path.read_text(encoding="utf-8"), re.DOTALL)
+        fm = yaml.safe_load(m.group(1)) if m else None
+        if isinstance(fm, dict) and fm.get("uid"):
+            fm["_path"] = path
+            out.append(fm)
+    return out
+
+
 def write_dossier(vault_root, uid: str, markdown: str) -> Path:
     """Writes an already-rendered, already-validated dossier. Idempotent on uid:
     re-writing the same uid overwrites the same file rather than creating a new one."""

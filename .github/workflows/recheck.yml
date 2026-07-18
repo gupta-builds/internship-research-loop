@@ -1,0 +1,42 @@
+name: recheck
+on:
+  schedule:
+    - cron: '30 6 * * *'  # daily — postings don't close often enough to justify hourly rechecks
+  workflow_dispatch: {}   # manual trigger, for verifying end-to-end before trusting the schedule
+
+permissions:
+  contents: write  # commit logs/rechecks.jsonl back to this repo
+  issues: write    # gh issue create on mass-deletion brake / push failure
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout internship-research-loop
+        uses: actions/checkout@v4
+
+      - name: Checkout gupta-builds/Jarvis
+        uses: actions/checkout@v4
+        with:
+          repository: gupta-builds/Jarvis
+          token: ${{ secrets.JARVIS_PUSH_TOKEN }}
+          path: jarvis-checkout
+          fetch-depth: 0  # full history — a shallow clone can fail `git pull --rebase`
+                          # if the vault's own auto-commit cycle has diverged by more than one commit
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "internship-research-loop bot"
+          git config --global user.email "actions@users.noreply.github.com"
+
+      - name: Run recheck
+        env:
+          JARVIS_DIR: ${{ github.workspace }}/jarvis-checkout
+          GH_TOKEN: ${{ github.token }}
+        run: python recheck.py

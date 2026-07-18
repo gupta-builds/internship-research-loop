@@ -1,8 +1,11 @@
 # internship-research-loop
 
-24/7 internship discovery automation — polls SimplifyJobs, Jose-Gael-Cruz-Lopez, and
-zapplyjobs, filters against a profile, dedups, and writes dossiers into an Obsidian
-vault through a validated template + four-check write gate.
+24/7 internship discovery automation — polls SimplifyJobs and Jose-Gael-Cruz-Lopez,
+filters against a profile, dedups (per-source uid + cross-source company+title), and
+writes dossiers into an Obsidian vault through a validated template + five-check
+write gate. A daily recheck (`recheck.yml`) removes dossiers whose postings close
+upstream. (zapplyjobs was dropped as a source 2026-07-18 — its entries are program
+landing pages, not deadline-bearing postings.)
 
 Full spec lives in the Jarvis vault: `Internship/Building System/Research Loop —
 Implementation Plan.md`.

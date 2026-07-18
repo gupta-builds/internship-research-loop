@@ -39,18 +39,6 @@ def test_fetch_josegael_calls_correct_url_and_normalizes():
     assert listings[0].source == "Jose-Gael-Cruz-Lopez"
 
 
-def test_fetch_zapply_calls_correct_url_and_parses_readme():
-    text = (FIXTURES / "zapply_readme.md").read_text()
-    fake_resp = Mock(status_code=200, text=text)
-    with patch("requests.get", return_value=fake_resp) as mock_get:
-        listings = sources.fetch_zapply()
-
-    mock_get.assert_called_once_with(sources.ZAPPLY_README_URL, timeout=sources.TIMEOUT)
-    fake_resp.raise_for_status.assert_called_once()
-    assert len(listings) > 0
-    assert all(l.source == "zapplyjobs" for l in listings)
-
-
 def test_fetch_simplify_propagates_http_errors():
     fake_resp = Mock(status_code=500)
     fake_resp.raise_for_status.side_effect = requests.HTTPError("500 Server Error")

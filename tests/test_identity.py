@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
 
-from core.identity import compute_uid
-from ingestion.normalize import normalize_josegael, normalize_simplify, parse_zapply_readme
+import pytest
+
+from core.identity import compute_uid, cross_source_key
+from ingestion.normalize import normalize_josegael, normalize_simplify
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -36,29 +38,17 @@ def test_uids_unique_across_distinct_listings():
     assert len(uids) == len(set(uids))
 
 
-def test_zapply_uid_is_content_hash_and_stable():
-    text = (FIXTURES / "zapply_readme.md").read_text()
-    listings = parse_zapply_readme(text)
-    uid1 = compute_uid(listings[0])
-    uid2 = compute_uid(listings[0])
-    assert uid1 == uid2
-    assert uid1.startswith("zapplyjobs:")
-
-
-def test_zapply_uid_changes_if_content_changes():
-    text = (FIXTURES / "zapply_readme.md").read_text()
-    listings = parse_zapply_readme(text)
-    by_company = {l.company: l for l in listings}
-    uid_nasa = compute_uid(by_company["NASA"])
-    uid_dropbox = compute_uid(by_company["Dropbox SWE intern"])
-    assert uid_nasa != uid_dropbox
-
-
-def test_zapply_uid_collides_only_on_same_content():
-    """Same company+title+url (case/whitespace-insensitive) must produce the same uid —
-    this is the collision behavior the dedup layer relies on."""
+def test_missing_raw_id_raises():
+    """Both remaining sources guarantee an id; a listing without one is a bug
+    (the hash fallback left with zapplyjobs), not something to key silently."""
     from ingestion.normalize import Listing
 
-    a = Listing(company="Acme Corp", title="SWE Intern", url="https://acme.example/apply", source="zapplyjobs")
-    b = Listing(company="  acme corp  ", title="swe intern", url="HTTPS://ACME.EXAMPLE/apply", source="zapplyjobs")
-    assert compute_uid(a) == compute_uid(b)
+    orphan = Listing(company="Acme", title="SWE Intern", url="https://acme.example", source="SimplifyJobs")
+    with pytest.raises(ValueError, match="no upstream id"):
+        compute_uid(orphan)
+
+
+def test_cross_source_key_normalizes_case_and_whitespace():
+    assert cross_source_key("MLH (Major League Hacking)", "MLH Fellowship") == \
+        cross_source_key("  mlh (major league hacking)", "mlh   fellowship ")
+    assert cross_source_key("MLH", "Fellowship") != cross_source_key("MLH", "Other Program")

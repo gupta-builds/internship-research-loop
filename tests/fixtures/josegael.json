@@ -1,15 +1,22 @@
 [
   {
-    "_case": "should-match: target_year includes Junior (3rd year)",
+    "_case": "should-reject: active false upstream (closed posting) \u2014 was should-match before the active gate",
     "id": "004f45ad-6a56-4a5f-b5ef-f2ab7dca02ce",
     "company_name": "Deloitte",
     "title": "Audit & Assurance - Discovery Intern (Sophomore/Junior) - Summer 2026",
     "url": "https://apply.deloitte.com/en_US/careers/JobDetail/Audit-Assurance-Discovery-Intern-Sophomore-Junior-Business-Technology-Profile-Summer-2026/306703",
-    "locations": ["Los Angeles, CA", "Seattle, WA", "Tempe, AZ"],
+    "locations": [
+      "Los Angeles, CA",
+      "Seattle, WA",
+      "Tempe, AZ"
+    ],
     "season": "Summer",
     "category": "Internship",
     "opportunity_type": "Internship",
-    "target_year": ["Sophomore (2nd year)", "Junior (3rd year)"],
+    "target_year": [
+      "Sophomore (2nd year)",
+      "Junior (3rd year)"
+    ],
     "sponsorship": "Offers Sponsorship",
     "active": false,
     "is_visible": true,
@@ -18,16 +25,23 @@
     "source": "Jose-Gael-Cruz-Lopez"
   },
   {
-    "_case": "should-match: target_year spans all years including Junior",
+    "_case": "should-reject: season Spring (wrong cycle) and active false \u2014 real Partiful entry",
     "id": "partiful-campus-growth-manager-spring-2026",
     "company_name": "Partiful",
     "title": "Campus Growth Manager",
     "url": "https://jobs.ashbyhq.com/partiful/af908f89-626d-4d26-a851-a39ba62737ff",
-    "locations": ["Remote, US"],
+    "locations": [
+      "Remote, US"
+    ],
     "season": "Spring",
     "category": "Internship",
     "opportunity_type": "Internship",
-    "target_year": ["Freshman (1st year)", "Sophomore (2nd year)", "Junior (3rd year)", "Senior (4th year)"],
+    "target_year": [
+      "Freshman (1st year)",
+      "Sophomore (2nd year)",
+      "Junior (3rd year)",
+      "Senior (4th year)"
+    ],
     "sponsorship": "Not Specified",
     "active": false,
     "is_visible": true,
@@ -36,16 +50,21 @@
     "source": "Jose-Gael-Cruz-Lopez"
   },
   {
-    "_case": "should-reject: target_year is Freshman/Sophomore only, no Junior, not empty so accept_unrestricted doesn't apply",
+    "_case": "should-reject: target_year is Freshman/Sophomore only, no Junior (also active false)",
     "id": "0dc46dd8-6430-4fbe-9db4-2e9cbce64846",
     "company_name": "American Express",
     "title": "Campus Opportunities",
     "url": "https://aexp.eightfold.ai/careers?Role+Type=campus&intlink=us-amex-career-en-us-GlobalStudentsPage-Explore-student-opportunities&hl=en",
-    "locations": ["Multiple Locations"],
+    "locations": [
+      "Multiple Locations"
+    ],
     "season": "Multiple",
     "category": "Program",
     "opportunity_type": "Campus Opportunities",
-    "target_year": ["Freshman (1st year)", "Sophomore (2nd year)"],
+    "target_year": [
+      "Freshman (1st year)",
+      "Sophomore (2nd year)"
+    ],
     "sponsorship": "Not Specified",
     "active": false,
     "is_visible": true,
@@ -59,7 +78,9 @@
     "company_name": "Example Corp",
     "title": "General Internship Program",
     "url": "https://example.com/careers/internship",
-    "locations": ["Remote"],
+    "locations": [
+      "Remote"
+    ],
     "season": "Summer",
     "category": "Internship",
     "opportunity_type": "Internship",
@@ -68,6 +89,54 @@
     "is_visible": true,
     "date_posted": 1770212009,
     "date_updated": 1770212009,
+    "source": "Jose-Gael-Cruz-Lopez"
+  },
+  {
+    "_case": "should-match: active true, season Summer (year-less, passes), Junior in target_year \u2014 real MLH entry",
+    "id": "mlh-fellowship-summer-2026",
+    "company_name": "MLH (Major League Hacking)",
+    "title": "MLH Fellowship",
+    "url": "https://fellowship.mlh.io/",
+    "locations": [
+      "Remote"
+    ],
+    "season": "Summer",
+    "category": "Program",
+    "opportunity_type": "Fellowship",
+    "target_year": [
+      "Freshman (1st year)",
+      "Sophomore (2nd year)",
+      "Junior (3rd year)",
+      "Senior (4th year)"
+    ],
+    "sponsorship": "Not Specified",
+    "active": true,
+    "is_visible": true,
+    "date_posted": 1774656000,
+    "date_updated": 1774656000,
+    "source": "Jose-Gael-Cruz-Lopez"
+  },
+  {
+    "_case": "should-reject: season Summer 2026 hits exclude_terms \u2014 real WomenTech entry",
+    "id": "c2d3e4f5-6a7b-8c9d-0e1f-a2b3c4d5e6f7",
+    "company_name": "WomenTech Network",
+    "title": "Women in Tech Global Conference 2026",
+    "url": "https://www.womentech.net/women-tech-conference",
+    "locations": [
+      "Virtual + Multiple Cities"
+    ],
+    "season": "Summer 2026",
+    "category": "Program",
+    "opportunity_type": "Conference",
+    "target_year": [
+      "Freshman (1st year)",
+      "Sophomore (2nd year)"
+    ],
+    "sponsorship": "Not Specified",
+    "active": false,
+    "is_visible": true,
+    "date_posted": 1774044000,
+    "date_updated": 1780704000,
     "source": "Jose-Gael-Cruz-Lopez"
   }
 ]
