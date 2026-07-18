@@ -243,7 +243,7 @@ def test_run_once_halts_on_schema_drift_and_writes_nothing(tmp_path, monkeypatch
     dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
     assert not dossiers_dir.exists() or not list(dossiers_dir.glob("*.md"))
     kwargs["issue_fn"].assert_called_once()
-    assert "Schema drift" in kwargs["issue_fn"].call_args[0][1]
+    assert "SchemaDriftError" in kwargs["issue_fn"].call_args[0][1]
 
 
 def test_run_once_does_not_mark_seen_when_push_fails(tmp_path):
@@ -294,3 +294,99 @@ def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path):
 
     assert second["written_count"] == 0
     assert second["already_seen_count"] == first["written_count"] + first["already_seen_count"]
+
+
+def test_run_once_halts_and_files_issue_on_fetch_network_failure(tmp_path):
+    """A source going offline (DNS failure, deleted repo, 5xx) must produce a
+    logged, issue-filed halt — not an uncaught crash with no record (the
+    PRD's previously-unmitigated 'source repo goes offline' risk)."""
+    import requests as _requests
+
+    def dying_http_get(url, timeout=None):
+        raise _requests.ConnectionError("simulated: upstream repo unreachable")
+
+    kwargs = _run_once_kwargs(tmp_path, http_get=dying_http_get)
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["halted"] is True
+    assert "ConnectionError" in record["halt_reason"]
+    logged = json.loads(kwargs["runs_log_path"].read_text().splitlines()[0])
+    assert logged["halted"] is True
+    kwargs["issue_fn"].assert_called_once()
+    assert not run_pipeline.load_seen_ids(kwargs["state_path"])
+
+
+def _page_with(text):
+    return f"# Great Intern Job\nRole details here.\n{text}\nMore details."
+
+
+def test_opt_exclusion_rejects_and_caches(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    cache = {}
+    # real Anduril exclusion text, verbatim from the live page 2026-07-18
+    fetch = Mock(return_value=_page_with(
+        "U.S. Person status is required as this position needs to access export controlled data."))
+
+    written, rejections = run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache=cache,
+    )
+
+    assert written == []
+    assert rejections[0]["check"] == "opt_eligibility"
+    assert cache[uid]["verdict"] == "excluded"
+
+
+def test_opt_cache_short_circuits_before_fetch(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    cache = {uid: {"verdict": "excluded", "signal": "U.S. Person status is required", "checked": "2026-07-18"}}
+    fetch = Mock(side_effect=AssertionError("must not fetch a cached-excluded posting"))
+
+    written, rejections = run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache=cache,
+    )
+
+    assert written == [] and rejections[0]["check"] == "opt_eligibility"
+    fetch.assert_not_called()
+
+
+def test_fetch_failure_fails_open_to_thin_dossier(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    fetch = Mock(side_effect=ConnectionError("firecrawl down"))
+
+    written, rejections = run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache={},
+    )
+
+    assert written == [uid] and rejections == []
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("*.md")).read_text()
+    assert "No enrichment yet" in dossier  # thin body, discovery not blocked
+
+
+def test_eligible_posting_gets_content_section(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    fetch = Mock(return_value=_page_with("Great role. Qualifications: Python."))
+
+    written, _ = run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache={},
+    )
+
+    assert written == [uid]
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("*.md")).read_text()
+    assert "## Posting (fetched 2026-07-18)" in dossier
+    assert "Qualifications: Python." in dossier
+
+
+def test_cross_source_key_punctuation_insensitive_marmon_case():
+    """Real dup from the 2026-07-18 audit: same Workday req via two routes,
+    titled 'Intern Co-op' vs 'Intern/Co-op'."""
+    from core.identity import cross_source_key
+    assert cross_source_key("Marmon Holdings", "Data Engineering Intern Co-op") == \
+        cross_source_key("Marmon Holdings", "Data Engineering Intern/Co-op")

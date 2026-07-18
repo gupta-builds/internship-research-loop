@@ -113,6 +113,8 @@ def _matches_josegael(listing, profile: dict) -> bool:
     excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
     for term in listing.terms:  # season, mapped in normalize_josegael
         t = _norm(term)
+        if not t:
+            continue  # whitespace-only season would IndexError the split below
         if t in excluded_terms or t.split()[0] in _WRONG_CYCLE_SEASONS:
             return False
     if not listing.target_year:

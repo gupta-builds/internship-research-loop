@@ -3,7 +3,12 @@ grad_year: 2028
 class_year: junior
 eligible_class_tags: [Junior, "3rd year"]  # matched as case-insensitive substrings against target_year entries
 accept_unrestricted: true  # postings with no class-year field at all still match
-terms: ["Summer 2027"]
+# "Winter 2027" = Dec 2026-Feb 2027 in SimplifyJobs' taxonomy — winters are
+# labeled by the LATER year, confirmed 2026-07-18 by term adjacency in live data
+# (three real listings co-tag ["Fall 2026", "Winter 2027"]). Postings don't
+# publish actual months in the feed, so the human screen of the fetched posting
+# content is still what confirms a genuine Dec-Jan window per posting.
+terms: ["Summer 2027", "Winter 2027"]
 # Real category values observed on SimplifyJobs/Summer2026-Internships (dev/.github/scripts/listings.json),
 # not the generic names in the original transcript — confirmed by fetching live data 2026-07-16.
 categories: ["Software", "Software Engineering", "AI/ML/Data", "Data Science, AI & Machine Learning"]

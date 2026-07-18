@@ -39,4 +39,5 @@ jobs:
         env:
           JARVIS_DIR: ${{ github.workspace }}/jarvis-checkout
           GH_TOKEN: ${{ github.token }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}  # discovery-time posting fetch; absent = thin dossiers, never a failure
         run: python run_pipeline.py

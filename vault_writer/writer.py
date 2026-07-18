@@ -59,7 +59,7 @@ def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str) -
     }
 
 
-def render_dossier(listing, uid: str, date_found: str, matched_reason: str) -> str:
+def render_dossier(listing, uid: str, date_found: str, matched_reason: str, posting_content: str = "") -> str:
     frontmatter = build_frontmatter(listing, uid, date_found, matched_reason)
     frontmatter_yaml = yaml.dump(
         frontmatter, Dumper=_FrontmatterDumper, sort_keys=False, default_flow_style=False, allow_unicode=True
@@ -70,6 +70,7 @@ def render_dossier(listing, uid: str, date_found: str, matched_reason: str) -> s
         title=listing.title,
         date_found=date_found,
         source=listing.source,
+        posting_content=posting_content,
     )
     return markdown.rstrip("\n") + "\n"
 

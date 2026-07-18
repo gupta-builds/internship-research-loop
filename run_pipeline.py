@@ -8,6 +8,8 @@ Invoked by .github/workflows/run.yml as `python run_pipeline.py`.
 import json
 import os
 import subprocess
+
+import requests
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -24,8 +26,9 @@ from core.run_log import (
 from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
+from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion
 from ingestion.sources import fetch_josegael, fetch_simplify
-from vault_writer.validate import validate
+from vault_writer.validate import check_format_compliance, validate
 from vault_writer.writer import render_dossier, scan_dossiers, write_dossier
 
 SOURCES = (
@@ -89,11 +92,26 @@ def dedup_new(matched_by_source: dict, seen_ids: set):
     return new, already_seen
 
 
-def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, date_found: str, http_head=None):
+def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, date_found: str,
+                       http_head=None, fetch_page_fn=None, opt_cache=None):
     """Renders + validates each new listing; writes the ones that pass into
     the Jarvis checkout. Does NOT push and does NOT mutate seen_ids — the
     caller must only do that after a confirmed push. Returns
-    (written_uids: list[str], rejections: list[dict])."""
+    (written_uids: list[str], rejections: list[dict]).
+
+    fetch_page_fn (url -> markdown or raises) enables the discovery-time
+    posting fetch: one Firecrawl call per new validated match serves both the
+    dossier's content section and the OPT-eligibility check. Fail-open — any
+    fetch failure writes the thin dossier and never blocks discovery. Ordering
+    is deliberate: the fetch runs only AFTER the write gate passes, so the
+    18-a-run dead-URL rejections never cost a Firecrawl credit.
+
+    opt_cache (uid -> {verdict, signal, checked}) persists across runs: an
+    OPT-rejected posting is never marked seen (so it's retried hourly), and
+    the cache is what stops that retry from re-fetching the same page every
+    hour. Checked per-posting, not per-company — Palantir's US Government and
+    Commercial roles differ on exactly this axis (verified 2026-07-18)."""
+    opt_cache = opt_cache if opt_cache is not None else {}
     # Cross-source dedup truth is the files actually in the checkout (they
     # diverged from seen_ids after the 2026-07-18 manual cleanup), plus
     # whatever this run writes — first source in SOURCES order wins.
@@ -103,14 +121,40 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
     written_uids = []
     rejections = []
     for uid, listing in new_listings:
+        cached = opt_cache.get(uid)
+        if cached and cached.get("verdict") == "excluded":
+            rejections.append({"uid": uid, "check": "opt_eligibility",
+                              "reason": f"{cached['signal']} (cached {cached['checked']})"})
+            continue
         markdown = render_dossier(listing, uid, date_found, build_matched_reason(listing, profile))
         result = validate(listing, uid, markdown, seen_ids, http_head=http_head, dossier_keys=dossier_keys)
-        if result.passed:
-            write_dossier(jarvis_dir, uid, markdown)
-            written_uids.append(uid)
-            dossier_keys.add(cross_source_key(listing.company, listing.title))
-        else:
+        if not result.passed:
             rejections.append({"uid": uid, "check": result.check, "reason": result.reason})
+            continue
+        posting_content = ""
+        if fetch_page_fn is not None:
+            try:
+                page_md = fetch_page_fn(listing.url)
+            except Exception:
+                page_md = ""  # fail-open: thin dossier beats a blocked run
+            if page_md:
+                signal = opt_exclusion(page_md)
+                if signal:
+                    opt_cache[uid] = {"verdict": "excluded", "signal": signal, "checked": date_found}
+                    rejections.append({"uid": uid, "check": "opt_eligibility", "reason": signal})
+                    continue
+                opt_cache[uid] = {"verdict": "eligible", "signal": None, "checked": date_found}
+                posting_content = extract_content(page_md)
+                enriched = render_dossier(listing, uid, date_found,
+                                          build_matched_reason(listing, profile), posting_content)
+                # The gate validated the thin render; re-check format on the
+                # enriched one — an extraction bug degrades to thin, never
+                # writes malformed markdown into the vault.
+                if check_format_compliance(enriched).passed:
+                    markdown = enriched
+        write_dossier(jarvis_dir, uid, markdown)
+        written_uids.append(uid)
+        dossier_keys.add(cross_source_key(listing.company, listing.title))
     return written_uids, rejections
 
 
@@ -131,6 +175,8 @@ def run_once(
     push_fn=commit_and_push_with_retry,
     issue_fn=file_github_issue,
     issue_repo: str = "gupta-builds/internship-research-loop",
+    fetch_page_fn=None,
+    opt_cache_path=None,
 ) -> dict:
     profile = profile or load_profile()
     timestamp = now.isoformat()
@@ -149,20 +195,23 @@ def run_once(
 
     try:
         check_schema_drift(http_get)
-    except SchemaDriftError as exc:
+        seen_ids = load_seen_ids(state_path)
+        matched_by_source = fetch_and_filter(profile, http_get)
+    except (SchemaDriftError, requests.RequestException) as exc:
+        # RequestException too — a deleted repo, DNS failure, or 5xx used to
+        # crash the process before any run-log record or issue existed (the
+        # PRD's "source repo goes offline" risk, previously unmitigated).
         record["halted"] = True
-        record["halt_reason"] = str(exc)
+        record["halt_reason"] = f"{type(exc).__name__}: {exc}"
         append_run_log(runs_log_path, record)
         issue_fn(
             issue_repo,
-            f"Schema drift detected — run halted at {timestamp}",
-            f"The scheduled run halted before touching any feeds for real.\n\n```\n{exc}\n```\n\n"
-            "Nothing was fetched, filtered, or written this run.",
+            f"Run halted ({type(exc).__name__}) at {timestamp}",
+            f"Schema drift or source fetch failure — nothing was fetched, filtered, "
+            f"or written this run.\n\n```\n{type(exc).__name__}: {exc}\n```",
         )
         return record
 
-    seen_ids = load_seen_ids(state_path)
-    matched_by_source = fetch_and_filter(profile, http_get)
     for name, info in matched_by_source.items():
         record["fetch_counts"][name] = info["fetch_count"]
         record["filter_match_counts"][name] = len(info["matched"])
@@ -171,9 +220,16 @@ def run_once(
     record["new_count"] = len(new_listings)
     record["already_seen_count"] = already_seen_count
 
+    opt_cache = {}
+    if opt_cache_path and Path(opt_cache_path).exists():
+        opt_cache = json.loads(Path(opt_cache_path).read_text())
     written_uids, rejections = validate_and_write(
-        new_listings, profile, jarvis_dir, seen_ids, now.date().isoformat(), http_head
+        new_listings, profile, jarvis_dir, seen_ids, now.date().isoformat(), http_head,
+        fetch_page_fn=fetch_page_fn, opt_cache=opt_cache,
     )
+    if opt_cache_path and opt_cache:
+        Path(opt_cache_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(opt_cache_path).write_text(json.dumps(opt_cache, indent=2, sort_keys=True) + "\n")
     record["rejections"] = rejections
 
     if should_run_weekly_rollup(now):
@@ -224,11 +280,14 @@ if __name__ == "__main__":
     REPO_ROOT = Path(__file__).parent
     now = datetime.now(timezone.utc)
 
+    firecrawl_key = os.environ.get("FIRECRAWL_API_KEY")
     result = run_once(
         jarvis_dir=os.environ["JARVIS_DIR"],
         state_path=REPO_ROOT / "state" / "seen_ids.json",
         runs_log_path=REPO_ROOT / "logs" / "runs.jsonl",
         now=now,
+        fetch_page_fn=(lambda url: fetch_posting_markdown(url, firecrawl_key)) if firecrawl_key else None,
+        opt_cache_path=REPO_ROOT / "state" / "opt_cache.json",
     )
     commit_and_push_with_retry(REPO_ROOT, f"Update state + logs — {now.date().isoformat()}")
 

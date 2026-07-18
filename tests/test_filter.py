@@ -145,3 +145,9 @@ def test_matches_rejects_foreign_only_listing_end_to_end():
     assert matches(listing, PROFILE) is False
 
 
+
+
+def test_josegael_whitespace_only_season_does_not_crash():
+    raw = next(r for r in _load("josegael.json") if r["id"] == "mlh-fellowship-summer-2026")
+    listing = normalize_josegael({**raw, "season": " "})
+    assert matches(listing, PROFILE) is True  # degenerate season ignored, not IndexError

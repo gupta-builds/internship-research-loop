@@ -1,4 +1,4 @@
-"""Layer 4 — the four-check write gate. Fail any check -> item is rejected and
+"""Layer 4 — the five-check write gate. Fail any check -> item is rejected and
 never touches the vault (fail-closed). Each check is independently callable so
 run.yml can log which specific check rejected an item and why.
 """

@@ -17,5 +17,8 @@ def compute_uid(listing) -> str:
 
 
 def cross_source_key(company: str, title: str) -> str:
-    norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+    # Punctuation-insensitive: "Intern Co-op" and "Intern/Co-op" are the same
+    # posting (real Marmon dup that slipped past a whitespace-only key,
+    # caught in the 2026-07-18 dossier audit).
+    norm = lambda s: re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
     return f"{norm(company)}|{norm(title)}"

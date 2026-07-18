@@ -1,4 +1,8 @@
 ---
 {{ frontmatter_yaml }}---
 # {{ company }} — {{ title }}
-Auto-discovered {{ date_found }} from {{ source }}. No enrichment yet — company/contact research happens on promotion, per [[30_Order/Workflows/Internship Pipeline]].
+{% if posting_content %}Auto-discovered {{ date_found }} from {{ source }}. Posting content below fetched at discovery (verbatim extraction, trimmed); company/contact enrichment happens on promotion, per [[30_Order/Workflows/Internship Pipeline]].
+## Posting (fetched {{ date_found }})
+{{ posting_content }}
+{%- else %}Auto-discovered {{ date_found }} from {{ source }}. No enrichment yet — company/contact research happens on promotion, per [[30_Order/Workflows/Internship Pipeline]].
+{%- endif %}
