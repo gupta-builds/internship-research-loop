@@ -9,8 +9,9 @@ terms: ["Summer 2027"]
 categories: ["Software", "Software Engineering", "AI/ML/Data", "Data Science, AI & Machine Learning"]
 # Rejects a SimplifyJobs listing outright if any of these terms are present, even
 # alongside an allowed term (multi-term/rotational postings spanning both cycles).
-# locations_allow was dropped: the plan never specified a matching rule for it
-# (substring vs exact, multi-location arrays, sources without location data), and
-# guessing one risks silently dropping real matches. Revisit once phase 3 shows
-# real per-listing locations data from a live run.
 exclude_terms: ["Summer 2026", "Fall 2026", "Spring 2026"]
+# Rule built 2026-07-17 from live feed data (1216 distinct location strings), not
+# guessed — see location_eligible() in core/filter.py. Permissive: no location
+# data or ambiguous strings ('Multiple Locations', 'Virtual', bare 'Remote') still
+# match; only affirmatively non-US listings (Canada/UK/'Remote in Germany') drop.
+locations_allow: us_remote

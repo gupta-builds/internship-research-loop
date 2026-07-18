@@ -15,14 +15,67 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+# Built from live feed data 2026-07-17 (1216 distinct location strings across both
+# JSON sources; zapplyjobs carries no location data at all). Rule: a US signal
+# always wins, an affirmative foreign token loses, everything ambiguous passes —
+# permissive by design, so 'Multiple Locations' / 'Virtual' / bare 'Remote' match
+# and only listings that affirmatively say Canada/UK/etc. are dropped.
+_US_STATES = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL",
+    "IN", "IA", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT",
+    "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI",
+    "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY", "DC", "PR",
+}
+_US_STATE_NAMES = {
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+    "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois",
+    "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland",
+    "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana",
+    "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york",
+    "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
+    "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah",
+    "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming",
+}
+# Every foreign token actually observed in live data, plus a few obvious neighbors.
+# ponytail: denylist can't name every country — a new foreign token passes until
+# added here; acceptable because a US signal is never falsely rejected.
+_NON_US = re.compile(
+    r"\b(canada|can|uk|united kingdom|germany|india|france|spain|singapore|europe"
+    r"|south america|united arab emirates|mexico|japan|china|ireland|australia)\b"
+)
+# ',' or '.' before the state code tolerates real dirty data ('Dallas. TX');
+# case-insensitive via upper() tolerates 'Carlsbad, Ca'.
+_STATE_SUFFIX = re.compile(r"[.,]\s*([A-Za-z]{2})$")
+
+
+def _entry_is_us_or_remote(loc: str) -> bool:
+    l = _norm(loc)
+    m = _STATE_SUFFIX.search(loc.strip())
+    if m and m.group(1).upper() in _US_STATES:
+        return True
+    if l.split(",")[-1].strip() in _US_STATE_NAMES:
+        return True  # 'New Mexico' before the denylist sees 'mexico'
+    return not _NON_US.search(l)
+
+
+def location_eligible(locations: list) -> bool:
+    if not locations:
+        return True  # no location data at all = unrestricted posting
+    return any(_entry_is_us_or_remote(x) for x in locations)
+
+
 def matches(listing, profile: dict) -> bool:
     if listing.source == "SimplifyJobs":
-        return _matches_simplify(listing, profile)
-    if listing.source == "Jose-Gael-Cruz-Lopez":
-        return _matches_josegael(listing, profile)
-    if listing.source == "zapplyjobs":
-        return _matches_zapply(listing, profile)
-    raise ValueError(f"unknown source: {listing.source}")
+        ok = _matches_simplify(listing, profile)
+    elif listing.source == "Jose-Gael-Cruz-Lopez":
+        ok = _matches_josegael(listing, profile)
+    elif listing.source == "zapplyjobs":
+        ok = _matches_zapply(listing, profile)
+    else:
+        raise ValueError(f"unknown source: {listing.source}")
+    if ok and profile.get("locations_allow") == "us_remote":
+        ok = location_eligible(listing.locations)
+    return ok
 
 
 def _matches_simplify(listing, profile: dict) -> bool:

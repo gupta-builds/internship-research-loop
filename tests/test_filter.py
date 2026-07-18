@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from core.filter import load_profile, matches
+from core.filter import load_profile, location_eligible, matches
 from ingestion.normalize import normalize_josegael, normalize_simplify, parse_zapply_readme
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -69,6 +69,51 @@ def test_zapply_readme_parses_and_filters():
     # plain-text row with no markdown link (regex's name_plain branch, untested until now)
     assert by_company["Activision Blizzard SPARX"].url == ""
     assert matches(by_company["Activision Blizzard SPARX"], PROFILE) is False
+
+
+# Every string below was observed verbatim in live feed data 2026-07-17 —
+# none are invented. The dirty ones ('Carlsbad, Ca', 'Dallas. TX') are real.
+@pytest.mark.parametrize(
+    "loc",
+    [
+        "Westlake, TX", "Carlsbad, Ca", "Dallas. TX", "NYC", "SF", "LA",
+        "United States", "Remote", "Remote in USA", "Remote in USa",
+        "Remote, US", "New Mexico", "Long Island, New York",
+        "Hawaii, United States", "Multiple Locations", "Multiple HBCUs",
+        "Virtual", "Hybrid", "U.S. Virgin Islands", "Multiple US Cities",
+    ],
+)
+def test_location_us_or_ambiguous_is_eligible(loc):
+    assert location_eligible([loc]) is True, loc
+
+
+@pytest.mark.parametrize(
+    "loc",
+    [
+        "Toronto, ON, Canada", "Toronto, ON, CAN", "Ontario, Canada",
+        "London, UK", "Remote in Canada", "Remote in UK", "Remote in Germany",
+        "Remote in India", "Bangalore, India", "Singapore", "Europe",
+        "Dubai - United Arab Emirates", "Munich, Germany",
+    ],
+)
+def test_location_affirmatively_foreign_is_rejected(loc):
+    assert location_eligible([loc]) is False, loc
+
+
+def test_location_no_data_is_unrestricted():
+    assert location_eligible([]) is True  # zapplyjobs carries no locations at all
+
+
+def test_location_one_us_entry_among_foreign_is_enough():
+    assert location_eligible(["London, UK", "Boston, MA"]) is True
+
+
+def test_matches_rejects_foreign_only_listing_end_to_end():
+    raw = next(
+        r for r in _load("simplifyjobs.json") if r["_case"].startswith("should-match")
+    )
+    listing = normalize_simplify({**raw, "locations": ["Toronto, ON, Canada"]})
+    assert matches(listing, PROFILE) is False
 
 
 def test_zapply_readme_handles_3_column_table_variant():
