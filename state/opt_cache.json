@@ -1,4 +1,14 @@
 {
+  "Greenhouse:8077685": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8083292": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:01925f31-564d-4bc0-94fc-2a2717d3132d": {
     "checked": "2026-07-20",
     "signal": null,
@@ -91,6 +101,61 @@
   },
   "SimplifyJobs:fa7fbaf4-50b2-4148-af69-22df652b6fd5": {
     "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:1a10ea70-7d94-49ca-9c63-d6cd5dcdfdb1": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:22b1b26d-56bf-4146-aa1e-c48b088c33b2": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:332f85f8-6ca8-47db-9377-039379a6d58d": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:520c760c-986a-4f06-9aba-4d2b3a17537c": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:62ec68a4-2c66-4687-b3ba-018b1caa6437": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:ae5d4514-76f7-486a-ad52-56fe3ef69bda": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:b9d13223-3ff9-4677-921d-cb82fa398158": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:d9b93194-4c9a-4c3e-a69d-da411676f0fd": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:eb2485e8-7d0d-4a6a-9bb0-a65a4468fbbd": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:f54eae4a-2d0d-4122-99d8-ed17feddf8c8": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:smartrecruiters:BoschGroup:744000139649345": {
+    "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
   }
