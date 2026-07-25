@@ -1,4 +1,9 @@
 {
+  "Greenhouse:4677152006": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8011956002": {
     "checked": "2026-07-25",
     "signal": null,
@@ -19,7 +24,22 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8401052002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8402114002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8402215002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8451782002": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
@@ -329,7 +349,17 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:ctccampusboard:4708230005": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:tenstorrentuniversity:5186916007": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:lever:acds:01fdf41b-a835-4e00-8d01-0275677a8f08": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
@@ -349,12 +379,27 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:smartrecruiters:WesternDigital:744000138727213": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workable:hyperlight:5581EA0668": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:workable:pony-dot-ai:4C1F53EF5D": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
   },
   "zshah101:workable:pony-dot-ai:BA5FFDBC71": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:aveva:/job/Philadelphia-Pennsylvania-United-States-of-America/Software-Developer-Intern--Drexel-Co-op-US_R014478": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
