@@ -1,4 +1,9 @@
 {
+  "Greenhouse:8011956002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8077685": {
     "checked": "2026-07-25",
     "signal": null,
@@ -10,6 +15,16 @@
     "verdict": "eligible"
   },
   "Greenhouse:8142539002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8402114002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8489582002": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
@@ -35,6 +50,11 @@
     "verdict": "eligible"
   },
   "Greenhouse:8624424002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8641352002": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
@@ -324,12 +344,42 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:smartrecruiters:HireVue:744000138728139": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workable:pony-dot-ai:4C1F53EF5D": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workable:pony-dot-ai:BA5FFDBC71": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:cmu:/job/Pittsburgh-PA/Research-Intern---School-of-Computer-Science---LTI_2024870": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:workday:coreandmain:/job/Saint-Louis-MO-63146/Intern---Data-Engineering----Corp_45804": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:workday:hp:/job/San-Francisco-California-United-States-of-America/Software-Engineering-Intern--Device-Experiences_3164166-1": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:workday:magna:/job/Troy-Michigan-US/R-D--Computer-Vision-Engineering-Intern_R00253444-1": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:moog:/job/Buffalo-NY/Intern--Software-Engineering_R-26-18885-1": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
