@@ -9,6 +9,36 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8142539002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8598324002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8606238002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8608328002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8624410002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8624424002": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:01925f31-564d-4bc0-94fc-2a2717d3132d": {
     "checked": "2026-07-20",
     "signal": null,
@@ -135,6 +165,11 @@
     "verdict": "eligible"
   },
   "vanshb03:22b1b26d-56bf-4146-aa1e-c48b088c33b2": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:3043f9a3-7ac2-4a59-aa99-61477f65c55b": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
@@ -274,7 +309,27 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:tenstorrentuniversity:5186916007": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:eppr.fa.us2.oraclecloud.com:192734": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:smartrecruiters:BoschGroup:744000139649345": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:coreandmain:/job/Saint-Louis-MO-63146/Intern---Data-Engineering----Corp_45804": {
+    "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:magna:/job/Troy-Michigan-US/R-D--Computer-Vision-Engineering-Intern_R00253444-1": {
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"

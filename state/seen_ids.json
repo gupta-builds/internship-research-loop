@@ -1,6 +1,12 @@
 [
   "Greenhouse:8077685",
   "Greenhouse:8083292",
+  "Greenhouse:8142539002",
+  "Greenhouse:8598324002",
+  "Greenhouse:8606238002",
+  "Greenhouse:8608328002",
+  "Greenhouse:8624410002",
+  "Greenhouse:8624424002",
   "Jose-Gael-Cruz-Lopez:10fe9201-5e3a-4ae5-882c-bfb7ec5a9a2f",
   "Jose-Gael-Cruz-Lopez:62909677-21f5-4372-8ac8-988bc3b794ea",
   "Jose-Gael-Cruz-Lopez:6afc8154-1b82-4f5e-af1c-8d5aaf3d2824",
@@ -144,6 +150,7 @@
   "vanshb03:1a10ea70-7d94-49ca-9c63-d6cd5dcdfdb1",
   "vanshb03:1f0c7094-1b59-4cda-95f2-40e11db9cd23",
   "vanshb03:22b1b26d-56bf-4146-aa1e-c48b088c33b2",
+  "vanshb03:3043f9a3-7ac2-4a59-aa99-61477f65c55b",
   "vanshb03:332f85f8-6ca8-47db-9377-039379a6d58d",
   "vanshb03:3a877898-03db-4d40-b260-c1b03dc487df",
   "vanshb03:3bf282cf-0952-44ca-85dc-2415cb802265",
@@ -191,5 +198,9 @@
   "zapplyjobs:f6b02da2345a9abd",
   "zapplyjobs:f98d518e01506585",
   "zshah101:ashby:quadrillion-labs:a4acc44c-31ce-41a0-ab44-2500487b4d05",
-  "zshah101:smartrecruiters:BoschGroup:744000139649345"
+  "zshah101:greenhouse:tenstorrentuniversity:5186916007",
+  "zshah101:oracle:eppr.fa.us2.oraclecloud.com:192734",
+  "zshah101:smartrecruiters:BoschGroup:744000139649345",
+  "zshah101:workday:coreandmain:/job/Saint-Louis-MO-63146/Intern---Data-Engineering----Corp_45804",
+  "zshah101:workday:magna:/job/Troy-Michigan-US/R-D--Computer-Vision-Engineering-Intern_R00253444-1"
 ]
