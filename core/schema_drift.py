@@ -6,7 +6,7 @@ emptied-out results.
 """
 import requests
 
-from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT
+from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT, VANSHB03_URL, ZSHAH101_URL
 
 # Every field normalize_simplify/normalize_josegael read, not just the ones
 # that would KeyError — a renamed "category" wouldn't crash (normalize_*
@@ -16,22 +16,37 @@ from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT
 # they'd silently make every listing pass those checks (permissive defaults).
 SIMPLIFY_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "terms", "locations", "date_posted", "active", "degrees"}
 JOSEGAEL_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "locations", "target_year", "date_posted", "active", "season"}
+VANSHB03_REQUIRED_KEYS = {"id", "company_name", "title", "url", "locations", "date_posted", "active", "season", "sponsorship"}
+ZSHAH101_REQUIRED_KEYS = {"id", "company", "title", "url", "location", "posted_at", "is_open", "season", "sponsorship", "category"}
+
+# Only the two curated single-feed JSON sources get a pre-fetch drift check,
+# same as SimplifyJobs/JGCL always have. Greenhouse/Ashby are a dozen
+# per-company endpoints, not one feed — checking each company's schema before
+# every run would multiply request volume for a company set that already
+# degrades gracefully per-token in fetch_greenhouse/fetch_ashby (a renamed
+# board silently returns nothing for that one company, not malformed data).
 
 
 class SchemaDriftError(Exception):
     pass
 
 
-def _check_json_source(name: str, url: str, required_keys: set, http_get) -> None:
+def _check_json_source(name: str, url: str, required_keys: set, http_get, *, is_dict: bool = False) -> None:
     resp = http_get(url, timeout=TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
-    if not isinstance(data, list) or not data:
-        raise SchemaDriftError(f"{name}: expected a non-empty JSON list, got {type(data).__name__}")
-    missing = required_keys - set(data[0].keys())
+    if is_dict:
+        if not isinstance(data, dict) or not data:
+            raise SchemaDriftError(f"{name}: expected a non-empty JSON object, got {type(data).__name__}")
+        first_entry = next(iter(data.values()))
+    else:
+        if not isinstance(data, list) or not data:
+            raise SchemaDriftError(f"{name}: expected a non-empty JSON list, got {type(data).__name__}")
+        first_entry = data[0]
+    missing = required_keys - set(first_entry.keys())
     if missing:
         raise SchemaDriftError(
-            f"{name}: missing expected keys {sorted(missing)} (entry keys: {sorted(data[0].keys())})"
+            f"{name}: missing expected keys {sorted(missing)} (entry keys: {sorted(first_entry.keys())})"
         )
 
 
@@ -43,9 +58,19 @@ def check_josegael_schema(http_get=None) -> None:
     _check_json_source("Jose-Gael-Cruz-Lopez", JOSEGAEL_URL, JOSEGAEL_REQUIRED_KEYS, http_get or requests.get)
 
 
+def check_vanshb03_schema(http_get=None) -> None:
+    _check_json_source("vanshb03", VANSHB03_URL, VANSHB03_REQUIRED_KEYS, http_get or requests.get)
+
+
+def check_zshah101_schema(http_get=None) -> None:
+    _check_json_source("zshah101", ZSHAH101_URL, ZSHAH101_REQUIRED_KEYS, http_get or requests.get, is_dict=True)
+
+
 def check_all(http_get=None) -> None:
-    """Runs both checks in order; raises SchemaDriftError from whichever
+    """Runs every check in order; raises SchemaDriftError from whichever
     fails first. Callers should treat any exception here as "halt the run,
     write nothing" per the plan's fail-closed design."""
     check_simplify_schema(http_get)
     check_josegael_schema(http_get)
+    check_vanshb03_schema(http_get)
+    check_zshah101_schema(http_get)

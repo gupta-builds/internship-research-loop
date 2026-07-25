@@ -71,6 +71,14 @@ def matches(listing, profile: dict) -> bool:
         ok = _matches_simplify(listing, profile)
     elif listing.source == "Jose-Gael-Cruz-Lopez":
         ok = _matches_josegael(listing, profile)
+    elif listing.source == "vanshb03":
+        ok = _matches_vanshb03(listing, profile)
+    elif listing.source == "zshah101":
+        ok = _matches_zshah101(listing, profile)
+    elif listing.source == "Greenhouse":
+        ok = _matches_greenhouse(listing, profile)
+    elif listing.source == "Ashby":
+        ok = _matches_ashby(listing, profile)
     else:
         raise ValueError(f"unknown source: {listing.source}")
     if ok and profile.get("locations_allow") == "us_remote":
@@ -102,23 +110,118 @@ def _matches_simplify(listing, profile: dict) -> bool:
     return _norm(listing.category) in allowed_categories
 
 
-# JGCL seasons are mostly year-less ("Summer" 66, "Multiple" 35 of 112 live
-# entries, 2026-07-18) — they can't affirm "Summer 2027", only exclude wrong
-# cycles. Reject affirmatively-wrong ones; pass Summer/Multiple/Year-Round/
-# Not Specified/missing, permissive like every other rule here.
+# Year-less seasons ("Summer", "Multiple") can't affirm "Summer 2027", only
+# exclude wrong cycles. Reject affirmatively-wrong ones; pass Summer/Multiple/
+# Year-Round/Not Specified/missing, permissive like every other rule here.
+# Shared by every source whose season/terms field can carry a bare, year-less
+# cycle name (JGCL, vanshb03) — SimplifyJobs and zshah101 always carry a year.
 _WRONG_CYCLE_SEASONS = {"spring", "fall", "winter"}
 
 
-def _matches_josegael(listing, profile: dict) -> bool:
-    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
-    for term in listing.terms:  # season, mapped in normalize_josegael
+def _has_wrong_cycle_season(terms: list, excluded_terms: set) -> bool:
+    for term in terms:
         t = _norm(term)
         if not t:
             continue  # whitespace-only season would IndexError the split below
         if t in excluded_terms or t.split()[0] in _WRONG_CYCLE_SEASONS:
-            return False
+            return True
+    return False
+
+
+def _matches_josegael(listing, profile: dict) -> bool:
+    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
+    if _has_wrong_cycle_season(listing.terms, excluded_terms):  # season, mapped in normalize_josegael
+        return False
     if not listing.target_year:
         return profile.get("accept_unrestricted", False)
     eligible = [_norm(t) for t in profile["eligible_class_tags"]]
     have = [_norm(t) for t in listing.target_year]
     return any(e in h for e in eligible for h in have)
+
+
+# vanshb03's own structured signal for the OPT exclusion criterion — a first-party
+# field beats the posting_page.py regex-on-scraped-text check, so reject here,
+# before ever spending a Firecrawl call. "Does Not Offer Sponsorship" is
+# deliberately NOT an exclusion (same "no visa sponsorship" != "no OPT" rule as
+# everywhere else in this pipeline) — only an explicit citizenship requirement is.
+_VANSHB03_CITIZENSHIP_REQUIRED = "u.s. citizenship is required"
+
+
+def _matches_vanshb03(listing, profile: dict) -> bool:
+    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
+    if _has_wrong_cycle_season(listing.terms, excluded_terms):  # season, mapped in normalize_vanshb03
+        return False
+    wanted_terms = {_norm(t) for t in profile["terms"]}
+    have_terms = {_norm(t) for t in listing.terms}
+    # wanted_terms are year-qualified ("summer 2027"); vanshb03's season is bare
+    # ("summer") — match on the cycle word only, same permissive-by-default
+    # posture as the wrong-cycle check above (can't affirm the year, can only
+    # avoid rejecting a real match over a year vanshb03 never states).
+    if not any(w.split()[0] in have_terms or w.split()[0] == h.split()[0] for w in wanted_terms for h in have_terms):
+        return False
+    if listing.sponsorship and _norm(listing.sponsorship) == _VANSHB03_CITIZENSHIP_REQUIRED:
+        return False
+    return True
+
+
+# zshah101's season is year-qualified like SimplifyJobs' terms, and its
+# category taxonomy differs from SimplifyJobs' own — map the two values we
+# actually see onto the same intent, not the literal profile.categories list
+# (which is SimplifyJobs-specific string spelling).
+_ZSHAH101_CATEGORIES = {"software", "data & ml/ai"}
+_ZSHAH101_CITIZENS_ONLY = "citizens-only"
+
+
+def _matches_zshah101(listing, profile: dict) -> bool:
+    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
+    have_terms = {_norm(t) for t in listing.terms}
+    if have_terms & excluded_terms:
+        return False
+    wanted_terms = {_norm(t) for t in profile["terms"]}
+    if not (wanted_terms & have_terms):
+        return False
+    if _norm(listing.category) not in _ZSHAH101_CATEGORIES:
+        return False
+    if listing.sponsorship and _norm(listing.sponsorship) == _ZSHAH101_CITIZENS_ONLY:
+        return False
+    return True
+
+
+# Neither Greenhouse nor Ashby's public job APIs carry a structured term
+# field — title + description text is all there is, and real postings on our
+# own seeded companies (Marshall Wace's "Technology Intern - 2027", Ellipsis
+# Labs' "Software Engineer - 2027 Interns") state the year without a season
+# word at all. A strict "must contain the literal 'Summer 2027' string" rule
+# would silently reject both — exactly the false-negative-is-worse-than-
+# false-positive failure mode every other rule in this file was built to
+# avoid. So: an explicit exclude_terms string always rejects; an explicit
+# wanted term string always accepts; and a bare mention of the target year
+# (with no season word) passes too, permissive like every other ambiguous
+# case here — text with no wanted-term phrase AND no bare target-year digit
+# anywhere still rejects, since that's no longer ambiguous, it's absent.
+def _text_has_any(text: str, terms) -> bool:
+    t = _norm(text)
+    return any(_norm(term) in t for term in terms)
+
+
+def _target_years(terms) -> set:
+    return {re.search(r"\d{4}", t).group(0) for t in terms if re.search(r"\d{4}", t)}
+
+
+def _matches_free_text_source(listing, profile: dict) -> bool:
+    haystack = f"{listing.title} {listing.raw_text}"
+    if _text_has_any(haystack, profile.get("exclude_terms", [])):
+        return False
+    if _text_has_any(haystack, profile["terms"]):
+        return True
+    # Fallback: no exact "Summer 2027"-style phrase, but the bare target year
+    # is present — pass, permissive by design. Anything without even a bare
+    # target-year digit string (wrong year, or no year mentioned at all)
+    # rejects here; that's still permissive relative to the strict-phrase
+    # rule, just not unconditionally permissive.
+    t = _norm(haystack)
+    return any(y in t for y in _target_years(profile["terms"]))
+
+
+_matches_greenhouse = _matches_free_text_source
+_matches_ashby = _matches_free_text_source

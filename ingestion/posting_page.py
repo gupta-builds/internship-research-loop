@@ -27,6 +27,22 @@ CONTENT_LIMIT = 7000
 # signals. Deliberately NOT matched: EEO boilerplate ("without regard to ...
 # citizenship status"), veteran definitions, and Palantir's conditional
 # "willingness to undergo a background investigation".
+#
+# The export-control/ITAR branch below was added 2026-07-25 against real,
+# measured evidence, not a guess: cross-checked all 22 live postings zshah101
+# tags `sponsorship: citizens-only` against this regex — only 6 of 22 (27%)
+# were caught. Reading the real fetched text for the misses showed a second,
+# very common phrasing this regex never covered: defense/ITAR-adjacent
+# companies (Saronic, Hermeus, Varda Space, in addition to the already-caught
+# Anduril) state the requirement as export-control boilerplate ("requires
+# access to export-controlled information or items that require 'U.S.
+# Person' status" / "must either be a 'U.S. person' as defined by 22 C.F.R. §
+# 120.62") rather than a direct imperative — the existing patterns above
+# never match that shape. Adding it raised the measured catch rate to 13/22
+# (59%); the remaining misses are not a regex problem — see the Improvement
+# Plan note for why (a tagging false positive, a company-level inference not
+# stated on that specific posting, and postings where the signal lives in an
+# application-form screening question Firecrawl's page scrape never sees).
 OPT_EXCLUSION_RE = re.compile(
     r"(u\.?s\.? person (status )?(is )?required"
     r"|must be a u\.?s\.? (citizen|person)"
@@ -34,8 +50,10 @@ OPT_EXCLUSION_RE = re.compile(
     r"|requires? u\.?s\.? citizenship"
     r"|(active|current) (u\.?s\.? )?(security )?clearance (is )?required"
     r"|must (hold|possess|have) (an? )?(active |current )?(u\.?s\.? )?security clearance"
-    r"|(opt|cpt)( candidates?| students?)? (are |is )?not (accepted|eligible|supported))",
-    re.I,
+    r"|(opt|cpt)( candidates?| students?)? (are |is )?not (accepted|eligible|supported)"
+    r"|export.control.{0,150}u\.?s\.?\s*person"
+    r"|u\.?s\.?\s*person.{0,150}export.control)",
+    re.I | re.S,
 )
 
 

@@ -28,14 +28,38 @@ def _josegael_raw():
     return _strip_case_keys(json.loads((FIXTURES / "josegael.json").read_text()))
 
 
+def _vanshb03_raw():
+    return _strip_case_keys(json.loads((FIXTURES / "vanshb03.json").read_text()))
+
+
+def _zshah101_raw():
+    # real feed shape: a dict keyed by id, not a list
+    return {r["id"]: r for r in _strip_case_keys(json.loads((FIXTURES / "zshah101.json").read_text()))}
+
+
 def _fake_http_get(url, timeout=None):
-    from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL
+    from ingestion.sources import (
+        ASHBY_JOBS_URL,
+        GREENHOUSE_JOBS_URL,
+        JOSEGAEL_URL,
+        SIMPLIFY_URL,
+        VANSHB03_URL,
+        ZSHAH101_URL,
+    )
 
     resp = Mock(status_code=200)
     if url == SIMPLIFY_URL:
         resp.json.return_value = _simplify_raw()
     elif url == JOSEGAEL_URL:
         resp.json.return_value = _josegael_raw()
+    elif url == VANSHB03_URL:
+        resp.json.return_value = _vanshb03_raw()
+    elif url == ZSHAH101_URL:
+        resp.json.return_value = _zshah101_raw()
+    elif url.startswith(GREENHOUSE_JOBS_URL.split("{")[0]) or url.startswith(ASHBY_JOBS_URL.split("{")[0]):
+        # per-company board endpoints — pipeline-orchestration tests don't need
+        # real per-company data, that's covered in test_sources.py directly
+        resp.json.return_value = {"jobs": []}
     else:
         raise AssertionError(f"unexpected url: {url}")
     return resp
@@ -55,6 +79,48 @@ def test_load_save_seen_ids_round_trips(tmp_path):
 
 def test_load_seen_ids_missing_file_returns_empty_set(tmp_path):
     assert run_pipeline.load_seen_ids(tmp_path / "nope.json") == set()
+
+
+# --- backlog cap (2026-07-25 decision: throttle, don't absorb or discard) ---
+
+def _listing_with_date(uid_suffix, date_posted):
+    listing = normalize_simplify(_simplify_raw()[0])
+    listing.raw_id = f"{listing.raw_id}-{uid_suffix}"
+    listing.date_posted = date_posted
+    return (compute_uid(listing), listing)
+
+
+def test_prioritize_and_cap_keeps_most_recent_first():
+    items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
+    this_run, deferred = run_pipeline._prioritize_and_cap(items, limit=2)
+
+    assert [d for _, l in this_run for d in [l.date_posted]] == [300, 200]
+    assert [l.date_posted for _, l in deferred] == [100]
+
+
+def test_prioritize_and_cap_missing_date_posted_sorts_last():
+    items = [_listing_with_date("known", 500), _listing_with_date("unknown", None)]
+    this_run, deferred = run_pipeline._prioritize_and_cap(items, limit=1)
+
+    assert this_run[0][1].date_posted == 500
+    assert deferred[0][1].date_posted is None
+
+
+def test_run_once_defers_beyond_the_cap_and_leaves_it_for_next_run(tmp_path, monkeypatch):
+    """The core guarantee: a deferred item is not marked seen, so it's neither
+    lost (no silent drop) nor duplicated (no re-write) — it just naturally
+    reappears as 'new' on the next run, same as any other unseen match."""
+    monkeypatch.setattr(run_pipeline, "MAX_NEW_WRITES_PER_RUN", 1)
+    kwargs = _run_once_kwargs(tmp_path)
+    record = run_pipeline.run_once(**kwargs)
+
+    total_matched = sum(len(info["matched"]) for info in
+                        run_pipeline.fetch_and_filter(PROFILE, http_get=_fake_http_get).values())
+    assert record["written_count"] == 1
+    assert record["deferred_count"] == total_matched - 1
+
+    seen = run_pipeline.load_seen_ids(kwargs["state_path"])
+    assert len(seen) == 1  # only the one actually written is seen — nothing deferred was marked
 
 
 def test_build_matched_reason_per_source():

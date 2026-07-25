@@ -9,6 +9,8 @@ from core.schema_drift import (
     check_all,
     check_josegael_schema,
     check_simplify_schema,
+    check_vanshb03_schema,
+    check_zshah101_schema,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -37,6 +39,18 @@ def simplify_raw():
 @pytest.fixture
 def josegael_raw():
     return _strip_case_keys(json.loads((FIXTURES / "josegael.json").read_text()))
+
+
+@pytest.fixture
+def vanshb03_raw():
+    return _strip_case_keys(json.loads((FIXTURES / "vanshb03.json").read_text()))
+
+
+@pytest.fixture
+def zshah101_raw():
+    # zshah101's real feed is a dict keyed by id, not a list — check_zshah101_schema
+    # expects that shape (see is_dict=True in schema_drift.py).
+    return {r["id"]: r for r in _strip_case_keys(json.loads((FIXTURES / "zshah101.json").read_text()))}
 
 
 # --- happy path, one per source ---
@@ -106,21 +120,59 @@ def test_check_all_raises_on_first_failing_source(simplify_raw, josegael_raw):
     assert call_count["n"] == 1  # halted before ever checking josegael
 
 
-def test_check_all_passes_when_both_are_healthy(simplify_raw, josegael_raw):
+def test_check_all_passes_when_all_sources_are_healthy(simplify_raw, josegael_raw, vanshb03_raw, zshah101_raw):
     call_log = []
 
     def http_get(url, timeout):
         call_log.append(url)
-        from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL
+        from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, VANSHB03_URL, ZSHAH101_URL
 
         if url == SIMPLIFY_URL:
             return _json_response(simplify_raw)
         if url == JOSEGAEL_URL:
             return _json_response(josegael_raw)
+        if url == VANSHB03_URL:
+            return _json_response(vanshb03_raw)
+        if url == ZSHAH101_URL:
+            return _json_response(zshah101_raw)
         raise AssertionError(f"unexpected url: {url}")
 
     check_all(http_get=http_get)  # does not raise
-    assert len(call_log) == 2
+    assert len(call_log) == 4
+
+
+# --- vanshb03 / zshah101 ---
+
+def test_vanshb03_schema_passes_on_real_shape(vanshb03_raw):
+    http_get = Mock(return_value=_json_response(vanshb03_raw))
+    check_vanshb03_schema(http_get=http_get)  # does not raise
+
+
+def test_vanshb03_schema_detects_dropped_sponsorship_field(vanshb03_raw):
+    drifted = [{k: v for k, v in r.items() if k != "sponsorship"} for r in vanshb03_raw]
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match="sponsorship"):
+        check_vanshb03_schema(http_get=http_get)
+
+
+def test_zshah101_schema_passes_on_real_shape(zshah101_raw):
+    http_get = Mock(return_value=_json_response(zshah101_raw))
+    check_zshah101_schema(http_get=http_get)  # does not raise
+
+
+def test_zshah101_schema_detects_wrong_shape():
+    """The one source shaped as a dict, not a list — a schema check that
+    assumed list-shape would misread this as empty/drifted."""
+    http_get = Mock(return_value=_json_response([]))
+    with pytest.raises(SchemaDriftError, match="non-empty JSON object"):
+        check_zshah101_schema(http_get=http_get)
+
+
+def test_zshah101_schema_detects_dropped_is_open_field(zshah101_raw):
+    drifted = {k: {kk: vv for kk, vv in v.items() if kk != "is_open"} for k, v in zshah101_raw.items()}
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match="is_open"):
+        check_zshah101_schema(http_get=http_get)
 
 
 # --- the permissive-default fields: renamed upstream, they'd silently make

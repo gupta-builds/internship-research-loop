@@ -27,14 +27,47 @@ from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
 from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion
-from ingestion.sources import fetch_josegael, fetch_simplify
+from ingestion.sources import (
+    fetch_ashby,
+    fetch_greenhouse,
+    fetch_josegael,
+    fetch_simplify,
+    fetch_vanshb03,
+    fetch_zshah101,
+)
 from vault_writer.validate import check_format_compliance, validate
 from vault_writer.writer import render_dossier, scan_dossiers, write_dossier
 
 SOURCES = (
     ("SimplifyJobs", fetch_simplify),
     ("Jose-Gael-Cruz-Lopez", fetch_josegael),
+    ("vanshb03", fetch_vanshb03),
+    ("zshah101", fetch_zshah101),
+    ("Greenhouse", fetch_greenhouse),
+    ("Ashby", fetch_ashby),
 )
+
+# 2026-07-25 decision: turning on 4 sources at once produced a one-time backlog
+# (186 new candidates, 171 write-gate-passing) far above the steady-state <100/
+# month Firecrawl budget Phase 6 was sized for. Neither absorbing the whole
+# backlog in one run (dumps 100+ dossiers on a promotion queue already at zero)
+# nor pre-seeding seen_ids to silently skip it (throws away real, currently-
+# open postings — the reason these sources were added) was acceptable. Cap
+# instead, and let it drain over several runs. No structured deadline field
+# exists across all 6 sources (Greenhouse sometimes has one via metadata, the
+# other 5 sources never do) — most-recently-posted first is the prioritization
+# that's actually available everywhere, not a compromise on the chosen rule.
+MAX_NEW_WRITES_PER_RUN = 18
+
+
+def _prioritize_and_cap(new_listings: list, limit: int) -> tuple:
+    """Most-recently-posted first; missing date_posted sorts last, never first
+    (an unknown post date must not win priority over a known-recent one).
+    Returns (this_run, deferred) — deferred items are simply not passed to
+    validate_and_write and therefore never marked seen, so dedup_new()
+    naturally re-offers them next run without any extra state to manage."""
+    ordered = sorted(new_listings, key=lambda item: item[1].date_posted or 0, reverse=True)
+    return ordered[:limit], ordered[limit:]
 
 RUN_LOG_MD_SUBPATH = Path("10_Areas/Career/Internships/List/Run Log.md")
 
@@ -186,6 +219,7 @@ def run_once(
         "filter_match_counts": {},
         "new_count": 0,
         "already_seen_count": 0,
+        "deferred_count": 0,
         "written_count": 0,
         "rejections": [],
         "errors": [],
@@ -220,11 +254,14 @@ def run_once(
     record["new_count"] = len(new_listings)
     record["already_seen_count"] = already_seen_count
 
+    this_run, deferred = _prioritize_and_cap(new_listings, MAX_NEW_WRITES_PER_RUN)
+    record["deferred_count"] = len(deferred)
+
     opt_cache = {}
     if opt_cache_path and Path(opt_cache_path).exists():
         opt_cache = json.loads(Path(opt_cache_path).read_text())
     written_uids, rejections = validate_and_write(
-        new_listings, profile, jarvis_dir, seen_ids, now.date().isoformat(), http_head,
+        this_run, profile, jarvis_dir, seen_ids, now.date().isoformat(), http_head,
         fetch_page_fn=fetch_page_fn, opt_cache=opt_cache,
     )
     if opt_cache_path and opt_cache:

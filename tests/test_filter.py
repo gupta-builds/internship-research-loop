@@ -4,7 +4,15 @@ from pathlib import Path
 import pytest
 
 from core.filter import _matches_josegael, degrees_eligible, load_profile, location_eligible, matches
-from ingestion.normalize import normalize_josegael, normalize_simplify
+from ingestion.normalize import (
+    Listing,
+    normalize_ashby,
+    normalize_greenhouse,
+    normalize_josegael,
+    normalize_simplify,
+    normalize_vanshb03,
+    normalize_zshah101,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PROFILE = load_profile()
@@ -151,3 +159,131 @@ def test_josegael_whitespace_only_season_does_not_crash():
     raw = next(r for r in _load("josegael.json") if r["id"] == "mlh-fellowship-summer-2026")
     listing = normalize_josegael({**raw, "season": " "})
     assert matches(listing, PROFILE) is True  # degenerate season ignored, not IndexError
+
+
+# --- vanshb03 (real feed entries verbatim, 2026-07-25) ---
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("vanshb03.json") if r["_case"].startswith("should-match")],
+)
+def test_vanshb03_should_match(raw):
+    assert matches(normalize_vanshb03(raw), PROFILE) is True, raw["_case"]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("vanshb03.json") if r["_case"].startswith("should-reject")],
+)
+def test_vanshb03_should_reject(raw):
+    assert matches(normalize_vanshb03(raw), PROFILE) is False, raw["_case"]
+
+
+def test_vanshb03_no_sponsorship_is_not_an_exclusion():
+    """'Does Not Offer Sponsorship' means no H-1B, not no OPT — same rule as
+    everywhere else in this pipeline. Only 'U.S. Citizenship is Required' rejects."""
+    raw = next(r for r in _load("vanshb03.json") if r["_case"] == "should-match-no-sponsorship-is-not-an-exclusion")
+    listing = normalize_vanshb03(raw)
+    assert listing.sponsorship == "Does Not Offer Sponsorship"
+    assert matches(listing, PROFILE) is True
+
+
+# --- zshah101 (real feed entries verbatim, 2026-07-25) ---
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("zshah101.json") if r["_case"].startswith("should-match")],
+)
+def test_zshah101_should_match(raw):
+    assert matches(normalize_zshah101(raw), PROFILE) is True, raw["_case"]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("zshah101.json") if r["_case"].startswith("should-reject")],
+)
+def test_zshah101_should_reject(raw):
+    assert matches(normalize_zshah101(raw), PROFILE) is False, raw["_case"]
+
+
+def test_zshah101_citizens_only_real_anduril_entry():
+    raw = next(r for r in _load("zshah101.json") if r["_case"] == "should-reject-citizens-only-real-anduril-else-matches")
+    listing = normalize_zshah101(raw)
+    assert listing.sponsorship == "citizens-only"
+    assert listing.terms == ["Summer 2027"] and listing.category == "Software"  # everything else about it matches
+    assert matches(listing, PROFILE) is False
+
+
+# --- Greenhouse / Ashby (real jobs on our seeded company boards, 2026-07-25) ---
+
+def test_greenhouse_matches_literal_term_in_title():
+    listing = Listing(company="PDT Partners", title="Summer 2027 Software Engineering Intern",
+                       url="https://job-boards.greenhouse.io/pdtpartners/jobs/8077685", source="Greenhouse",
+                       active=True, raw_text="")
+    assert matches(listing, PROFILE) is True
+
+
+def test_greenhouse_rejects_explicit_wrong_year_in_content():
+    listing = Listing(company="Acme", title="Software Engineering Intern",
+                       url="https://job-boards.greenhouse.io/acme/jobs/1", source="Greenhouse",
+                       active=True, raw_text="Join us for our Summer 2026 internship program.")
+    assert matches(listing, PROFILE) is False
+
+
+def test_greenhouse_bare_year_with_no_season_word_passes_permissively():
+    """Real case: Marshall Wace's live 'Technology Intern - 2027' postings state
+    the year with no season word anywhere. A strict 'Summer 2027' literal-string
+    match would silently reject a real match — the false-negative-is-worse-than-
+    false-positive principle this whole file is built around applies here too."""
+    listing = Listing(company="Marshall Wace", title="Technology Intern - 2027 - Singapore",
+                       url="https://job-boards.greenhouse.io/mwinternshipprogram/jobs/1", source="Greenhouse",
+                       active=True, raw_text="Join our 2027 internship cohort in Singapore.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_greenhouse_bare_wrong_year_with_no_right_year_rejects():
+    listing = Listing(company="Acme", title="Software Intern - 2026 Cohort",
+                       url="https://job-boards.greenhouse.io/acme/jobs/2", source="Greenhouse",
+                       active=True, raw_text="Our 2026 internship program.")
+    assert matches(listing, PROFILE) is False
+
+
+def test_ashby_matches_literal_term_in_description():
+    listing = Listing(company="Centerfield", title="Software Engineer Intern",
+                       url="https://jobs.ashbyhq.com/centerfield/1", source="Ashby",
+                       active=True, raw_text="Join our team for Summer 2027.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_ashby_bare_year_real_ellipsis_labs_case_passes():
+    """Real case: Ellipsis Labs' live 'Software Engineer - 2027 Interns' posting
+    never says 'Summer 2027' either, same reasoning as the Greenhouse case above."""
+    listing = Listing(company="Ellipsis Labs", title="Software Engineer - 2027 Interns",
+                       url="https://jobs.ashbyhq.com/ellipsislabs/1", source="Ashby",
+                       active=True, raw_text="Ellipsis Labs is a profitable, venture-backed startup.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_normalize_greenhouse_strips_html_and_maps_fields():
+    raw = {"id": 8077685, "title": "Summer 2027 Software Engineering Intern",
+           "absolute_url": "https://job-boards.greenhouse.io/pdtpartners/jobs/8077685",
+           "location": {"name": "New York, NY"}, "updated_at": "2026-07-24T15:05:09-04:00",
+           "content": "<p>Join our <strong>team</strong></p>"}
+    listing = normalize_greenhouse(raw, "PDT Partners")
+    assert listing.company == "PDT Partners"
+    assert listing.locations == ["New York, NY"]
+    assert listing.active is True
+    assert "<" not in listing.raw_text and "Join our" in listing.raw_text
+    assert listing.raw_id == "8077685"
+
+
+def test_normalize_ashby_maps_fields():
+    raw = {"id": "abc-123", "title": "Software Engineer Intern", "location": "Los Angeles, California",
+           "jobUrl": "https://jobs.ashbyhq.com/centerfield/abc-123", "publishedAt": "2026-06-09T21:39:58+00:00",
+           "isListed": True, "descriptionPlain": "Real description text."}
+    listing = normalize_ashby(raw, "Centerfield")
+    assert listing.company == "Centerfield"
+    assert listing.locations == ["Los Angeles, California"]
+    assert listing.active is True
+    assert listing.raw_text == "Real description text."
+    assert listing.raw_id == "abc-123"

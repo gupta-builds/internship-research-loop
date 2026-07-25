@@ -20,6 +20,19 @@ FIXTURES = Path(__file__).parent / "fixtures"
         "U.S. citizenship required due to government contract requirements.",
         "OPT/CPT candidates are not accepted for this position.",
         "Must be a U.S. citizen.",
+        # real — Saronic SWE Intern (Fall 2026), fetched 2026-07-25: the
+        # export-control/ITAR phrasing our original 6 patterns never covered
+        "If this role is based in the United States, it requires access to export-controlled "
+        "information or items that require “U.S. Person” status.",
+        # real — Hermeus SWE Intern (HIL), fetched 2026-07-25
+        "U.S. EXPORT CONTROL COMPLIANCE STATUS\nThe person hired will have access to information "
+        "and items subject to U.S. export controls, and therefore, must either be a "
+        "“U.S. person” as defined by 22 C.F.R. § 120.62.",
+        # real — Varda Space Flight Software Internship, fetched 2026-07-25
+        "ITAR Requirements\nVarda, like all employers, must ensure that its employees working in "
+        "the United States are lawfully authorized to work in the U.S. Additionally, our employees "
+        "are exposed to and have access to certain export-controlled technology. "
+        "“US person” means: U.S. citizen, U.S. lawful permanent resident.",
     ],
 )
 def test_explicit_negative_signals_exclude(text):
