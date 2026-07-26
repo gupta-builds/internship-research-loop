@@ -244,6 +244,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:5d9a43f8-7e38-40ad-8d88-41ac71297a4f": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:62ec68a4-2c66-4687-b3ba-018b1caa6437": {
     "checked": "2026-07-25",
     "signal": null,
@@ -266,6 +271,11 @@
   },
   "vanshb03:6f9d532c-ee7e-43a4-ac91-02f468430a5d": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:7c6cb84c-1fcc-4634-b671-50e75e7dbcac": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
@@ -339,6 +349,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:e6ef564e-5028-431b-97ed-0154893db99f": {
+    "checked": "2026-07-26",
+    "signal": "U.S. Person status is required",
+    "verdict": "excluded"
+  },
   "vanshb03:eb2485e8-7d0d-4a6a-9bb0-a65a4468fbbd": {
     "checked": "2026-07-25",
     "signal": null,
@@ -374,6 +389,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:akunacapital:8018853": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:akunacapital:8018856": {
     "checked": "2026-07-26",
     "signal": null,
@@ -396,6 +416,21 @@
   },
   "zshah101:greenhouse:fiveringsllc:5349707008": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:jumptrading:8052281": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:jumptrading:8052338": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:jumptrading:8052351": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
@@ -471,6 +506,11 @@
   },
   "zshah101:workday:cmu:/job/Pittsburgh-PA/Research-Intern---School-of-Computer-Science---LTI_2024870": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:copart:/job/Dallas-TX---Headquarters/DevOps-Engineering-Intern_JR109490": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
