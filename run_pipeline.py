@@ -13,9 +13,11 @@ import requests
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from core.classify import BUCKET_FOLDERS, classification_callout, classify
 from core.filter import load_profile, matches
 from core.git_ops import GitPushError, commit_and_push_with_retry
 from core.identity import compute_uid
+from core.relevance import stage1_reject, stage2_confirm
 from core.run_log import (
     append_run_log,
     append_weekly_rollup,
@@ -109,7 +111,10 @@ def fetch_and_filter(profile: dict, http_get=None) -> dict:
     results = {}
     for name, fetch_fn in SOURCES:
         listings = fetch_fn(http_get)
-        results[name] = {"fetch_count": len(listings), "matched": [l for l in listings if matches(l, profile)]}
+        results[name] = {
+            "fetch_count": len(listings),
+            "matched": [l for l in listings if matches(l, profile) and not stage1_reject(l.title, l.raw_text)],
+        }
     return results
 
 
@@ -130,7 +135,7 @@ def dedup_new(matched_by_source: dict, seen_ids: set):
 
 
 def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, date_found: str,
-                       http_head=None, fetch_page_fn=None, opt_cache=None):
+                       http_head=None, fetch_page_fn=None, opt_cache=None, state_dir=None):
     """Renders + validates each new listing; writes the ones that pass into
     the Jarvis checkout. Does NOT push and does NOT mutate seen_ids — the
     caller must only do that after a confirmed push. Returns
@@ -169,27 +174,42 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
             rejections.append({"uid": uid, "check": result.check, "reason": result.reason})
             continue
         posting_content = ""
+        # Degraded-signal default: no content fetched yet (or ever, if
+        # fetch_page_fn is None) — title/category alone still classify,
+        # since every write needs a bucket. Refined below once/if real
+        # posting content comes back.
+        bucket, signal = classify(listing.title, listing.category, "")
         if fetch_page_fn is not None:
             try:
                 page_md = fetch_page_fn(listing.url)
             except Exception:
                 page_md = ""  # fail-open: thin dossier beats a blocked run
             if page_md:
-                signal = opt_exclusion(page_md)
-                if signal:
-                    opt_cache[uid] = {"verdict": "excluded", "signal": signal, "checked": date_found}
-                    rejections.append({"uid": uid, "check": "opt_eligibility", "reason": signal})
+                posting_content = extract_content(page_md)
+                # Adjacent-field content confirmation (Task A stage 2): needs
+                # the fetched page, so it runs here rather than at the cheap
+                # title-only stage1_reject seam in fetch_and_filter.
+                if not stage2_confirm(listing.title, listing.company, posting_content):
+                    rejections.append({"uid": uid, "check": "cs_relevance",
+                                       "reason": "adjacent-field posting, no software signal in content"})
+                    continue
+                opt_signal = opt_exclusion(page_md)
+                if opt_signal:
+                    opt_cache[uid] = {"verdict": "excluded", "signal": opt_signal, "checked": date_found}
+                    rejections.append({"uid": uid, "check": "opt_eligibility", "reason": opt_signal})
                     continue
                 opt_cache[uid] = {"verdict": "eligible", "signal": None, "checked": date_found}
-                posting_content = extract_content(page_md)
+                bucket, signal = classify(listing.title, listing.category, posting_content)
                 enriched = render_dossier(listing, uid, date_found,
-                                          build_matched_reason(listing, profile), posting_content)
+                                          build_matched_reason(listing, profile), posting_content,
+                                          classification_callout(bucket, signal))
                 # The gate validated the thin render; re-check format on the
                 # enriched one — an extraction bug degrades to thin, never
                 # writes malformed markdown into the vault.
                 if check_format_compliance(enriched).passed:
                     markdown = enriched
-        write_dossier(jarvis_dir, uid, markdown)
+        write_dossier(jarvis_dir, uid, markdown, listing.title, listing.company, BUCKET_FOLDERS[bucket],
+                     state_dir=state_dir)
         written_uids.append(uid)
         dossier_keys.add(cross_source_key(listing.company, listing.title))
     return written_uids, rejections
@@ -214,6 +234,7 @@ def run_once(
     issue_repo: str = "gupta-builds/internship-research-loop",
     fetch_page_fn=None,
     opt_cache_path=None,
+    state_dir=None,
 ) -> dict:
     profile = profile or load_profile()
     timestamp = now.isoformat()
@@ -266,7 +287,7 @@ def run_once(
         opt_cache = json.loads(Path(opt_cache_path).read_text())
     written_uids, rejections = validate_and_write(
         this_run, profile, jarvis_dir, seen_ids, now.date().isoformat(), http_head,
-        fetch_page_fn=fetch_page_fn, opt_cache=opt_cache,
+        fetch_page_fn=fetch_page_fn, opt_cache=opt_cache, state_dir=state_dir,
     )
     if opt_cache_path and opt_cache:
         Path(opt_cache_path).parent.mkdir(parents=True, exist_ok=True)
@@ -329,6 +350,7 @@ if __name__ == "__main__":
         now=now,
         fetch_page_fn=(lambda url: fetch_posting_markdown(url, firecrawl_key)) if firecrawl_key else None,
         opt_cache_path=REPO_ROOT / "state" / "opt_cache.json",
+        state_dir=REPO_ROOT / "state",
     )
     commit_and_push_with_retry(REPO_ROOT, f"Update state + logs — {now.date().isoformat()}")
 

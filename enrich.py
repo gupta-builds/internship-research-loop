@@ -57,6 +57,30 @@ def fc_scrape(url: str, key: str) -> str:
     return data.get("markdown", "")
 
 
+# Confirmed live 2026-07-26: simplify.jobs is a real, live site (SimplifyJobs'
+# own job board, separate from their GitHub feed) — resolves 200. A search
+# hit landing on any of these domains is noise, not a real contact.
+_EXCLUDED_CONTACT_DOMAINS_RE = re.compile(
+    r"indeed\.com|glassdoor\.com|simplify\.jobs|linkedin\.com/jobs/", re.I,
+)
+
+
+def _search_and_filter(query: str, key: str) -> list:
+    return [h for h in fc_search(query, key) if not _EXCLUDED_CONTACT_DOMAINS_RE.search(h.get("url", ""))]
+
+
+def linkedin_recruiter_snippet(company: str, key: str) -> list:
+    # Search-snippet text only — NEVER fc_scrape() or otherwise fetch the
+    # underlying linkedin.com URL; that crosses the "no LinkedIn... no login
+    # walls" line in this module's docstring above. Whatever text Firecrawl's
+    # search-result snippet itself contains (title/description fields,
+    # confirmed live 2026-07-26 — a real hit returned "Katie Nielsen - Senior
+    # Recruiter at Anduril Industries" as its title) is all we ever see.
+    hits = fc_search(f"site:linkedin.com {company} recruiter", key)
+    return [(h.get("title", ""), h.get("description", ""), h.get("url", ""))
+            for h in hits if "linkedin.com" in h.get("url", "")]
+
+
 def trim(md: str, limit: int = 800) -> str:
     # ponytail: naive trim keeps nav/link junk at the top of some pages —
     # good enough to orient a human; add a boilerplate stripper if it annoys.
@@ -142,6 +166,19 @@ def main():
     if org:
         sources.append(f"https://github.com/orgs/{org}/people")
         contacts += [(n, u) for n, u in members]
+
+    for query, label in ((f"{company} recruiter", "recruiter search"),
+                         (f"{company} university recruiting", "university recruiting search")):
+        for hit in _search_and_filter(query, key):
+            name = hit.get("title", "").strip()
+            if name:
+                contacts.append((name, f"{label}: {hit['url']}"))
+                sources.append(hit["url"])
+
+    for name, snippet, url in linkedin_recruiter_snippet(company, key):
+        if name:
+            contacts.append((name, f"linkedin search snippet: {snippet or url}"))
+            sources.append(url)
 
     mx = mx_ok(domain) if domain else False
     rows = []

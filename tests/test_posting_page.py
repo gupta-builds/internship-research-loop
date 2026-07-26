@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion
+from ingestion.posting_page import _content_fetch_url, extract_content, fetch_posting_markdown, opt_exclusion
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -78,3 +78,45 @@ def test_fetch_posting_markdown_calls_firecrawl():
     _, kwargs = post.call_args
     assert kwargs["headers"]["Authorization"] == "Bearer fc-key"
     assert kwargs["json"]["url"] == "https://x.example/job"
+
+
+def test_extract_content_from_real_ashby_page():
+    """Real CTGT posting (jobs.ashbyhq.com), fetched 2026-07-26 — confirms the
+    full JD (About/Role/Responsibilities/Qualifications) extracts cleanly."""
+    md = (FIXTURES / "posting_ashby_ctgt.md").read_text(encoding="utf-8")
+    content = extract_content(md)
+    assert content.startswith("# Software Engineering Intern (Summer 2027)")
+    assert "About CTGT" in content
+    assert "What You Will Do" in content
+    assert "Who You Are" in content
+    assert "Apply for this Job" not in content  # trailing apply link stripped
+    assert "\n\n" not in content
+    assert not any(l.strip() == "---" for l in content.splitlines())
+
+
+def test_content_fetch_url_strips_ashby_application_suffix():
+    """Real bug, confirmed live 2026-07-26: the same CTGT posting returned
+    4015 chars of full content at its base URL vs 1099 chars of bare
+    application-form fields at its /application URL. listing.url (used for
+    display/apply) must stay untouched — only the fetch target changes."""
+    url = "https://jobs.ashbyhq.com/ellipsislabs/02136b22-35b1-4b3d-8bef-567c3380a849/application"
+    assert _content_fetch_url(url) == "https://jobs.ashbyhq.com/ellipsislabs/02136b22-35b1-4b3d-8bef-567c3380a849"
+
+
+def test_content_fetch_url_leaves_non_ashby_urls_alone():
+    url = "https://job-boards.greenhouse.io/fiveringsllc/jobs/123/application"
+    assert _content_fetch_url(url) == url
+
+
+def test_content_fetch_url_leaves_ashby_non_application_urls_alone():
+    url = "https://jobs.ashbyhq.com/ctgt/f657c2f5-125e-42b6-a68a-646bbea3d155"
+    assert _content_fetch_url(url) == url
+
+
+def test_fetch_posting_markdown_strips_ashby_application_suffix_before_calling_firecrawl():
+    resp = Mock(status_code=200)
+    resp.json.return_value = {"data": {"markdown": "# A Job"}}
+    post = Mock(return_value=resp)
+    fetch_posting_markdown("https://jobs.ashbyhq.com/acme/abc123/application", "fc-key", http_post=post)
+    _, kwargs = post.call_args
+    assert kwargs["json"]["url"] == "https://jobs.ashbyhq.com/acme/abc123"

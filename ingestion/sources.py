@@ -21,12 +21,17 @@ ZSHAH101_URL = "https://raw.githubusercontent.com/zshah101/Automated-List-Of-Sum
 GREENHOUSE_JOBS_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
 ASHBY_JOBS_URL = "https://api.ashbyhq.com/posting-api/job-board/{token}"
 
-# Seed list, 2026-07-25: every token here was verified live this session to
-# resolve with real job data (see the Improvement Plan note for the check).
-# Expand by grepping new dossier URLs for a job-boards.greenhouse.io or
-# jobs.ashbyhq.com pattern, or by adding a known target company and testing
-# its guessed token the same way — never add a token that hasn't been
-# confirmed live, a wrong guess just silently returns 0 jobs, not an error.
+# Seed list, 2026-07-25 (quant/prop-trading batch) + 2026-07-26 (AI/ML
+# diversification batch): every token here was verified live to resolve with
+# real job data (see the Improvement Plan note for the 07-25 check; the
+# 07-26 additions were each confirmed with a direct GET against
+# GREENHOUSE_JOBS_URL/ASHBY_JOBS_URL returning a non-empty jobs array —
+# fireworksai: 46 jobs, scaleai: 204 jobs, cohere: 137 jobs, cursor: 120
+# jobs, modal: 32 jobs, elevenlabs: 215 jobs). Expand by grepping new
+# dossier URLs for a job-boards.greenhouse.io or jobs.ashbyhq.com pattern, or
+# by adding a known target company and testing its guessed token the same
+# way — never add a token that hasn't been confirmed live, a wrong guess
+# just silently returns 0 jobs, not an error.
 GREENHOUSE_COMPANIES = {
     "fccincinnati": "FC Cincinnati",
     "aquaticcapitalmanagement": "Aquatic Capital Management",
@@ -35,6 +40,8 @@ GREENHOUSE_COMPANIES = {
     "virtu": "Virtu Financial",
     "mwinternshipprogram": "Marshall Wace",
     "optiverus": "Optiver",
+    "fireworksai": "Fireworks AI",
+    "scaleai": "Scale AI",
 }
 ASHBY_COMPANIES = {
     "ellipsislabs": "Ellipsis Labs",
@@ -42,6 +49,10 @@ ASHBY_COMPANIES = {
     "circleback": "Circleback",
     "ctgt": "CTGT",
     "pylon-labs": "Pylon",
+    "cohere": "Cohere",
+    "cursor": "Cursor (Anysphere)",
+    "modal": "Modal",
+    "elevenlabs": "ElevenLabs",
 }
 
 AI_JOBS_URL = "https://artificialintelligencejobs.co/jobs.json"

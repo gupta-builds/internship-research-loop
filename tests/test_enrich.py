@@ -1,7 +1,10 @@
 """Offline tests for enrich.py's pure logic — no network, per the suite's rule."""
+from unittest.mock import Mock, patch
+
 import pytest
 
-from enrich import extract_bylines, infer_email, read_dossier, replace_enrichment
+import enrich
+from enrich import extract_bylines, infer_email, linkedin_recruiter_snippet, read_dossier, replace_enrichment
 
 DOSSIER = """---
 uid: SimplifyJobs:abc
@@ -44,3 +47,45 @@ def test_infer_email():
     assert infer_email("John Smith-Jones", "acme.com") == "john.smithjones@acme.com"
     assert infer_email("madonna", "acme.com") is None  # single name — no pattern
     assert infer_email("Jane Doe", "") is None  # no domain discovered
+
+
+# Real hit shapes confirmed live 2026-07-26 against Firecrawl's /search API
+# (Anduril recruiter/site:linkedin.com queries): each hit is
+# {"url", "title", "description"} — Indeed/Glassdoor/simplify.jobs/LinkedIn
+# job-post hits are exactly the kind of noise these must filter out.
+_MIXED_HITS = [
+    {"url": "https://www.linkedin.com/in/janedoe", "title": "Jane Doe - Recruiter at Acme"},
+    {"url": "https://www.indeed.com/cmp/Acme/jobs", "title": "Acme jobs on Indeed"},
+    {"url": "https://www.glassdoor.com/Overview/Acme", "title": "Acme on Glassdoor"},
+    {"url": "https://simplify.jobs/p/acme-swe-intern", "title": "Acme SWE Intern"},
+    {"url": "https://www.linkedin.com/jobs/view/12345", "title": "Acme is hiring"},
+    {"url": "https://acme.com/careers", "title": "Careers at Acme"},
+]
+
+
+def test_excluded_contact_domains_filters_indeed_glassdoor_simplify_linkedin_jobs():
+    with patch.object(enrich, "fc_search", return_value=_MIXED_HITS):
+        survivors = enrich._search_and_filter("Acme recruiter", "fc-key")
+    assert [h["url"] for h in survivors] == [
+        "https://www.linkedin.com/in/janedoe",
+        "https://acme.com/careers",
+    ]
+
+
+def test_linkedin_recruiter_snippet_never_calls_fc_scrape():
+    hits = [{"url": "https://www.linkedin.com/in/katiekeaton",
+            "title": "Katie Nielsen - Senior Recruiter at Acme", "description": ""}]
+    scrape = Mock(side_effect=AssertionError("linkedin_recruiter_snippet must never scrape"))
+    with patch.object(enrich, "fc_search", return_value=hits), patch.object(enrich, "fc_scrape", scrape):
+        results = linkedin_recruiter_snippet("Acme", "fc-key")
+    scrape.assert_not_called()
+    assert results == [("Katie Nielsen - Senior Recruiter at Acme", "", "https://www.linkedin.com/in/katiekeaton")]
+
+
+def test_linkedin_recruiter_snippet_ignores_non_linkedin_hits():
+    """fc_search for a site:linkedin.com query can still return a stray
+    non-LinkedIn hit (a page that quotes/links to LinkedIn) — must be
+    dropped, not surfaced as a contact."""
+    hits = [{"url": "https://example.com/mentions-linkedin", "title": "Some Page"}]
+    with patch.object(enrich, "fc_search", return_value=hits):
+        assert linkedin_recruiter_snippet("Acme", "fc-key") == []

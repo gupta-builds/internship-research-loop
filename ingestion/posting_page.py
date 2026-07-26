@@ -14,12 +14,35 @@ real data 2026-07-18: Palantir's US Government and Commercial internships
 differ on exactly this axis within the same company.
 """
 import re
+from urllib.parse import urlparse
 
 import requests
 
 FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape"
 FETCH_TIMEOUT = 120
 CONTENT_LIMIT = 7000
+
+# Real bug, confirmed live 2026-07-26: some sources (e.g. SimplifyJobs, for an
+# Ellipsis Labs posting) store the Ashby *application-form* URL
+# (jobs.ashbyhq.com/<company>/<id>/application) as listing.url instead of the
+# posting page itself. That form-only URL renders no job description at all —
+# A/B fetched the same live CTGT posting both ways: the base URL returned
+# 4015 chars of full content (About/Role/Responsibilities/Qualifications),
+# the /application URL returned 1099 chars of bare form fields only ("Upload
+# your resume", "LinkedIn Profile", reCAPTCHA, no JD prose whatsoever). Not
+# an extraction bug — the fetched page genuinely never had the content.
+_ASHBY_APPLICATION_SUFFIX_RE = re.compile(r"/application/?$")
+
+
+def _content_fetch_url(url: str) -> str:
+    """The URL to actually fetch for posting content — strips an Ashby
+    application-form suffix so the fetch lands on the real posting page.
+    listing.url itself (used for display/apply) is never touched, only the
+    URL passed to Firecrawl here."""
+    parsed = urlparse(url)
+    if parsed.netloc == "jobs.ashbyhq.com" and _ASHBY_APPLICATION_SUFFIX_RE.search(parsed.path):
+        return url[: url.rindex("/application")]
+    return url
 
 # Built from the actual exclusion language found on live posting pages
 # 2026-07-18 (Anduril: "U.S. Person status is required as this position needs
@@ -71,7 +94,7 @@ def fetch_posting_markdown(url: str, api_key: str, http_post=None) -> str:
     resp = (http_post or requests.post)(
         FIRECRAWL_SCRAPE_URL,
         headers={"Authorization": f"Bearer {api_key}"},
-        json={"url": url, "formats": ["markdown"], "waitFor": 8000},
+        json={"url": _content_fetch_url(url), "formats": ["markdown"], "waitFor": 8000},
         timeout=FETCH_TIMEOUT,
     )
     resp.raise_for_status()

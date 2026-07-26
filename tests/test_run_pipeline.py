@@ -182,7 +182,7 @@ def test_validate_and_write_happy_path(tmp_path):
     assert written == [uid]
     assert rejections == []
     dossiers_dir = tmp_path / "10_Areas/Career/Internships/List/Dossiers"
-    assert any(dossiers_dir.glob("*.md"))
+    assert any(dossiers_dir.glob("**/*.md"))
 
 
 def test_validate_and_write_rejects_dead_url(tmp_path):
@@ -198,7 +198,7 @@ def test_validate_and_write_rejects_dead_url(tmp_path):
     assert len(rejections) == 1
     assert rejections[0]["check"] == "url_liveness"
     dossiers_dir = tmp_path / "10_Areas/Career/Internships/List/Dossiers"
-    assert not list(dossiers_dir.glob("*.md")) if dossiers_dir.exists() else True
+    assert not list(dossiers_dir.glob("**/*.md")) if dossiers_dir.exists() else True
 
 
 def test_validate_and_write_rejects_cross_source_duplicate(tmp_path):
@@ -293,7 +293,7 @@ def test_run_once_happy_path_marks_seen_and_writes_dossiers(tmp_path):
     assert len(seen) == record["written_count"]
 
     dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
-    assert len(list(dossiers_dir.glob("*.md"))) == record["written_count"]
+    assert len(list(dossiers_dir.glob("**/*.md"))) == record["written_count"]
 
     logged = json.loads((kwargs["runs_log_path"]).read_text().splitlines()[0])
     assert logged["written_count"] == record["written_count"]
@@ -313,7 +313,7 @@ def test_run_once_halts_on_schema_drift_and_writes_nothing(tmp_path, monkeypatch
     assert "missing expected keys" in record["halt_reason"]
     assert not run_pipeline.load_seen_ids(kwargs["state_path"])
     dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
-    assert not dossiers_dir.exists() or not list(dossiers_dir.glob("*.md"))
+    assert not dossiers_dir.exists() or not list(dossiers_dir.glob("**/*.md"))
     kwargs["issue_fn"].assert_called_once()
     assert "SchemaDriftError" in kwargs["issue_fn"].call_args[0][1]
 
@@ -337,7 +337,7 @@ def test_run_once_does_not_mark_seen_when_push_fails(tmp_path):
     # passed, write happened) — what must NOT have happened is seen_ids
     # advancing, since the push that would make them durable failed.
     dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
-    assert len(list(dossiers_dir.glob("*.md"))) > 0
+    assert len(list(dossiers_dir.glob("**/*.md"))) > 0
 
     seen = run_pipeline.load_seen_ids(kwargs["state_path"])
     assert seen == set(), "a failed push must leave seen_ids empty so the item is retried next run"
@@ -436,8 +436,8 @@ def test_fetch_failure_fails_open_to_thin_dossier(tmp_path):
     )
 
     assert written == [uid] and rejections == []
-    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("*.md")).read_text()
-    assert "No enrichment yet" in dossier  # thin body, discovery not blocked
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md")).read_text()
+    assert "No posting content fetched" in dossier  # thin body, discovery not blocked
 
 
 def test_eligible_posting_gets_content_section(tmp_path):
@@ -451,7 +451,7 @@ def test_eligible_posting_gets_content_section(tmp_path):
     )
 
     assert written == [uid]
-    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("*.md")).read_text()
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md")).read_text()
     assert "## Posting (fetched 2026-07-18)" in dossier
     assert "Qualifications: Python." in dossier
 

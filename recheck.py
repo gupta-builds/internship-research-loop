@@ -27,7 +27,7 @@ from ingestion.sources import (
     fetch_zshah101,
 )
 from run_pipeline import file_github_issue
-from vault_writer.writer import scan_dossiers
+from vault_writer.writer import load_dossier_uids, scan_dossiers
 
 # 2026-07-25: was still SimplifyJobs/JGCL only after the 4-source batch shipped
 # earlier the same day — dossiers from vanshb03/zshah101/Greenhouse/Ashby were
@@ -51,23 +51,31 @@ FEEDS = {
     "AIJobs": fetch_ai_jobs,
 }
 RECHECKS_LOG = Path(__file__).parent / "logs" / "rechecks.jsonl"
+STATE_DIR = Path(__file__).parent / "state"
 ISSUE_REPO = "gupta-builds/internship-research-loop"
 
 
-def plan_removals(dossiers: list, feeds_by_source: dict) -> list:
+def plan_removals(dossiers: list, feeds_by_source: dict, uid_by_path: dict, jarvis_dir) -> list:
     """[{uid, path, reason}] for dossiers whose posting closed. A source that
     failed to fetch is absent from feeds_by_source — its dossiers are skipped
-    entirely, never treated as gone."""
+    entirely, never treated as gone. A dossier with no dossier_uids.json
+    manifest entry (written before the manifest existed, or hand-edited into
+    the vault, e.g. Software Engineer - Ellipsis Labs.md) is skipped too —
+    unknown means leave alone, not removable."""
     removals = []
+    jarvis_dir = Path(jarvis_dir)
     for fm in dossiers:
-        source, _, raw_id = fm["uid"].partition(":")
+        uid = uid_by_path.get(str(fm["_path"].relative_to(jarvis_dir)))
+        if uid is None:
+            continue
+        source, _, raw_id = uid.partition(":")
         if source not in feeds_by_source:
             continue
         active_by_id = feeds_by_source[source]
         if raw_id not in active_by_id:
-            removals.append({"uid": fm["uid"], "path": fm["_path"], "reason": "absent from live feed"})
+            removals.append({"uid": uid, "path": fm["_path"], "reason": "absent from live feed"})
         elif active_by_id[raw_id] is False:
-            removals.append({"uid": fm["uid"], "path": fm["_path"], "reason": "active: false upstream"})
+            removals.append({"uid": uid, "path": fm["_path"], "reason": "active: false upstream"})
     return removals
 
 
@@ -79,6 +87,7 @@ def main():
     now = datetime.now(timezone.utc)
 
     dossiers = scan_dossiers(jarvis_dir)
+    uid_by_path = load_dossier_uids(STATE_DIR)
 
     feeds_by_source, errors = {}, []
     for source, fetch_fn in FEEDS.items():
@@ -87,7 +96,7 @@ def main():
         except Exception as exc:  # fetch failure must not read as "everything absent"
             errors.append(f"{source} fetch failed, its dossiers skipped: {exc}")
 
-    removals = plan_removals(dossiers, feeds_by_source)
+    removals = plan_removals(dossiers, feeds_by_source, uid_by_path, jarvis_dir)
     record = {
         "timestamp": now.isoformat(),
         "type": "recheck",
