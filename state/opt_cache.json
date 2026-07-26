@@ -179,6 +179,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:03443f37-7b10-4753-8828-2d9bcc2e4f2d": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:0484ebb0-7ca8-4df1-80e7-235738d4c3dc": {
     "checked": "2026-07-25",
     "signal": null,
@@ -251,6 +256,11 @@
   },
   "vanshb03:6d04639a-152a-4d9a-972f-dd2c58a39d7c": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:6f2fd56d-e37c-42ba-8d10-d0d152a365f7": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
@@ -359,6 +369,26 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:akunacapital:8018847": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:akunacapital:8018856": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:akunacapital:8018886": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:akunacapital:8018893": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:ctccampusboard:4708230005": {
     "checked": "2026-07-25",
     "signal": null,
@@ -386,6 +416,11 @@
   },
   "zshah101:lever:acds:41bee5e2-6477-428f-b359-34b4071d545f": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:lever:xsolla:1c0e5375-2352-4a2c-a816-48ddebbdd3d6": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
@@ -451,6 +486,11 @@
   },
   "zshah101:workday:magna:/job/Troy-Michigan-US/R-D--Computer-Vision-Engineering-Intern_R00253444-1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:manh:/job/US---Home-Office/AI-Developer-Co-Op--Boston--MA-_16931": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
