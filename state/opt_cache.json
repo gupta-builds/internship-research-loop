@@ -74,6 +74,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8451781002": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8451782002": {
     "checked": "2026-07-25",
     "signal": null,
@@ -339,6 +344,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:a067ab42-1f1c-43ce-af5a-93749ee307ca": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:a2a0252c-cef2-4e59-bd6c-40f63824ab65": {
     "checked": "2026-07-25",
     "signal": null,
@@ -484,6 +494,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:pdtpartners:8077685": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:tenstorrentuniversity:5186916007": {
     "checked": "2026-07-25",
     "signal": null,
@@ -491,6 +506,11 @@
   },
   "zshah101:greenhouse:thetradedesk:5187605007": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:virtu:8624410002": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
