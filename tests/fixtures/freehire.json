@@ -1,0 +1,49 @@
+[
+  {
+    "_case": "should-match-google-exact-ground-truth-summer2027-in-title",
+    "public_slug": "software-engineering-intern-bs-summer-2027-google-iyvtwjtd",
+    "source": "google",
+    "manually_added": false,
+    "external_id": ":85564713261245126",
+    "url": "https://www.google.com/about/careers/applications/jobs/results/85564713261245126?utm_source=freehire.dev",
+    "title": "Software Engineering Intern, BS, Summer 2027",
+    "company": "Google",
+    "company_slug": "google",
+    "location": "Mountain View, CA, USA; Atlanta, GA, USA; Austin, TX, USA",
+    "description": "Join us for a unique 12-14 week paid internship.",
+    "countries": ["us"],
+    "regions": ["north_america"],
+    "posted_at": "2026-07-20T16:11:13Z",
+    "created_at": "2026-07-20T17:01:40Z",
+    "closed_at": null,
+    "enrichment": {
+      "summary": "A 12-14 week paid internship for Bachelor's students to develop scalable software systems.",
+      "employment_type": "internship",
+      "visa_sponsorship": true,
+      "seniority": "intern"
+    }
+  },
+  {
+    "_case": "should-reject-nuro-exact-ground-truth-no-year-mentioned-anywhere",
+    "public_slug": "software-engineer-ai-platform-intern-nuro-ds4hiohn",
+    "source": "greenhouse",
+    "manually_added": false,
+    "external_id": "nuro:7351061",
+    "url": "https://nuro.ai/careersitem?gh_jid=7351061&utm_source=freehire.dev",
+    "title": "Software Engineer, AI Platform - Intern",
+    "company": "Nuro",
+    "company_slug": "nuro",
+    "location": "Mountain View, California (HQ)",
+    "description": "Nuro believes self-driving vehicles are the most immediate and profound opportunity for AI to drive positive change in the physical world.",
+    "countries": ["us"],
+    "regions": ["north_america"],
+    "posted_at": "2026-07-16T05:03:55Z",
+    "created_at": "2026-06-16T21:03:22Z",
+    "closed_at": null,
+    "enrichment": {
+      "employment_type": "internship",
+      "relocation": "supported",
+      "seniority": "intern"
+    }
+  }
+]

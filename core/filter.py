@@ -79,6 +79,10 @@ def matches(listing, profile: dict) -> bool:
         ok = _matches_greenhouse(listing, profile)
     elif listing.source == "Ashby":
         ok = _matches_ashby(listing, profile)
+    elif listing.source == "Freehire":
+        ok = _matches_freehire(listing, profile)
+    elif listing.source == "AIJobs":
+        ok = _matches_ai_jobs(listing, profile)
     else:
         raise ValueError(f"unknown source: {listing.source}")
     if ok and profile.get("locations_allow") == "us_remote":
@@ -115,7 +119,18 @@ def _matches_simplify(listing, profile: dict) -> bool:
 # Year-Round/Not Specified/missing, permissive like every other rule here.
 # Shared by every source whose season/terms field can carry a bare, year-less
 # cycle name (JGCL, vanshb03) — SimplifyJobs and zshah101 always carry a year.
+# "winter" stays here even though Winter 2027 is wanted, and "spring" stays
+# here even though Spring 2027 is now wanted too (profile.yaml terms) — a bare
+# "Winter"/"Spring" from these two sources is ambiguous between the wanted
+# cycle and an already-excluded one (Winter 2026 rotted off, Spring 2026 is in
+# exclude_terms), same reasoning that keeps "fall" here. Only "summer" gets
+# the permissive year-less pass; JGCL/vanshb03 postings for the other wanted
+# cycles need their year-qualified form to match here, same pre-existing gap
+# for winter as for spring — not introduced by this change.
 _WRONG_CYCLE_SEASONS = {"spring", "fall", "winter"}
+
+
+_HAS_YEAR = re.compile(r"\d{4}")
 
 
 def _has_wrong_cycle_season(terms: list, excluded_terms: set) -> bool:
@@ -123,7 +138,14 @@ def _has_wrong_cycle_season(terms: list, excluded_terms: set) -> bool:
         t = _norm(term)
         if not t:
             continue  # whitespace-only season would IndexError the split below
-        if t in excluded_terms or t.split()[0] in _WRONG_CYCLE_SEASONS:
+        if t in excluded_terms:
+            return True
+        # The bare-season reject only applies to year-less strings — a
+        # year-qualified one ("Winter 2027", "Spring 2027") is unambiguous and
+        # must reach the real match logic below (target_year for JGCL,
+        # wanted_terms for vanshb03) instead of being killed on the season
+        # word alone, regardless of the correct year being present.
+        if not _HAS_YEAR.search(t) and t.split()[0] in _WRONG_CYCLE_SEASONS:
             return True
     return False
 
@@ -225,3 +247,8 @@ def _matches_free_text_source(listing, profile: dict) -> bool:
 
 _matches_greenhouse = _matches_free_text_source
 _matches_ashby = _matches_free_text_source
+# Freehire's own postings often do state the term literally (Google's real
+# posting title was "Software Engineering Intern, BS, Summer 2027"), but its
+# aggregated sources are uneven — same free-text/bare-year fallback applies.
+_matches_freehire = _matches_free_text_source
+_matches_ai_jobs = _matches_free_text_source

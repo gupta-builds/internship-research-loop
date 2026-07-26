@@ -122,6 +122,28 @@
     "degrees": []
   },
   {
+    "_case": "should-match: Spring 2027 only, category Software (low-weight term, still matches)",
+    "source": "Simplify",
+    "category": "Software",
+    "company_name": "Anthropic",
+    "id": "b2b7f6d1-1e3a-4f8b-9c2d-6a5e7f8d9c1a",
+    "title": "Software Engineering Intern - Spring 2027",
+    "active": true,
+    "terms": [
+      "Spring 2027"
+    ],
+    "date_updated": 1776406681,
+    "date_posted": 1776406269,
+    "url": "https://simplify.jobs/p/spring-2027-example",
+    "locations": [
+      "San Francisco, CA"
+    ],
+    "company_url": "https://simplify.jobs/c/Anthropic",
+    "is_visible": true,
+    "sponsorship": "Other",
+    "degrees": []
+  },
+  {
     "_case": "should-reject: degrees PhD-only, no Bachelor's \u2014 real TikTok entry, otherwise matching",
     "source": "Simplify",
     "category": "AI/ML/Data",

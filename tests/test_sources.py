@@ -145,3 +145,37 @@ def test_fetch_ashby_skips_a_dead_company_board_without_crashing():
 
     listings = sources.fetch_ashby(http_get=flaky_get)
     assert listings == []
+
+
+# --- artificialintelligencejobs.co (real record, fetched 2026-07-25) ---
+
+def _ai_jobs_response(jobs):
+    resp = Mock(status_code=200)
+    resp.json.return_value = {"generated": "2026-07-25 08:19 UTC", "companies": 320, "count": len(jobs), "jobs": jobs}
+    return resp
+
+
+def test_fetch_ai_jobs_filters_to_intern_level_and_normalizes():
+    intern_job = {  # real, verbatim from the live feed 2026-07-25
+        "title": "Product Management Intern (Summer 2027)", "location": "San Francisco",
+        "url": "https://jobs.ashbyhq.com/databricks/some-real-posting-id", "posted": "2026-07-24",
+        "company": "Databricks", "companyUrl": "https://databricks.com", "category": "Product",
+        "level": "Intern", "remote": False, "region": "US", "slug": "databricks-product-management-intern-x1",
+    }
+    senior_job = {**intern_job, "level": "Senior", "title": "Senior Software Engineer, Database Engine Internals"}
+
+    def fake_get(url, timeout=None):
+        return _ai_jobs_response([intern_job, senior_job])
+
+    listings = sources.fetch_ai_jobs(http_get=fake_get)
+    assert len(listings) == 1
+    assert listings[0].source == "AIJobs"
+    assert listings[0].company == "Databricks"
+    assert listings[0].active is True
+
+
+def test_fetch_ai_jobs_propagates_no_crash_on_failure():
+    def dying_get(url, timeout=None):
+        raise requests.ConnectionError("simulated: site down")
+
+    assert sources.fetch_ai_jobs(http_get=dying_get) == []

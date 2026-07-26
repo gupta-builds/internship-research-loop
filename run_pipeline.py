@@ -26,8 +26,10 @@ from core.run_log import (
 from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
+from ingestion.freehire import fetch_freehire
 from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion
 from ingestion.sources import (
+    fetch_ai_jobs,
     fetch_ashby,
     fetch_greenhouse,
     fetch_josegael,
@@ -45,6 +47,8 @@ SOURCES = (
     ("zshah101", fetch_zshah101),
     ("Greenhouse", fetch_greenhouse),
     ("Ashby", fetch_ashby),
+    ("Freehire", fetch_freehire),
+    ("AIJobs", fetch_ai_jobs),
 )
 
 # 2026-07-25 decision: turning on 4 sources at once produced a one-time backlog

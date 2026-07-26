@@ -4,6 +4,7 @@ and (with http_get injected) by tests — no live network calls in the suite.
 import requests
 
 from ingestion.normalize import (
+    normalize_ai_jobs,
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
@@ -42,6 +43,8 @@ ASHBY_COMPANIES = {
     "ctgt": "CTGT",
     "pylon-labs": "Pylon",
 }
+
+AI_JOBS_URL = "https://artificialintelligencejobs.co/jobs.json"
 
 TIMEOUT = 30
 
@@ -111,3 +114,16 @@ def fetch_ashby(http_get=None) -> list:
             if job.get("employmentType") == "Intern":  # structured — use it, not title text
                 listings.append(normalize_ashby(job, company))
     return listings
+
+
+def fetch_ai_jobs(http_get=None) -> list:
+    # A single generated snapshot, not per-company — one fetch, degrade like
+    # the two big JSON feeds (empty on failure, never crash the run).
+    get = http_get or requests.get
+    try:
+        resp = get(AI_JOBS_URL, timeout=TIMEOUT)
+        resp.raise_for_status()
+        jobs = resp.json().get("jobs", [])
+    except requests.RequestException:
+        return []
+    return [normalize_ai_jobs(j) for j in jobs if j.get("level") == "Intern"]

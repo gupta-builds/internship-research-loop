@@ -38,7 +38,9 @@ def _zshah101_raw():
 
 
 def _fake_http_get(url, timeout=None):
+    from ingestion.freehire import FREEHIRE_SEARCH_URL
     from ingestion.sources import (
+        AI_JOBS_URL,
         ASHBY_JOBS_URL,
         GREENHOUSE_JOBS_URL,
         JOSEGAEL_URL,
@@ -59,6 +61,10 @@ def _fake_http_get(url, timeout=None):
     elif url.startswith(GREENHOUSE_JOBS_URL.split("{")[0]) or url.startswith(ASHBY_JOBS_URL.split("{")[0]):
         # per-company board endpoints — pipeline-orchestration tests don't need
         # real per-company data, that's covered in test_sources.py directly
+        resp.json.return_value = {"jobs": []}
+    elif url.startswith(FREEHIRE_SEARCH_URL.split("{")[0]):
+        resp.json.return_value = {"data": []}
+    elif url == AI_JOBS_URL:
         resp.json.return_value = {"jobs": []}
     else:
         raise AssertionError(f"unexpected url: {url}")

@@ -6,6 +6,7 @@ import pytest
 from core.filter import _matches_josegael, degrees_eligible, load_profile, location_eligible, matches
 from ingestion.normalize import (
     Listing,
+    normalize_ai_jobs,
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
@@ -287,3 +288,78 @@ def test_normalize_ashby_maps_fields():
     assert listing.active is True
     assert listing.raw_text == "Real description text."
     assert listing.raw_id == "abc-123"
+
+
+# --- Spring 2027 (low-weight wanted term, added 2026-07-26) ---
+
+def test_terms_weight_present_and_correct():
+    assert PROFILE["terms_weight"] == {
+        "Summer 2027": "high",
+        "Winter 2027": "high",
+        "Spring 2027": "low",
+    }
+
+
+def test_simplify_matches_spring_2027_only():
+    raw = next(r for r in _load("simplifyjobs.json") if r["_case"].startswith("should-match: Spring 2027 only"))
+    assert raw["terms"] == ["Spring 2027"]
+    assert matches(normalize_simplify(raw), PROFILE) is True
+
+
+def test_josegael_matches_year_qualified_spring_2027():
+    """Regression for the _has_wrong_cycle_season bug: a year-qualified season
+    ("Spring 2027") was being rejected on the bare season word alone, same as
+    it always has been for "Winter 2027" — the year makes it unambiguous and
+    it must reach the target_year check instead of being killed upfront."""
+    raw = next(r for r in _load("josegael.json") if r["id"] == "synthetic-spring-2027-example")
+    listing = normalize_josegael(raw)
+    assert listing.terms == ["Spring 2027"]
+    assert matches(listing, PROFILE) is True
+
+
+def test_josegael_bare_spring_still_rejects():
+    """Bare, year-less "Spring" stays ambiguous (could be excluded Spring 2026
+    or wanted Spring 2027) — same conservative treatment as bare "Winter"."""
+    raw = next(r for r in _load("josegael.json") if r["id"] == "partiful-campus-growth-manager-spring-2026")
+    assert _matches_josegael(normalize_josegael(raw), PROFILE) is False
+
+
+def test_vanshb03_bare_spring_still_rejects():
+    raw = next(r for r in _load("vanshb03.json") if r["_case"].startswith("should-reject-bare-spring"))
+    assert matches(normalize_vanshb03(raw), PROFILE) is False
+
+
+def test_zshah101_matches_spring_2027():
+    raw = next(r for r in _load("zshah101.json") if r["_case"] == "should-match-spring-2027-low-weight-term-software")
+    listing = normalize_zshah101(raw)
+    assert listing.terms == ["Spring 2027"]
+    assert matches(listing, PROFILE) is True
+
+
+def test_greenhouse_matches_spring_2027_literal_term():
+    listing = Listing(company="Acme", title="Software Engineering Intern - Spring 2027",
+                       url="https://job-boards.greenhouse.io/acme/jobs/3", source="Greenhouse",
+                       active=True, raw_text="")
+    assert matches(listing, PROFILE) is True
+
+
+def test_ashby_matches_spring_2027_literal_term():
+    listing = Listing(company="Centerfield", title="Software Engineer Intern",
+                       url="https://jobs.ashbyhq.com/centerfield/2", source="Ashby",
+                       active=True, raw_text="Join our team for Spring 2027.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_normalize_ai_jobs_maps_fields_and_matches_real_intern_record():
+    """Real record, fetched 2026-07-25: Databricks 'Product Management Intern
+    (Summer 2027)', level: Intern. AI Jobs API has no 'active' field — every
+    entry is a currently-listed snapshot, same reasoning as Greenhouse/Ashby."""
+    raw = {"title": "Product Management Intern (Summer 2027)", "location": "San Francisco",
+           "url": "https://jobs.ashbyhq.com/databricks/some-real-posting-id", "posted": "2026-07-24",
+           "company": "Databricks", "level": "Intern", "slug": "databricks-product-management-intern-x1"}
+    listing = normalize_ai_jobs(raw)
+    assert listing.company == "Databricks"
+    assert listing.locations == ["San Francisco"]
+    assert listing.active is True
+    assert listing.source == "AIJobs"
+    assert matches(listing, PROFILE) is True

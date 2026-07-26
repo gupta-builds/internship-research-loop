@@ -117,6 +117,28 @@
     "source": "Jose-Gael-Cruz-Lopez"
   },
   {
+    "_case": "should-match: season Spring 2027 (year-qualified, low-weight term), Junior in target_year \u2014 synthetic, exercises the year-qualified-season fix",
+    "id": "synthetic-spring-2027-example",
+    "company_name": "Example Research Co",
+    "title": "Applied Research Intern - Spring 2027",
+    "url": "https://example.com/careers/spring-2027-intern",
+    "locations": [
+      "Remote"
+    ],
+    "season": "Spring 2027",
+    "category": "Research",
+    "opportunity_type": "Internship",
+    "target_year": [
+      "Junior (3rd year)"
+    ],
+    "sponsorship": "Not Specified",
+    "active": true,
+    "is_visible": true,
+    "date_posted": 1774656000,
+    "date_updated": 1774656000,
+    "source": "Jose-Gael-Cruz-Lopez"
+  },
+  {
     "_case": "should-reject: season Summer 2026 hits exclude_terms \u2014 real WomenTech entry",
     "id": "c2d3e4f5-6a7b-8c9d-0e1f-a2b3c4d5e6f7",
     "company_name": "WomenTech Network",

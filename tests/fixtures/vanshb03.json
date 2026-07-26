@@ -64,6 +64,22 @@
     "season": "Summer"
   },
   {
+    "_case": "should-reject-bare-spring-still-ambiguous-even-though-spring-2027-is-now-wanted",
+    "date_updated": 1776726755,
+    "url": "https://job-boards.greenhouse.io/example/jobs/1",
+    "locations": ["Remote"],
+    "sponsorship": "Other",
+    "active": true,
+    "company_name": "Example Co",
+    "title": "Software Engineering Intern",
+    "source": "vanshb03",
+    "id": "synthetic-bare-spring-example",
+    "date_posted": 1776726755,
+    "company_url": "",
+    "is_visible": true,
+    "season": "Spring"
+  },
+  {
     "_case": "should-reject-inactive",
     "date_updated": 1779501473,
     "url": "https://abcfinancial.wd5.myworkdayjobs.com/abcfinancialservices/job/Dallas-TX/Software-Engineer---Intern_REQ-1246",

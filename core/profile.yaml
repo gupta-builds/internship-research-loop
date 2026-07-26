@@ -8,10 +8,33 @@ accept_unrestricted: true  # postings with no class-year field at all still matc
 # (three real listings co-tag ["Fall 2026", "Winter 2027"]). Postings don't
 # publish actual months in the feed, so the human screen of the fetched posting
 # content is still what confirms a genuine Dec-Jan window per posting.
-terms: ["Summer 2027", "Winter 2027"]
+terms: ["Summer 2027", "Winter 2027", "Spring 2027"]
+# Summer/Winter 2027 are equally top priority; Spring 2027 is wanted but
+# explicitly lower priority. This is a weight, not a second pass/fail gate —
+# Spring 2027 still matches like any other wanted term today. A later, separate
+# task consumes this for priority tagging; this one only makes it present and
+# readable downstream.
+terms_weight: {"Summer 2027": "high", "Winter 2027": "high", "Spring 2027": "low"}
 # Real category values observed on SimplifyJobs/Summer2026-Internships (dev/.github/scripts/listings.json),
 # not the generic names in the original transcript — confirmed by fetching live data 2026-07-16.
 categories: ["Software", "Software Engineering", "AI/ML/Data", "Data Science, AI & Machine Learning"]
+# Fellowship/research/mentorship-shaped entries were checked against live data
+# 2026-07-26 (SimplifyJobs, JGCL, zshah101 feeds + 5 Greenhouse/5 Ashby seeded
+# company boards): real examples exist (e.g. SimplifyJobs "Oracle Database
+# Research Intern" category=Software terms includes Winter/Spring 2027; JGCL
+# "CBAI Summer Research Fellowship in AI Safety '26" category=Research; JGCL
+# "Anthropic Fellows Program" category=Program; zshah101 "Research Intern -
+# School of Computer Science - LTI" (CMU) category=Software) — but every one
+# already matches under the existing rules: SimplifyJobs/zshah101 tag them
+# with a category already in categories/_ZSHAH101_CATEGORIES above, and JGCL's
+# matcher never gates on category at all. No fellowship/mentorship-shaped hits
+# turned up on the seeded Greenhouse/Ashby boards, and those two sources are
+# free-text term matching with no category gate to begin with. No matching
+# code needed — nothing here to extend yet.
+#
+# Pay is never a filter criterion anywhere in this pipeline — confirmed
+# 2026-07-26 by grepping core/filter.py for any pay/pay_per_week gate; none
+# exists. Don't add one; compensation is out of scope for Layer 2 eligibility.
 # Rejects a SimplifyJobs listing outright if any of these terms are present, even
 # alongside an allowed term (multi-term/rotational postings spanning both cycles).
 exclude_terms: ["Summer 2026", "Fall 2026", "Spring 2026"]

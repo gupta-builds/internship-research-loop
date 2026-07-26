@@ -17,13 +17,38 @@ from pathlib import Path
 
 from core.git_ops import GitPushError, commit_and_push_with_retry
 from core.run_log import append_run_log
-from ingestion.sources import fetch_josegael, fetch_simplify
+from ingestion.sources import (
+    fetch_ai_jobs,
+    fetch_ashby,
+    fetch_greenhouse,
+    fetch_josegael,
+    fetch_simplify,
+    fetch_vanshb03,
+    fetch_zshah101,
+)
 from run_pipeline import file_github_issue
 from vault_writer.writer import scan_dossiers
 
+# 2026-07-25: was still SimplifyJobs/JGCL only after the 4-source batch shipped
+# earlier the same day — dossiers from vanshb03/zshah101/Greenhouse/Ashby were
+# silently never rechecked. Greenhouse/Ashby/AIJobs never expose an
+# active:false flag (their public APIs only ever return currently-open jobs),
+# so for those three "absent from feed" is the only closure signal there is —
+# which is exactly the existing absent-from-feed branch below, no
+# special-casing needed. Freehire is deliberately NOT here: checked live,
+# its own closed_at field lags real closures by days (see
+# ingestion/freehire.py's docstring) and the posting stays present in a
+# fresh company-scoped query even after it's actually closed — "absent from
+# feed" wouldn't be a real signal for it, so adding it would be false
+# confidence, not real coverage.
 FEEDS = {
     "SimplifyJobs": fetch_simplify,
     "Jose-Gael-Cruz-Lopez": fetch_josegael,
+    "vanshb03": fetch_vanshb03,
+    "zshah101": fetch_zshah101,
+    "Greenhouse": fetch_greenhouse,
+    "Ashby": fetch_ashby,
+    "AIJobs": fetch_ai_jobs,
 }
 RECHECKS_LOG = Path(__file__).parent / "logs" / "rechecks.jsonl"
 ISSUE_REPO = "gupta-builds/internship-research-loop"

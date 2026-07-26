@@ -80,6 +80,27 @@
     "url": "https://www.amazon.jobs/en/jobs/10418355/2027-software-dev-engineer-intern"
   },
   {
+    "_case": "should-match-spring-2027-low-weight-term-software",
+    "category": "Software",
+    "company": "Example Co",
+    "company_slug": "example-co",
+    "enriched_at": "2026-07-16T07:39:11Z",
+    "first_seen_at": "2026-07-16T07:39:11Z",
+    "id": "synthetic:example-co:spring-2027",
+    "is_open": true,
+    "last_seen_at": "2026-07-25T13:58:53Z",
+    "location": "Remote",
+    "posted_at": "2026-06-09T21:39:58+00:00",
+    "salary": null,
+    "season": "Spring 2027",
+    "season_inferred": false,
+    "skills": ["Python"],
+    "source": "greenhouse",
+    "sponsorship": "unknown",
+    "title": "Software Engineering Intern",
+    "url": "https://job-boards.greenhouse.io/example-co/jobs/1"
+  },
+  {
     "_case": "should-reject-wrong-category-hardware",
     "category": "Hardware",
     "company": "Fluxergy",

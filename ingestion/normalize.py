@@ -152,3 +152,44 @@ def normalize_ashby(raw: dict, company: str) -> Listing:
         raw_id=raw["id"],
         raw_text=raw.get("descriptionPlain", ""),
     )
+
+
+def normalize_freehire(raw: dict, company: str) -> Listing:
+    # Role-type triage (enrichment.seniority == "intern") happens in
+    # fetch_freehire, before this is ever called. `location` is a single
+    # "city, state, country; city2, ..." string, split into a list for
+    # location_eligible(). active=True unconditionally — see the module
+    # docstring in ingestion/freehire.py for why closed_at isn't trustworthy.
+    # The tracking query string freehire appends isn't part of the real URL.
+    loc = raw.get("location", "")
+    locations = [part.strip() for part in loc.split(";") if part.strip()]
+    return Listing(
+        company=company,
+        title=raw["title"],
+        url=raw["url"].split("?")[0],
+        source="Freehire",
+        locations=locations,
+        active=True,
+        date_posted=_parse_iso_ts(raw.get("posted_at", "")),
+        raw_id=raw["public_slug"],
+        raw_text=f"{raw.get('description', '')} {(raw.get('enrichment') or {}).get('summary', '')}".strip(),
+    )
+
+
+def normalize_ai_jobs(raw: dict) -> Listing:
+    # Role-type triage (level == "Intern") happens in fetch_ai_jobs. This
+    # feed is a fresh-generated snapshot of currently-listed jobs (like
+    # Greenhouse/Ashby) — active=True unconditionally, absence from a later
+    # fetch is the real closure signal, which is why (unlike freehire) this
+    # source is safe to add to recheck.py's FEEDS.
+    loc = raw.get("location", "")
+    return Listing(
+        company=raw.get("company", ""),
+        title=raw["title"],
+        url=raw["url"],
+        source="AIJobs",
+        locations=[loc] if loc else [],
+        active=True,
+        date_posted=_parse_iso_ts(raw.get("posted", "")),
+        raw_id=raw.get("slug") or raw["url"],
+    )
