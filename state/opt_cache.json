@@ -1,4 +1,39 @@
 {
+  "AIJobs:anduril-industries-2027-electrical-engineer-intern-610c502b": {
+    "checked": "2026-07-26",
+    "signal": "U.S. Person status is required",
+    "verdict": "excluded"
+  },
+  "AIJobs:anduril-industries-2027-manufacturing-engineer-intern-5e5cb78d": {
+    "checked": "2026-07-26",
+    "signal": "U.S. Person status is required",
+    "verdict": "excluded"
+  },
+  "AIJobs:anduril-industries-2027-mechanical-engineer-intern-8420b9bc": {
+    "checked": "2026-07-26",
+    "signal": "U.S. Person status is required",
+    "verdict": "excluded"
+  },
+  "AIJobs:anduril-industries-2027-software-engineer-intern-f05175a1": {
+    "checked": "2026-07-26",
+    "signal": "U.S. Person status is required",
+    "verdict": "excluded"
+  },
+  "AIJobs:databricks-product-management-intern-summer-2027-9d67545b": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Freehire:software-engineering-intern-bs-summer-2027-google-iyvtwjtd": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Freehire:software-engineering-intern-ms-summer-2027-google-yaielorf": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:4677152006": {
     "checked": "2026-07-25",
     "signal": null,
