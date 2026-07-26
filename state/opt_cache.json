@@ -504,6 +504,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:imc:4823924101": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:imc:4907430101": {
     "checked": "2026-07-26",
     "signal": null,
@@ -641,6 +646,11 @@
   },
   "zshah101:workday:moog:/job/Buffalo-NY/Intern--Software-Engineering_R-26-18885-1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:nelnet:/job/Lincoln-NE/Intern---AI-Engineer_R22763": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
