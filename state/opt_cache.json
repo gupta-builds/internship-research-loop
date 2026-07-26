@@ -294,6 +294,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:41ca28b6-8ea0-426d-913d-f69aa73ddc0c": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:520c760c-986a-4f06-9aba-4d2b3a17537c": {
     "checked": "2026-07-25",
     "signal": null,
@@ -496,6 +501,11 @@
   },
   "zshah101:greenhouse:fiveringsllc:5349707008": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:imc:4907430101": {
+    "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
   },
