@@ -564,6 +564,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:lever:palantir:d5486403-c050-4920-b2e0-91b69b61ebb2": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:lever:xsolla:1c0e5375-2352-4a2c-a816-48ddebbdd3d6": {
     "checked": "2026-07-26",
     "signal": null,
@@ -650,6 +655,11 @@
     "verdict": "eligible"
   },
   "zshah101:workday:nelnet:/job/Lincoln-NE/Intern---AI-Engineer_R22763": {
+    "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:sonyglobal:/job/Remote---New-York/Research-Intern-on-Generative-and-Protective-AI-for-Content-Creation_JR-119335": {
     "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
