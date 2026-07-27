@@ -459,6 +459,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:ashby:veeda-labs:58cc42fb-1d6f-4e5f-860d-3b97bdccc6f4": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:breezy:vetsez:d18961a7a7e701": {
     "checked": "2026-07-26",
     "signal": null,
@@ -526,6 +531,11 @@
   },
   "zshah101:greenhouse:jumptrading:8052351": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:lilasciences:4289387009": {
+    "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
   },
