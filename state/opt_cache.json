@@ -259,6 +259,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:14d2f761-5544-4430-96fd-760ab3b53b2a": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:1a10ea70-7d94-49ca-9c63-d6cd5dcdfdb1": {
     "checked": "2026-07-25",
     "signal": null,
@@ -385,6 +390,11 @@
     "verdict": "eligible"
   },
   "vanshb03:a2f1a704-2ce0-4f89-abbb-6a783383b1fa": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:a93073fb-1339-47c5-a060-7218eef4e39b": {
     "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
@@ -521,6 +531,11 @@
   },
   "zshah101:greenhouse:akunacapital:8018893": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:axontalentcommunity:7800617003": {
+    "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
   },
