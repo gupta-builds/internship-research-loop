@@ -269,6 +269,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:28be5b3d-d4a6-4a6f-8f9a-66e5f8e93a62": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:2cfe2e3b-2886-49fe-8dcb-868f6cf20150": {
     "checked": "2026-07-26",
     "signal": null,
@@ -349,6 +354,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:96cc5998-c8cc-40eb-a815-7ae9739af769": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:9d6696b7-37a8-4591-bd0c-3188d7029a5c": {
     "checked": "2026-07-25",
     "signal": null,
@@ -369,6 +379,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:a2f1a704-2ce0-4f89-abbb-6a783383b1fa": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:aa8011b9-bdde-4fba-8065-71030aac9442": {
     "checked": "2026-07-25",
     "signal": null,
@@ -376,6 +391,11 @@
   },
   "vanshb03:ae5d4514-76f7-486a-ad52-56fe3ef69bda": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:b0944d26-53d0-412d-a5f5-146e82e3e29d": {
+    "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
   },
@@ -391,6 +411,11 @@
   },
   "vanshb03:bc3f3e20-e320-44eb-8cc0-534519cb91c5": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:bed160fc-23f7-474e-8720-7a84be2521a9": {
+    "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
   },
@@ -551,6 +576,21 @@
   },
   "zshah101:greenhouse:thetradedesk:5187605007": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:toshibaglobalcommercesolutions:5177892007": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:toshibaglobalcommercesolutions:5190937007": {
+    "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:toshibaglobalcommercesolutions:5192820007": {
+    "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
   },
