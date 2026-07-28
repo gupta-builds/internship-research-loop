@@ -109,6 +109,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8624408002": {
+    "checked": "2026-07-28",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8624410002": {
     "checked": "2026-07-25",
     "signal": null,
@@ -434,6 +439,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:bb65ddcd-a17c-4ccf-bb76-47ed7a6ab47d": {
+    "checked": "2026-07-28",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:bc3f3e20-e320-44eb-8cc0-534519cb91c5": {
     "checked": "2026-07-25",
     "signal": null,
@@ -486,6 +496,11 @@
   },
   "vanshb03:ecbe71bf-241c-4edb-8608-d6c6b48a1c6f": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:f42289fe-0636-475a-9d10-f5a733f1ffa6": {
+    "checked": "2026-07-28",
     "signal": null,
     "verdict": "eligible"
   },
