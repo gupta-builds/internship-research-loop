@@ -7,3 +7,4 @@
 {"timestamp": "2026-07-25T08:32:27.387380+00:00", "type": "recheck", "scanned": 29, "removals": [{"uid": "SimplifyJobs:f09f0a56-4999-4d19-afb4-894ea819d401", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-07-26T08:59:09.304449+00:00", "type": "recheck", "scanned": 120, "removals": [], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-07-27T10:27:49.227897+00:00", "type": "recheck", "scanned": 119, "removals": [], "errors": [], "halted": false, "halt_reason": null}
+{"timestamp": "2026-07-28T09:19:23.443174+00:00", "type": "recheck", "scanned": 127, "removals": [{"uid": "zshah101:breezy:vetsez:d18961a7a7e701", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
