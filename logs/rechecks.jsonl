@@ -8,3 +8,4 @@
 {"timestamp": "2026-07-26T08:59:09.304449+00:00", "type": "recheck", "scanned": 120, "removals": [], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-07-27T10:27:49.227897+00:00", "type": "recheck", "scanned": 119, "removals": [], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-07-28T09:19:23.443174+00:00", "type": "recheck", "scanned": 127, "removals": [{"uid": "zshah101:breezy:vetsez:d18961a7a7e701", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
+{"timestamp": "2026-07-29T09:23:40.855392+00:00", "type": "recheck", "scanned": 132, "removals": [{"uid": "zshah101:workday:intel:/job/US-Oregon-Hillsboro/AI-Applied-intern_JR0285916", "reason": "active: false upstream"}, {"uid": "vanshb03:14d2f761-5544-4430-96fd-760ab3b53b2a", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
