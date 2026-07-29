@@ -254,6 +254,11 @@
     "signal": "U.S. citizenship is required",
     "verdict": "excluded"
   },
+  "SimplifyJobs:d8419553-b116-44e9-8ec0-d1ae843c6512": {
+    "checked": "2026-07-29",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:e01898a9-7ee0-4abc-a2e4-d7973c542041": {
     "checked": "2026-07-22",
     "signal": null,
@@ -268,6 +273,11 @@
     "checked": "2026-07-20",
     "signal": null,
     "verdict": "eligible"
+  },
+  "SimplifyJobs:f28ce710-20a1-4d92-ad55-c5af195bebef": {
+    "checked": "2026-07-29",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
   },
   "SimplifyJobs:f427df1b-b7a2-492a-b64b-dae0ff625bd1": {
     "checked": "2026-07-27",
