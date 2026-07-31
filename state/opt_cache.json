@@ -144,6 +144,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8657286002": {
+    "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8657500002": {
     "checked": "2026-07-29",
     "signal": null,
@@ -206,6 +211,11 @@
   },
   "SimplifyJobs:53663e4c-42be-4d2a-ba0f-ac7a0d65da22": {
     "checked": "2026-07-24",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:56196707-1bc1-44de-9e0e-a32456792771": {
+    "checked": "2026-07-31",
     "signal": null,
     "verdict": "eligible"
   },
