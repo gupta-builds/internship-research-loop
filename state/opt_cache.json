@@ -319,6 +319,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:01c1fcb9-0733-4c21-b3ce-0e4909dd74f9": {
+    "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:03443f37-7b10-4753-8828-2d9bcc2e4f2d": {
     "checked": "2026-07-26",
     "signal": null,
@@ -361,6 +366,11 @@
   },
   "vanshb03:1f0c7094-1b59-4cda-95f2-40e11db9cd23": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:223b1712-5b79-4420-a01d-6a07a469fc24": {
+    "checked": "2026-07-31",
     "signal": null,
     "verdict": "eligible"
   },
@@ -409,6 +419,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:4efac7e3-5a9e-4ed2-82fa-f31b5a5f12c4": {
+    "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:520c760c-986a-4f06-9aba-4d2b3a17537c": {
     "checked": "2026-07-25",
     "signal": null,
@@ -444,6 +459,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:7931a6e2-7388-4f0e-914e-20116556dcda": {
+    "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:7c6cb84c-1fcc-4634-b671-50e75e7dbcac": {
     "checked": "2026-07-26",
     "signal": null,
@@ -461,6 +481,11 @@
   },
   "vanshb03:96cc5998-c8cc-40eb-a815-7ae9739af769": {
     "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:97bcc94a-7aeb-4470-ad6a-ba58dfa438cf": {
+    "checked": "2026-07-31",
     "signal": null,
     "verdict": "eligible"
   },
@@ -579,6 +604,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:f09ce418-abc9-4aa1-aa21-9436909f9bc6": {
+    "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:f42289fe-0636-475a-9d10-f5a733f1ffa6": {
     "checked": "2026-07-28",
     "signal": null,
@@ -596,6 +626,11 @@
   },
   "zshah101:ashby:deepgram:dc8693b5-72ce-4ca3-ab15-9c8434d35da1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:ashby:melius:b61f063a-4f94-4e50-a4ef-05aaab552280": {
+    "checked": "2026-07-31",
     "signal": null,
     "verdict": "eligible"
   },
@@ -721,6 +756,11 @@
   },
   "zshah101:greenhouse:virtu:8624410002": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:virtu:8657500002": {
+    "checked": "2026-07-31",
     "signal": null,
     "verdict": "eligible"
   },
