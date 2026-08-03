@@ -484,6 +484,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:426e67f2-8dc0-42ed-b8ad-b7301cb10c4e": {
+    "checked": "2026-08-03",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:4b39cb32-9528-407a-a747-cd099b419e7f": {
     "checked": "2026-07-30",
     "signal": null,
@@ -531,6 +536,11 @@
   },
   "vanshb03:73edeb34-2b12-4989-b4de-50fc553978f8": {
     "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:75da2eba-bcac-49bf-940d-15df6c18051e": {
+    "checked": "2026-08-03",
     "signal": null,
     "verdict": "eligible"
   },
