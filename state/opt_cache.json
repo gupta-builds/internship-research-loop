@@ -169,6 +169,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8682750002": {
+    "checked": "2026-08-05",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:01925f31-564d-4bc0-94fc-2a2717d3132d": {
     "checked": "2026-07-20",
     "signal": null,
@@ -359,6 +364,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:bdefa1b8-76a9-4d2c-8b53-192783c6edd7": {
+    "checked": "2026-08-05",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:c3d4ae08-ce75-4327-94cf-38da2d5cbae0": {
     "checked": "2026-07-30",
     "signal": "U.S. citizenship is required",
@@ -381,6 +391,11 @@
   },
   "SimplifyJobs:e3601b6a-4638-441c-9854-c14ef8a978d7": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:ea40b09a-1b9a-48b0-8330-24a499d63fe8": {
+    "checked": "2026-08-05",
     "signal": null,
     "verdict": "eligible"
   },
