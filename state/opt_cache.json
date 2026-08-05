@@ -529,6 +529,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:625df226-811a-4661-b7bf-a46c30f74b14": {
+    "checked": "2026-08-05",
+    "signal": "Export Control compliance requirements, therefore a \u201cUS Person\u201d as defined by 22 C.F.R. \u00a7 120.15 is required. \u201cUS Person",
+    "verdict": "excluded"
+  },
   "vanshb03:62ec68a4-2c66-4687-b3ba-018b1caa6437": {
     "checked": "2026-07-25",
     "signal": null,
