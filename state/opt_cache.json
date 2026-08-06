@@ -474,6 +474,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:050d8f29-405d-4cc1-90fc-e22d1fe78151": {
+    "checked": "2026-08-06",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:061fb553-36e2-4a40-996e-8145094c1880": {
     "checked": "2026-07-25",
     "signal": null,
@@ -554,6 +559,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:41aedd07-28e8-4be6-a6ad-0ffb8a16d770": {
+    "checked": "2026-08-06",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:41ca28b6-8ea0-426d-913d-f69aa73ddc0c": {
     "checked": "2026-07-26",
     "signal": null,
@@ -561,6 +571,11 @@
   },
   "vanshb03:426e67f2-8dc0-42ed-b8ad-b7301cb10c4e": {
     "checked": "2026-08-03",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:4288f0c5-7ad1-4c64-a0ee-d87d8a1f93e2": {
+    "checked": "2026-08-06",
     "signal": null,
     "verdict": "eligible"
   },
@@ -749,6 +764,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:d9c62743-b0d5-4a65-9696-3d4f8600d21d": {
+    "checked": "2026-08-06",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:da4804e5-799e-4dad-9c6f-b29d6ab45cc2": {
     "checked": "2026-07-25",
     "signal": null,
@@ -771,6 +791,11 @@
   },
   "vanshb03:ecbe71bf-241c-4edb-8608-d6c6b48a1c6f": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:eeb1da07-cb17-4419-8406-da3eaf5ee961": {
+    "checked": "2026-08-06",
     "signal": null,
     "verdict": "eligible"
   },
