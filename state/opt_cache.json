@@ -244,6 +244,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:34fa4813-bc92-4deb-8987-cf33bc625246": {
+    "checked": "2026-08-06",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:41018f36-15af-46ed-8719-1fb8d0abe78e": {
     "checked": "2026-07-22",
     "signal": null,
@@ -296,6 +301,11 @@
   },
   "SimplifyJobs:6bb2553b-f9bc-4c0b-ae90-ae4d6dabeeee": {
     "checked": "2026-08-02",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:6c1e882c-ab83-4d33-81c7-770ca19e76e1": {
+    "checked": "2026-08-06",
     "signal": null,
     "verdict": "eligible"
   },
@@ -368,6 +378,11 @@
     "checked": "2026-08-03",
     "signal": null,
     "verdict": "eligible"
+  },
+  "SimplifyJobs:a9d682ef-59ba-42c1-9fad-28a7afc1aea4": {
+    "checked": "2026-08-06",
+    "signal": "U.S. Citizenship is required",
+    "verdict": "excluded"
   },
   "SimplifyJobs:aedd360d-23ce-4970-aa0b-45302887e26f": {
     "checked": "2026-08-03",
