@@ -24,6 +24,71 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "AIJobs:varda-space-industries-applications-engineering-internship-spring-2027-15e3ab35": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-avionics-engineering-internship-spring-2027-0fadcc9a": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-biologics-formulation-research-internship-sprin-53cec800": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-cybersecurity-internship-spring-2027-0468e4c2": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-flight-software-internship-spring-2027-7a5509fa": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-guidance-navigation-controls-gnc-internship-spr-4271715b": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-manufacturing-engineering-internship-spring-202-3693cbcd": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-mechanisms-payload-internship-spring-2027-6aa6988c": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-propulsion-engineering-internship-spring-2027-4069d61b": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-site-reliability-internship-spring-2027-0d5d41be": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-structures-engineering-internship-spring-2027-6fecc282": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-supply-chain-internship-spring-2027-823da627": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-vehicle-integration-test-internship-spring-2027-786a1a80": {
+    "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
   "Freehire:software-engineering-intern-bs-summer-2027-google-iyvtwjtd": {
     "checked": "2026-07-26",
     "signal": null,
@@ -911,6 +976,11 @@
   },
   "zshah101:greenhouse:botauto:5289440008": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:cssmerge:8687896002": {
+    "checked": "2026-08-07",
     "signal": null,
     "verdict": "eligible"
   },
