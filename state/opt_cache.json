@@ -474,6 +474,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:912eecfa-63a9-49e1-8eaf-4ee42653061e": {
+    "checked": "2026-08-10",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:96f057ba-4984-4466-ad7a-4e8f75d1ddf9": {
     "checked": "2026-07-27",
     "signal": "U.S. citizenship is required",
@@ -1241,6 +1246,11 @@
   },
   "zshah101:workday:hp:/job/San-Francisco-California-United-States-of-America/Software-Engineering-Intern--Device-Experiences_3164166-1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:ing:/job/New-York/Summer-2027-Internship---Tech--Infrastructure-_REQ-10119621": {
+    "checked": "2026-08-10",
     "signal": null,
     "verdict": "eligible"
   },
