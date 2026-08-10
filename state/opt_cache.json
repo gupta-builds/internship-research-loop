@@ -1184,6 +1184,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:oracle:fa-esgu-saasfaprod1.fa.ocs.oraclecloud.com:23339": {
+    "checked": "2026-08-10",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:oracle:fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com:36722": {
     "checked": "2026-07-27",
     "signal": null,
