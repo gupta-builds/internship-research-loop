@@ -394,6 +394,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:52462af1-1206-44dd-b198-4abe760812d3": {
+    "checked": "2026-08-11",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:53663e4c-42be-4d2a-ba0f-ac7a0d65da22": {
     "checked": "2026-07-24",
     "signal": null,
