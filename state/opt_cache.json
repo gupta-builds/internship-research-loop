@@ -304,6 +304,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:15b4ef61-9a66-40f9-b13e-594b7470650f": {
+    "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:1a9582e0-2525-494c-8737-53db648f37cb": {
     "checked": "2026-08-07",
     "signal": null,
@@ -374,6 +379,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:4165516a-c0f2-4f44-a98a-ad4501fb11ad": {
+    "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:43929c26-d19b-4057-9543-bf087c4bbf62": {
     "checked": "2026-08-01",
     "signal": null,
@@ -398,6 +408,11 @@
     "checked": "2026-08-11",
     "signal": null,
     "verdict": "eligible"
+  },
+  "SimplifyJobs:4928dfb2-7a20-4da6-8405-a591089e515c": {
+    "checked": "2026-08-11",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
   },
   "SimplifyJobs:4de1af82-e491-4ce1-8a1f-4fdc1c58dcc9": {
     "checked": "2026-08-10",
@@ -816,6 +831,11 @@
   },
   "SimplifyJobs:f57a89f7-f1c7-44ac-826b-23f1d9a409cf": {
     "checked": "2026-08-10",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:f683599d-0ac1-4900-8528-722d0bcfb4c4": {
+    "checked": "2026-08-11",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1456,6 +1476,11 @@
   },
   "zshah101:workday:hp:/job/San-Francisco-California-United-States-of-America/Software-Engineering-Intern--Device-Experiences_3164166-1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:hp:/job/Spring-Texas-United-States-of-America/Enterprise-Operations-Software-Internship_3167271-2": {
+    "checked": "2026-08-11",
     "signal": null,
     "verdict": "eligible"
   },
