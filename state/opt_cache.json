@@ -384,6 +384,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:3bb608c1-4704-4fe1-a877-eaf540f90cc1": {
+    "checked": "2026-08-13",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:41018f36-15af-46ed-8719-1fb8d0abe78e": {
     "checked": "2026-07-22",
     "signal": null,
@@ -474,6 +479,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:58719875-03a5-4934-aa9f-46c5b044cc97": {
+    "checked": "2026-08-13",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:593ee6f1-3e6c-4136-8182-829091448ed2": {
     "checked": "2026-08-11",
     "signal": null,
@@ -481,6 +491,11 @@
   },
   "SimplifyJobs:5acb5ba5-b61d-4432-922b-9dea91c7815d": {
     "checked": "2026-08-10",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:5cbd2b0f-806d-42d0-91fe-637455fe40c0": {
+    "checked": "2026-08-13",
     "signal": null,
     "verdict": "eligible"
   },
@@ -811,6 +826,11 @@
   },
   "SimplifyJobs:e01898a9-7ee0-4abc-a2e4-d7973c542041": {
     "checked": "2026-07-22",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:e0791588-2fd5-4867-8c40-2b4af827a16d": {
+    "checked": "2026-08-13",
     "signal": null,
     "verdict": "eligible"
   },
