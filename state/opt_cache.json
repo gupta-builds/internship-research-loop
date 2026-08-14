@@ -89,6 +89,11 @@
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
     "verdict": "excluded"
   },
+  "AIJobs:zipline-community-engagement-intern-spring-2027-042f167d": {
+    "checked": "2026-08-14",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:zipline-strategic-engagements-events-intern-spring-2027-965ffa04": {
     "checked": "2026-08-12",
     "signal": null,
@@ -271,6 +276,11 @@
   },
   "SimplifyJobs:08dcec1c-e97a-4c39-978e-cd2dede8bb31": {
     "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:093ca891-a330-4763-aeb5-b6195cb0df79": {
+    "checked": "2026-08-14",
     "signal": null,
     "verdict": "eligible"
   },
