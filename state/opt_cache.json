@@ -429,6 +429,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:44a036f1-8b46-4596-939b-e10b3f0e8761": {
+    "checked": "2026-08-15",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:45df96a1-aefa-4c09-ae4c-5c32680da300": {
     "checked": "2026-08-13",
     "signal": "U.S. citizenship is required",
@@ -639,6 +644,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:80991915-38ed-48d7-b67d-20f3f7a7b84c": {
+    "checked": "2026-08-15",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:810c0d4f-1b94-4649-bec6-20b46e134782": {
     "checked": "2026-08-10",
     "signal": null,
@@ -698,6 +708,11 @@
     "checked": "2026-07-27",
     "signal": null,
     "verdict": "eligible"
+  },
+  "SimplifyJobs:8fea2128-ad21-47ad-b431-eb973db4321e": {
+    "checked": "2026-08-15",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
   },
   "SimplifyJobs:911caa98-2914-42a0-82e3-458130b9de36": {
     "checked": "2026-07-23",
@@ -849,6 +864,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:c61b3999-cfc9-4184-8e3e-3a21a00ebcef": {
+    "checked": "2026-08-15",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:ca012a00-87e1-40b7-ac6f-1464ce5ad2f1": {
     "checked": "2026-08-06",
     "signal": null,
@@ -949,8 +969,18 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:ee8a3af2-214e-482e-9a90-3dd327c6bdf1": {
+    "checked": "2026-08-15",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:f09f0a56-4999-4d19-afb4-894ea819d401": {
     "checked": "2026-07-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:f271bfa3-e723-416b-aad4-0a6cf6f4f19e": {
+    "checked": "2026-08-15",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1446,6 +1476,11 @@
   },
   "zshah101:greenhouse:fiveringsllc:5349707008": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:greenhouse:freeformfuturecorp:7872198003": {
+    "checked": "2026-08-15",
     "signal": null,
     "verdict": "eligible"
   },
