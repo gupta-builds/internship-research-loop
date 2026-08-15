@@ -19,6 +19,36 @@
     "signal": "U.S. Person status is required",
     "verdict": "excluded"
   },
+  "AIJobs:astranis-cad-engineer-librarian-intern-spring-2027-3ad76477": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
+  "AIJobs:astranis-cad-engineer-librarian-intern-summer-2027-02660512": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
+  "AIJobs:astranis-cad-engineer-librarian-intern-winter-2027-3b41cce6": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
+  "AIJobs:astranis-mechanical-engineer-intern-spring-2027-14dab9d0": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
+  "AIJobs:astranis-mechanical-engineer-intern-summer-2027-60946046": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
+  "AIJobs:astranis-mechanical-engineer-intern-winter-2027-2113f06f": {
+    "checked": "2026-08-15",
+    "signal": "must be a U.S. citizen",
+    "verdict": "excluded"
+  },
   "AIJobs:databricks-product-management-intern-summer-2027-9d67545b": {
     "checked": "2026-07-26",
     "signal": null,
