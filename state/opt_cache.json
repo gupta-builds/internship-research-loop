@@ -1679,7 +1679,17 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26010970": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011082": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011084": {
     "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
@@ -1689,7 +1699,32 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011698": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011745": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011796": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011987": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011991": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011999": {
     "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
@@ -1756,6 +1791,16 @@
   },
   "zshah101:workday:cmu:/job/Pittsburgh-PA/Research-Intern---School-of-Computer-Science---LTI_2024870": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:conagrabrands:/job/Omaha-Nebraska/IT-Infrastructure-Internship---Summer-2027_Req-039788": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:conagrabrands:/job/Omaha-Nebraska/Software-Development-Internship---Summer-2027_Req-039787": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
