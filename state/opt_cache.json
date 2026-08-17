@@ -509,6 +509,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:47fe2157-ddd3-4233-87d7-cf96058a286d": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:48614093-9c24-4b18-92b5-a3b6f4e55c36": {
     "checked": "2026-08-11",
     "signal": null,
@@ -656,6 +661,11 @@
   },
   "SimplifyJobs:73c1ef4b-88b7-4b1c-b439-231e8bb950fd": {
     "checked": "2026-08-10",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:7838c307-daa5-4e75-b8c2-7218ab2354cb": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
@@ -918,6 +928,11 @@
     "checked": "2026-08-07",
     "signal": "export controls (including DOE 10 CFR Part 810 and NRC requirements). U.S. Person",
     "verdict": "excluded"
+  },
+  "SimplifyJobs:bff3221b-d0ea-4c07-9c51-4ba9501e3a5c": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
   },
   "SimplifyJobs:c101d2aa-a5df-4f4b-b719-e88358c1f874": {
     "checked": "2026-08-17",
