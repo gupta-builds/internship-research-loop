@@ -214,6 +214,16 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "Greenhouse:8488699002": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8488701002": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Greenhouse:8489186002": {
     "checked": "2026-07-29",
     "signal": null,
@@ -281,6 +291,16 @@
   },
   "Greenhouse:8682750002": {
     "checked": "2026-08-05",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8713409002": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Greenhouse:8713775002": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
