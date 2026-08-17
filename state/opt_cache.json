@@ -324,6 +324,16 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:04bfd73d-5fde-4957-ac3d-fe42504abc58": {
+    "checked": "2026-08-17",
+    "signal": "export-controlled information. Therefore, employment will be contingent upon the ability to prove that you meet the status of a U.S. Person",
+    "verdict": "excluded"
+  },
+  "SimplifyJobs:057837b7-3fc8-4359-a8b2-1a63802d4a6e": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:0828ba46-8539-4401-9c81-3c38584a5690": {
     "checked": "2026-07-21",
     "signal": null,
@@ -659,6 +669,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:72d3b16a-abca-4801-ba46-ede79443dc62": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:73c1ef4b-88b7-4b1c-b439-231e8bb950fd": {
     "checked": "2026-08-10",
     "signal": null,
@@ -676,6 +691,11 @@
   },
   "SimplifyJobs:7b0e7a72-a5b1-4bc3-b011-3eecb0cf3b6b": {
     "checked": "2026-08-14",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:7b295350-3015-456a-8a5a-c1c0bc02557c": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
@@ -819,6 +839,11 @@
     "signal": "U.S. citizenship is required",
     "verdict": "excluded"
   },
+  "SimplifyJobs:99180876-aa59-4945-8c98-69851d3d4fe5": {
+    "checked": "2026-08-17",
+    "signal": "export-controlled information. Therefore, employment will be contingent upon the ability to prove that you meet the status of a U.S. Person",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:9bf4727a-804d-4ee8-8c44-0eeec2960987": {
     "checked": "2026-08-04",
     "signal": "must be a U.S. citizen",
@@ -828,6 +853,11 @@
     "checked": "2026-08-07",
     "signal": "US Citizenship Required",
     "verdict": "excluded"
+  },
+  "SimplifyJobs:9d9a6729-76a5-4fb4-b71f-ea04e053c877": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
   },
   "SimplifyJobs:9dc9b18a-d84c-47ee-889e-0a73856a35d4": {
     "checked": "2026-08-05",
@@ -919,6 +949,11 @@
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
     "verdict": "excluded"
   },
+  "SimplifyJobs:bc4a9aef-6e3a-4f04-b875-8a018e3091a3": {
+    "checked": "2026-08-17",
+    "signal": "export-controlled information. Therefore, employment will be contingent upon the ability to prove that you meet the status of a U.S. Person",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:bdefa1b8-76a9-4d2c-8b53-192783c6edd7": {
     "checked": "2026-08-05",
     "signal": null,
@@ -949,6 +984,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:c5e3ece8-669f-4ff8-9bb7-45dba1374d0f": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:c61b3999-cfc9-4184-8e3e-3a21a00ebcef": {
     "checked": "2026-08-15",
     "signal": null,
@@ -966,6 +1006,11 @@
   },
   "SimplifyJobs:cd083629-4e4e-44cb-bb63-7fdd44841b74": {
     "checked": "2026-08-07",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:cee3ea0e-1799-447b-a1c6-f6e69f1c5202": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1054,6 +1099,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:edbfe6a0-64b5-4ceb-8e7f-1ba82a46bfa4": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:ee8a3af2-214e-482e-9a90-3dd327c6bdf1": {
     "checked": "2026-08-15",
     "signal": null,
@@ -1089,6 +1139,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:f585bde5-311b-4e38-b814-787eb3d19819": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:f683599d-0ac1-4900-8528-722d0bcfb4c4": {
     "checked": "2026-08-11",
     "signal": null,
@@ -1114,8 +1169,18 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:fc32e743-59bc-46e9-abe8-d2a441c3baa4": {
+    "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:fc66b12e-8d7f-4a0e-b4f6-8f54189941d9": {
     "checked": "2026-08-07",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:fccd4367-7e28-42a3-93ee-6e8e6447fbf3": {
+    "checked": "2026-08-17",
     "signal": null,
     "verdict": "eligible"
   },
