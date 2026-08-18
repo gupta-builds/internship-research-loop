@@ -439,6 +439,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:27485535-2932-4f11-b804-2a27ab5ad3e1": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:2751af83-9f4f-48b8-8aba-6f534e9681e7": {
     "checked": "2026-08-08",
     "signal": null,
@@ -1829,6 +1834,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011015": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011082": {
     "checked": "2026-08-17",
     "signal": null,
@@ -2031,6 +2041,11 @@
   },
   "zshah101:workday:nelnet:/job/Lincoln-NE/Intern-Program---Agentic-AI_R22904": {
     "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:pimco:/job/Austin-TX-USA/XMLNAME-2027-Summer-Intern---Technology-Analyst--Software-Engineering_R106745": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
