@@ -1819,6 +1819,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011784": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011796": {
     "checked": "2026-08-17",
     "signal": null,
@@ -1836,6 +1841,21 @@
   },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011999": {
     "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26012000": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26012375": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26012392": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1986,6 +2006,11 @@
   },
   "zshah101:workday:tencent:/job/US-California-Palo-Alto/Research-Intern---Video-World-Models--Research---ML-Systems-_R107752-1": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:vanguard:/job/Charlotte-NC/College-to-Corporate-IT-Internship---Data-Analyst--NC-_177677-1": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
