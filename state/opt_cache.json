@@ -569,6 +569,16 @@
     "signal": "U.S. citizenship is required",
     "verdict": "excluded"
   },
+  "SimplifyJobs:530c60b3-3de0-4a8e-bb7c-5f32553939ac": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:53459724-0b30-44d4-92de-1a790c676770": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:53663e4c-42be-4d2a-ba0f-ac7a0d65da22": {
     "checked": "2026-07-24",
     "signal": null,
@@ -581,6 +591,11 @@
   },
   "SimplifyJobs:56196707-1bc1-44de-9e0e-a32456792771": {
     "checked": "2026-07-31",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:565376c9-9f43-421c-aee2-1c09b5461f85": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
@@ -646,6 +661,11 @@
   },
   "SimplifyJobs:668cc2ce-ddbc-4d16-9c40-c27e83c81d93": {
     "checked": "2026-07-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:69582230-5dee-4f0d-88be-bcd518c6edd5": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
@@ -794,6 +814,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:8d49244e-af9c-4cbb-bb68-827c8671b75d": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:8e984444-bc04-494b-b26d-4f4a8cd5d1e7": {
     "checked": "2026-07-31",
     "signal": null,
@@ -866,6 +891,11 @@
   },
   "SimplifyJobs:9fe00265-7716-44f9-bc43-1017aa863220": {
     "checked": "2026-08-03",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:a3008ed4-1483-4ec4-9ccf-259ac6b6fd86": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
@@ -979,6 +1009,11 @@
     "signal": "U.S. citizenship is required",
     "verdict": "excluded"
   },
+  "SimplifyJobs:c5313a71-4df5-476f-839a-59038fb3d8ec": {
+    "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:c54661fa-4ea4-4783-b996-0470acb38ef8": {
     "checked": "2026-08-10",
     "signal": null,
@@ -1016,6 +1051,11 @@
   },
   "SimplifyJobs:d0e6095d-b7d9-4b98-9b30-5bc4f60fed04": {
     "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:d10a9d0d-62b5-4eb6-8218-d01baa84b887": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1771,6 +1811,11 @@
   },
   "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011745": {
     "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:egug.fa.us2.oraclecloud.com:26011781": {
+    "checked": "2026-08-18",
     "signal": null,
     "verdict": "eligible"
   },
