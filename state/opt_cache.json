@@ -119,8 +119,23 @@
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
     "verdict": "excluded"
   },
+  "AIJobs:zipline-accounting-intern-spring-2027-cdd20020": {
+    "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:zipline-community-engagement-intern-spring-2027-042f167d": {
     "checked": "2026-08-14",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-community-engagement-intern-summer-2027-8f9f1cfb": {
+    "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-construction-management-intern-spring-2027-a77eda3e": {
+    "checked": "2026-08-19",
     "signal": null,
     "verdict": "eligible"
   },
@@ -186,6 +201,26 @@
   },
   "AIJobs:zipline-supplier-industrialization-engineering-intern-summer-2027-4c5a438a": {
     "checked": "2026-08-18",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-supply-chain-business-operations-intern-spring-2027-665dbeb2": {
+    "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-supply-chain-business-operations-intern-summer-2027-f66b64f7": {
+    "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-system-test-automation-intern-spring-2027-c6bf4ceb": {
+    "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-system-test-automation-intern-summer-2027-fad0fd1a": {
+    "checked": "2026-08-19",
     "signal": null,
     "verdict": "eligible"
   },
