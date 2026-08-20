@@ -494,6 +494,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:013fdd20-3235-4aca-8bd4-f5eb44a09c32": {
+    "checked": "2026-08-20",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:01925f31-564d-4bc0-94fc-2a2717d3132d": {
     "checked": "2026-07-20",
     "signal": null,
@@ -531,6 +536,11 @@
   },
   "SimplifyJobs:093ca891-a330-4763-aeb5-b6195cb0df79": {
     "checked": "2026-08-14",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:09e061cd-a5e8-4059-bb6d-a0672a475328": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1041,6 +1051,11 @@
   },
   "SimplifyJobs:83e8dcee-3e30-49d2-97e2-42937bcfe4fa": {
     "checked": "2026-08-06",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:8569a45d-e504-4cc5-897a-de907ab8e0f7": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
@@ -2214,6 +2229,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:smartrecruiters:AbbVie:3743990014697918": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:smartrecruiters:BoschGroup:744000139649345": {
     "checked": "2026-07-25",
     "signal": null,
@@ -2286,6 +2306,11 @@
   },
   "zshah101:workday:coreandmain:/job/Saint-Louis-MO-63146/Intern---Data-Engineering----Corp_45804": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:fifththird:/job/Cincinnati-OH/Software-Engineer-Co-Op---Enterprise-Finance-Applications---Summer-2027_R71588": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
