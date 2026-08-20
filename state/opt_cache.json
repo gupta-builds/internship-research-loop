@@ -1089,6 +1089,11 @@
     "signal": "US Citizenship Required",
     "verdict": "excluded"
   },
+  "SimplifyJobs:891aa4bf-2086-45f7-bfa3-8f85c512ae83": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:8b699e41-5c53-4b40-aaf9-57a6bd162427": {
     "checked": "2026-08-10",
     "signal": null,
@@ -1169,6 +1174,11 @@
     "signal": "export-controlled information. Therefore, employment will be contingent upon the ability to prove that you meet the status of a U.S. Person",
     "verdict": "excluded"
   },
+  "SimplifyJobs:99fcf5a1-1347-44be-9d63-7e03612f082b": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:9bf4727a-804d-4ee8-8c44-0eeec2960987": {
     "checked": "2026-08-04",
     "signal": "must be a U.S. citizen",
@@ -1207,6 +1217,11 @@
   "SimplifyJobs:a65068a9-808a-4223-9f74-2421c555cb44": {
     "checked": "2026-08-06",
     "signal": "U.S. Citizenship is required",
+    "verdict": "excluded"
+  },
+  "SimplifyJobs:a717fdef-0f39-4450-ba29-a63aa12f17ba": {
+    "checked": "2026-08-20",
+    "signal": "U.S. citizenship is required",
     "verdict": "excluded"
   },
   "SimplifyJobs:a9d682ef-59ba-42c1-9fad-28a7afc1aea4": {
@@ -1401,6 +1416,11 @@
   },
   "SimplifyJobs:d8419553-b116-44e9-8ec0-d1ae843c6512": {
     "checked": "2026-07-29",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:d8608143-b6cd-4a6e-9563-519ce1b5d368": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
