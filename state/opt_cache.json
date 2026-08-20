@@ -1304,6 +1304,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:ce6bb4b3-0f2f-4eb0-b490-e518ef1dba06": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:cee3ea0e-1799-447b-a1c6-f6e69f1c5202": {
     "checked": "2026-08-17",
     "signal": null,
