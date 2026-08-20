@@ -969,6 +969,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:74d636b4-f64c-4e45-87b4-df75cb3d1fee": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:7838c307-daa5-4e75-b8c2-7218ab2354cb": {
     "checked": "2026-08-17",
     "signal": null,
@@ -2306,6 +2311,11 @@
   },
   "zshah101:workday:coreandmain:/job/Saint-Louis-MO-63146/Intern---Data-Engineering----Corp_45804": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:workday:fanniemae:/job/Washington-DC/Campus---Data-Science-Intern--Analytics---Modeling-Program-_JR2815": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
