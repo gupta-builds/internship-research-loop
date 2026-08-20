@@ -1,4 +1,9 @@
 {
+  "AIJobs:abundant-member-of-technical-staff-research-intern-winter-2027-b6e63733": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:anduril-industries-2027-electrical-engineer-intern-610c502b": {
     "checked": "2026-07-26",
     "signal": "U.S. Person status is required",
@@ -124,8 +129,18 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "AIJobs:zipline-accounting-intern-summer-2027-5767f09a": {
+    "checked": "2026-08-20",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:zipline-aerodynamics-intern-spring-2027-f752b8cc": {
     "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-applications-engineer-intern-spring-2027-9de69bc0": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
@@ -146,6 +161,11 @@
   },
   "AIJobs:zipline-construction-management-intern-spring-2027-a77eda3e": {
     "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:zipline-construction-management-intern-summer-2027-85a34292": {
+    "checked": "2026-08-20",
     "signal": null,
     "verdict": "eligible"
   },
