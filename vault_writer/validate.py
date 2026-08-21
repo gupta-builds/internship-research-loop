@@ -71,7 +71,7 @@ def check_cross_source_duplicate(listing, dossier_keys) -> ValidationResult:
     """Same program via two sources = two different uids but one normalized
     company+title key (MLH Fellowship landed twice pre-cleanup). Routine
     rejection, not systemic — first source in write order wins."""
-    key = cross_source_key(listing.company, listing.title)
+    key = cross_source_key(listing.company, listing.title, listing.url)
     if key in dossier_keys:
         return ValidationResult(False, "cross_source_duplicate", f"company+title already in vault: {key}")
     return ValidationResult(True, "cross_source_duplicate")

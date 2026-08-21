@@ -158,7 +158,8 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
     # diverged from seen_ids after the 2026-07-18 manual cleanup), plus
     # whatever this run writes — first source in SOURCES order wins.
     dossier_keys = {
-        cross_source_key(fm.get("company", ""), fm.get("title", "")) for fm in scan_dossiers(jarvis_dir)
+        cross_source_key(fm.get("company", ""), fm.get("title", ""), fm.get("url", ""))
+        for fm in scan_dossiers(jarvis_dir)
     }
     written_uids = []
     rejections = []
@@ -211,7 +212,7 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
         write_dossier(jarvis_dir, uid, markdown, listing.title, listing.company, BUCKET_FOLDERS[bucket],
                      state_dir=state_dir)
         written_uids.append(uid)
-        dossier_keys.add(cross_source_key(listing.company, listing.title))
+        dossier_keys.add(cross_source_key(listing.company, listing.title, listing.url))
     return written_uids, rejections
 
 

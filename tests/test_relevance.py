@@ -56,6 +56,67 @@ def test_stage1_does_not_reject_plain_software_titles():
     assert stage1_reject("Machine Learning Engineer Intern", "") is False
 
 
+# --- Task B: product/program-management and rotational-program roles ---
+
+def test_stage1_rejects_real_databricks_product_management_title():
+    """Real, live Databricks posting (AIJobs, found 2026-07-26) — genuinely
+    PM work ('learn how to be a successful PM') despite listing 'computer
+    science' as an acceptable major; previously slipped through both stages
+    and was classified AI/ML only because 'Machine Learning' is one of
+    Databricks' internal team names, not because the role does ML work."""
+    assert stage1_reject("Product Management Intern (Summer 2027)", "") is True
+
+
+def test_stage1_rejects_real_conagra_demand_science_rotational_title():
+    """Real, live Conagra Brands posting (SimplifyJobs, found 2026-07-27,
+    still in the vault at List/Dossiers/Other/ as of this writing) — a 2-year
+    business rotational program (Behavioral Science/Demand Forecasting/
+    Demand Planning/Advanced Analytics) with zero programming content;
+    previously passed the gate on no real software signal at all."""
+    assert stage1_reject("Demand Science Rotational Analyst", "") is True
+
+
+def test_stage1_does_not_reject_engineering_track_rotational_program():
+    """A genuine software-engineering-track rotational program that names
+    actual engineering rotations must still pass — the reject pattern
+    requires 'rotational' not be immediately preceded by 'engineering'/
+    'software', same adjacency-breaking idiom this file already uses for
+    Tax/Risk Technology titles."""
+    assert stage1_reject(
+        "Software Engineering Rotational Program Intern",
+        "Rotations include: Backend Services, Frontend Platform, Infrastructure.",
+    ) is False
+
+
+def test_stage1_does_not_reject_product_engineer_titles():
+    assert stage1_reject("Product Engineer Intern", "") is False
+    assert stage1_reject("Product-Focused Software Engineer Intern", "") is False
+
+
+# --- Task C: adjacent-field hint now catches chemical/industrial roles ---
+
+# Real, from the live Mosaic Company "Operations & Automation Engineering
+# Co-op/Intern" posting (chemical-plant industrial-automation role) — PLC/
+# DCS/SCADA controls, Bachelor's in Chemical Engineering required, physical
+# labor requirements, "basic computer skills" as a minor bullet, zero real
+# programming content anywhere. Previously passed stage 2 unconditionally
+# (neither "chemical" nor "automation" hit the old adjacent-field hint list)
+# and only got flagged downstream by classify.py's since-fixed bare-'threat'
+# match on this exact workplace-safety disclaimer.
+MOSAIC_CONTENT = (
+    "Requires a Bachelor's degree in Chemical Engineering or related field. Experience with PLC, DCS, "
+    "and SCADA control systems preferred. Basic computer skills required. Must be able to lift 50 lbs "
+    "and wear a respirator as needed. The Company will not require an employee to perform any duty "
+    "without posing a direct threat to the safety of his or her own self or others."
+)
+
+
+def test_stage2_rejects_real_mosaic_chemical_engineering_content():
+    assert stage2_confirm(
+        "Operations & Automation Engineering Co-op/Intern", "The Mosaic Company", MOSAIC_CONTENT
+    ) is False
+
+
 # --- stage2_confirm ---
 
 # Real content, copied verbatim from the vault dossier

@@ -32,9 +32,19 @@ _AI_ML_RE = re.compile(
     r"|computer vision|\bnlp\b|natural language|embeddings?|pytorch|tensorflow"
     r"|neural network|data scientist|ml engineer|ai engineer|ai.enabled)\b", re.I,
 )
+# 'threat' narrowed 2026-07-29: real false positive, Mosaic Company
+# "Operations & Automation Engineering Co-op/Intern" (chemical-plant
+# PLC/DCS/SCADA role, zero cybersecurity content) matched bare 'threat' on a
+# workplace-safety disclaimer ("without posing a direct threat to the safety
+# of his or her own self"). Requiring co-occurrence with a real
+# security-context word within 30 chars catches genuine cybersecurity usage
+# ("threat model", "threat actor", "threat intelligence", "threat detection")
+# without matching safety-boilerplate/weather/insider-threat-to-unrelated-
+# things mentions of the bare word.
 _CYS_FINANCE_RE = re.compile(
     r"\b(security engineer|cybersecurity|application security|appsec"
-    r"|penetration test|infosec|threat|vulnerability|quant(itative)? developer"
+    r"|penetration test|infosec|threat.{0,30}(model|actor|intelligence|detection)|vulnerability"
+    r"|quant(itative)? developer"
     r"|quantitative (research|trading)|trading systems?|fintech|risk engine"
     r"|payments? (engineer|infrastructure)|blockchain|crypto|defi)\b", re.I,
 )

@@ -5,7 +5,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from ingestion.posting_page import _content_fetch_url, extract_content, fetch_posting_markdown, opt_exclusion
+from ingestion.posting_page import (
+    _content_fetch_url,
+    extract_content,
+    fetch_posting_markdown,
+    opt_exclusion,
+    phd_only_exclusion,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -120,3 +126,48 @@ def test_fetch_posting_markdown_strips_ashby_application_suffix_before_calling_f
     fetch_posting_markdown("https://jobs.ashbyhq.com/acme/abc123/application", "fc-key", http_post=post)
     _, kwargs = post.call_args
     assert kwargs["json"]["url"] == "https://jobs.ashbyhq.com/acme/abc123"
+
+
+# --- Task F: content-level PhD-only degree gate ---
+
+def test_phd_only_exclusion_rejects_real_optiver_text():
+    """Real Optiver 'Quantitative Research Intern, PhD (Summer 2027)'
+    (Greenhouse job id 8451781002) — no structured degrees field, so
+    degrees_eligible() waved it through on missing-data permissiveness. Its
+    real content states the PhD requirement as an enrollment condition rather
+    than a blunt 'PhD required'."""
+    text = (
+        "As part of our assessment process, you may be invited to participate in a multi-day, on-site "
+        "evaluative program.\nWho You Are:\n- Currently enrolled in a PhD program in Statistics, Computer "
+        "Science, Machine Learning, Mathematics, or a related STEM field with outstanding academic "
+        "performance\n- Expected graduation between December 2027 - June 2029"
+    )
+    assert phd_only_exclusion(text) is not None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # real — Aquatic Capital Management "Software Engineer, Intern (Summer 2027)"
+        "Active student pursuing a BS, MS, or PhD in mathematics, statistics, machine learning, physics, "
+        "computer science, or other scientific disciplines with an expected graduation date between "
+        "Fall 2027 and Spring 2028.",
+        # real — Appian "Software Engineering Intern"
+        "Currently pursuing a Bachelor's or Master's degree in Computer Science or Computer Engineering "
+        "with a strong academic record.",
+        # real — Manhattan Associates "A.I. Developer Co-Op (Boston, MA)"
+        "Currently enrolled in a bachelor's or master's degree program in Computer Science, Artificial "
+        "Intelligence, Software Engineering, Data Science, or a related discipline",
+        # never reject on 'preferred'
+        "A PhD is preferred but not required for this role.",
+        # never reject on PhD merely listed among acceptable degrees
+        "Open to Bachelor's, Master's, or PhD candidates.",
+    ],
+)
+def test_phd_only_exclusion_does_not_reject_bachelors_masters_eligible_real_text(text):
+    assert phd_only_exclusion(text) is None, text
+
+
+def test_phd_only_exclusion_rejects_explicit_equivalent_phrasing():
+    assert phd_only_exclusion("This role is open to doctoral candidates only.") is not None
+    assert phd_only_exclusion("PhD required for this position.") is not None

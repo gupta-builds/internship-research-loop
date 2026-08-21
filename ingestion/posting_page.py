@@ -87,6 +87,43 @@ def opt_exclusion(text: str):
     return m.group(0) if m else None
 
 
+# Built from the real Optiver "Quantitative Research Intern, PhD (Summer
+# 2027)" posting (Greenhouse job id 8451781002 — the same posting manually
+# deleted from the vault once already, then resurfaced, 2026-07-29): its
+# structured degrees field is empty (Greenhouse carries none), so
+# core/filter.py's degrees_eligible() waved it through on missing-data
+# permissiveness. Its real content states the requirement as "Currently
+# enrolled in a PhD program in Statistics, Computer Science, ..." rather than
+# a blunt "PhD required" — the enrolled-in/pursuing-a-phd-program phrasing is
+# the literal shape this real posting uses, so it's included as an explicit
+# equivalent alongside "PhD required"/"PhD only"/"doctoral candidates only".
+# Permissive by default like every other gate here: never fires on "PhD
+# preferred", and the window guard below never fires when a Bachelor's/
+# Master's is also named nearby (checked against the real Aquatic Capital
+# Management, Appian, and Manhattan Associates postings, all of which list
+# PhD only as one of several acceptable degrees and must keep passing).
+_PHD_ONLY_RE = re.compile(
+    r"\bphd\s+(?:is\s+)?(?:required|only)\b"
+    r"|\bdoctoral candidates?\s+only\b"
+    r"|\b(?:currently\s+)?(?:enrolled in|pursuing)\s+an?\s+(?:phd|doctoral)\s+(?:program|degree)\b",
+    re.I,
+)
+
+
+def phd_only_exclusion(text: str):
+    """The matched PhD-exclusivity phrase, or None if the posting shows no
+    explicit signal that only PhD candidates are eligible. Never fires when a
+    Bachelor's/Master's is also named near the match — that's a posting
+    listing PhD as one of several acceptable degrees, not a PhD-only one."""
+    m = _PHD_ONLY_RE.search(text)
+    if not m:
+        return None
+    window = text[max(0, m.start() - 80): m.end() + 80]
+    if re.search(r"bachelor|master|\bbs\b|\bms\b", window, re.I):
+        return None
+    return m.group(0)
+
+
 def fetch_posting_markdown(url: str, api_key: str, http_post=None) -> str:
     """Page markdown via Firecrawl (JS-rendered — ATS pages are SPAs).
     Raises requests exceptions on failure; callers treat any failure as

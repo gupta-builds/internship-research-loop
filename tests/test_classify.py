@@ -73,3 +73,25 @@ def test_classification_callout_other_bucket_has_no_signal_but_still_no_number()
     callout = classification_callout("Other", "")
     assert callout.startswith("> [!NOTE] Other:")
     assert "Priority" not in callout
+
+
+# --- Task C: bare 'threat' narrowed to require security context ---
+
+def test_classify_does_not_match_bare_threat_real_mosaic_safety_disclaimer():
+    """Real false positive: Mosaic Company 'Operations & Automation
+    Engineering Co-op/Intern' (chemical-plant PLC/DCS/SCADA role, zero
+    cybersecurity content) matched bare 'threat' on a workplace-safety
+    disclaimer, nothing to do with cybersecurity."""
+    content = (
+        "The Company will not require an employee to perform any duty without posing a direct threat "
+        "to the safety of his or her own self or others."
+    )
+    bucket, signal = classify("Operations & Automation Engineering Co-op/Intern", "", content)
+    assert bucket != "CyS & Finance"
+    assert signal != "threat"
+
+
+def test_classify_still_matches_genuine_threat_intelligence_content():
+    bucket, signal = classify("Security Engineering Intern", "", "You'll work on threat intelligence and detection.")
+    assert bucket == "CyS & Finance"
+    assert "threat" in signal.lower()

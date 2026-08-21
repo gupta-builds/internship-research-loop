@@ -43,12 +43,34 @@ def _norm(s: str) -> str:
 # (real Walleye Capital title) must NOT match "risk analyst" — "Technology"
 # sits between the two words in both real titles, breaking the adjacency
 # these patterns require.
+# Product/program-management and business-rotational patterns added 2026-07-29
+# from two real recurring incidents: Databricks "Product Management Intern
+# (Summer 2027)" (AIJobs, found 2026-07-26 — explicitly PM work, "learn how to
+# be a successful PM," despite listing "computer science" as an acceptable
+# major, and classified AI/ML only because "Machine Learning" is one of
+# Databricks' internal team names, not because the role does ML work) and
+# Conagra Brands "Demand Science Rotational Analyst" (SimplifyJobs,
+# 2026-07-27, still live at List/Dossiers/Other/ as of this writing — a 2-year
+# business rotational program across Behavioral Science/Demand
+# Forecasting/Demand Planning/Advanced Analytics with zero programming
+# content; its own stated requirement is "a general understanding of
+# business, financial concepts, and theory behind processes"). The rotational
+# pattern requires "rotational" not be immediately preceded by "engineering "/
+# "software " so a genuine software-engineering-track rotational program still
+# passes (checked explicitly in tests/test_relevance.py).
+_ROTATIONAL_ANALYST_RE = re.compile(
+    r"(?<!engineering )(?<!software )\brotational (analyst|program)\b", re.I,
+)
 _STAGE1_REJECT_RE = re.compile(
     r"\b(financial analyst|risk analyst|performance analyst"
     r"|tax (associate|preparer|accountant)"
     r"|investor relations"
     r"|sports performance (analyst|analytics)|academy performance (analyst|analysis)"
-    r"|human resources intern|hr intern|marketing intern|business development intern)\b",
+    r"|human resources intern|hr intern|marketing intern|business development intern"
+    r"|product management intern|product manager intern"
+    r"|program management intern|technical program manager intern"
+    r"|demand (planning|science) (analyst|rotational)"
+    r"|business analyst intern)\b",
     re.I,
 )
 
@@ -56,7 +78,8 @@ _STAGE1_REJECT_RE = re.compile(
 def stage1_reject(title: str, raw_text: str) -> bool:
     """True if this listing's title/raw_text is unambiguously non-software —
     reject without ever fetching the page."""
-    return bool(_STAGE1_REJECT_RE.search(f"{title} {raw_text}"))
+    haystack = f"{title} {raw_text}"
+    return bool(_STAGE1_REJECT_RE.search(haystack)) or bool(_ROTATIONAL_ANALYST_RE.search(haystack))
 
 
 # Adjacent-field company/title hint — NOT a reject signal on its own (Jane
@@ -64,9 +87,20 @@ def stage1_reject(title: str, raw_text: str) -> bool:
 # ML roles all pass real content checks below). Only postings that hit this
 # hint need their fetched content checked at all; everything else already
 # cleared stage 1 and passes through unconditionally.
+# chemical/plant/PLC-DCS-SCADA added 2026-07-29: real false-positive, Mosaic
+# (The Mosaic Company, agricultural/mining) "Operations & Automation
+# Engineering Co-op/Intern" — a chemical-plant industrial-automation role
+# (PLC/DCS/SCADA controls, Bachelor's in Chemical Engineering required,
+# physical labor requirements, "basic computer skills" as a minor bullet)
+# passed stage 2 unconditionally because neither "chemical" nor "automation"
+# hit the old hint list, so its content (no Python/Java/C++/git/algorithm
+# anywhere) was never checked at all — it only got flagged downstream by
+# classify.py's now-fixed bare-'threat' match on an unrelated workplace-safety
+# disclaimer. Adding these hints routes it through the real software-signal
+# content check below, which correctly rejects it.
 _ADJACENT_FIELD_COMPANY_HINT_RE = re.compile(
     r"\b(space|aerospace|robotics|astro|satellite|defense|automotive|firmware"
-    r"|embedded|hardware)\b", re.I,
+    r"|embedded|hardware|chemical|industrial|plant operations|\bplc\b|\bdcs\b|\bscada\b)\b", re.I,
 )
 
 # Real content signals confirmed against live vault dossiers 2026-07-26: Bosch
@@ -89,9 +123,17 @@ _SOFTWARE_CONTENT_SIGNAL_RE = re.compile(
 def stage2_confirm(title: str, company: str, posting_content: str) -> bool:
     """Called only when posting_content is non-empty. True = passes (either
     not adjacent-field at all, or adjacent-field AND content shows real
-    software work). False = adjacent-field company/title with no software
-    signal in the actual content — genuinely non-technical despite passing
-    stage 1 (e.g. a hardware-manufacturing floor role at a space company)."""
-    if not _ADJACENT_FIELD_COMPANY_HINT_RE.search(f"{title} {company}"):
+    software work). False = adjacent-field with no software signal in the
+    actual content — genuinely non-technical despite passing stage 1 (e.g. a
+    hardware-manufacturing floor role at a space company).
+
+    The hint check also scans posting_content, not just title+company: real
+    bug, Mosaic Company's "Operations & Automation Engineering Co-op/Intern"
+    (2026-07-29) — its chemical-plant/PLC-DCS-SCADA signal appears only in
+    the fetched content ("Bachelor's degree in Chemical Engineering",
+    "PLC, DCS, and SCADA control systems"), never in the title or company
+    name, so a title+company-only hint check never routed it through the
+    software-signal confirmation below at all."""
+    if not _ADJACENT_FIELD_COMPANY_HINT_RE.search(f"{title} {company} {posting_content}"):
         return True
     return bool(_SOFTWARE_CONTENT_SIGNAL_RE.search(posting_content))

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from core.identity import compute_uid, cross_source_key
+from core.identity import compute_uid, cross_source_key, extract_ats_job_id
 from ingestion.normalize import normalize_josegael, normalize_simplify
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -52,3 +52,93 @@ def test_cross_source_key_normalizes_case_and_whitespace():
     assert cross_source_key("MLH (Major League Hacking)", "MLH Fellowship") == \
         cross_source_key("  mlh (major league hacking)", "mlh   fellowship ")
     assert cross_source_key("MLH", "Fellowship") != cross_source_key("MLH", "Other Program")
+
+
+# --- Task D: URL/job-id-based cross-source dedup — four real 2026-07-29 incidents ---
+
+def test_extract_ats_job_id_greenhouse():
+    assert extract_ats_job_id("https://job-boards.greenhouse.io/virtu/jobs/8624410002") == "8624410002"
+
+
+def test_extract_ats_job_id_lever_ignores_apply_suffix():
+    """Real Palantir 'Intel' FDSE duplicate: SimplifyJobs' URL carries a
+    trailing /apply, zshah101's doesn't — same Lever job id either way."""
+    with_apply = "https://jobs.lever.co/palantir/9e40d77f-b07c-437b-98e7-def9b0184d89/apply"
+    without_apply = "https://jobs.lever.co/palantir/9e40d77f-b07c-437b-98e7-def9b0184d89"
+    assert extract_ats_job_id(with_apply) == "9e40d77f-b07c-437b-98e7-def9b0184d89"
+    assert extract_ats_job_id(with_apply) == extract_ats_job_id(without_apply)
+
+
+def test_extract_ats_job_id_google_careers_results_url():
+    """Real Google BS/MS Summer 2027 SWE intern duplicate: vanshb03 and
+    Freehire both resolve to the identical numeric id embedded in
+    .../jobs/results/85564713261245126."""
+    url = "https://www.google.com/about/careers/applications/jobs/results/85564713261245126"
+    assert extract_ats_job_id(url) == "85564713261245126"
+
+
+def test_extract_ats_job_id_none_when_no_recognizable_id():
+    assert extract_ats_job_id("https://t.me/getjobss/7795") is None
+
+
+def test_extract_ats_job_id_google_pattern_is_domain_anchored():
+    """Fix 1, Prompt 5 review (2026-07-30): the Google pattern used to have no
+    domain anchor, unlike the Greenhouse/Lever/Ashby patterns above — it
+    matched the .../careers/jobs/results/<id> path shape on ANY domain, so an
+    unrelated company's own careers page with a coincidentally-matching
+    numeric id would collapse into the same cross_source_key as a real Google
+    posting and get silently rejected as a duplicate."""
+    assert extract_ats_job_id("https://random-startup.com/careers/jobs/results/12345") is None
+
+
+def test_cross_source_key_prefers_job_id_over_text_real_virtu_triple():
+    """Real, confirmed 2026-07-29 — a genuine TRIPLE duplicate: three
+    different title strings (SimplifyJobs, zshah101, vanshb03), identical
+    greenhouse.io/virtu/jobs/8624410002 URL. Company+title text alone would
+    have produced three different keys; the job-id key collapses all three."""
+    url = "https://job-boards.greenhouse.io/virtu/jobs/8624410002"
+    keys = {
+        cross_source_key("Virtu Financial", "2027 Internship - Software Engineer", url),
+        cross_source_key("Virtu Financial", "Software Engineer Intern - Software Engineer", url),
+        cross_source_key("Virtu Financial", "Software Engineer Intern", url),
+    }
+    assert len(keys) == 1
+
+
+def test_cross_source_key_prefers_job_id_over_text_real_google_case():
+    """Real Google BS vs MS title-string variant, same numeric job id."""
+    url = "https://www.google.com/about/careers/applications/jobs/results/85564713261245126"
+    assert cross_source_key("Google", "Software Engineering Intern", url) == \
+        cross_source_key("Google", "Software Engineering Intern, BS, Summer 2027", url)
+
+
+def test_cross_source_key_prefers_job_id_over_text_real_palantir_cross_bucket_case():
+    """Real Palantir 'Intel' FDSE duplicate across two different buckets
+    (SimplifyJobs landed it in AI/ML, zshah101 in Fullstack) — same Lever
+    job id either way, distinct from the other three incidents in that the
+    dossiers also disagreed with each other about classification."""
+    assert cross_source_key(
+        "Palantir", "Forward Deployed Software Engineer Intern - Intel",
+        "https://jobs.lever.co/palantir/9e40d77f-b07c-437b-98e7-def9b0184d89/apply",
+    ) == cross_source_key(
+        "Palantir", "Forward Deployed Software Engineer, Internship - Intel",
+        "https://jobs.lever.co/palantir/9e40d77f-b07c-437b-98e7-def9b0184d89",
+    )
+
+
+def test_cross_source_key_falls_back_to_text_for_company_name_variant_real_aquatic_case():
+    """Real Aquatic vs Aquatic Capital Management: same Greenhouse posting,
+    same URL — job id alone already collapses this one, but confirms the
+    company-name-variant incident (the one case the original company-alias-
+    map idea would have caught) is still covered."""
+    url = "https://job-boards.greenhouse.io/aquaticcapitalmanagement/jobs/8489233002"
+    assert cross_source_key("Aquatic", "Software Engineer Intern", url) == \
+        cross_source_key("Aquatic Capital Management", "Software Engineer Intern", url)
+
+
+def test_cross_source_key_falls_back_to_normalized_text_when_no_job_id():
+    """A source/ATS with no recognizable job id in its URL shape (e.g.
+    Freehire's Telegram links) must still fall back to the original
+    normalized-company+title key rather than losing dedup entirely."""
+    assert cross_source_key("MLH", "Fellowship", "https://t.me/getjobss/7795") == \
+        cross_source_key("MLH", "Fellowship", "https://t.me/getjobss/9999")
