@@ -1759,6 +1759,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:0d25edcf-4b13-487c-9567-7ca21a9b042b": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:0e507b5e-48e5-4181-beb7-529d5afb3369": {
     "checked": "2026-07-25",
     "signal": null,
@@ -1766,6 +1771,11 @@
   },
   "vanshb03:0ebb6ea9-1466-4de6-851a-75ad92836912": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:12243e5c-7c64-4d17-9472-840926a226d2": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1806,6 +1816,11 @@
   },
   "vanshb03:2cfe2e3b-2886-49fe-8dcb-868f6cf20150": {
     "checked": "2026-07-26",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:2fc17ba3-562c-4170-a89a-cbeb28cfda48": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -2148,6 +2163,11 @@
     "checked": "2026-07-26",
     "signal": "U.S. Person status is required",
     "verdict": "excluded"
+  },
+  "vanshb03:e8cdd6c9-273d-4f50-af44-c49ab843704f": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
   },
   "vanshb03:eb2485e8-7d0d-4a6a-9bb0-a65a4468fbbd": {
     "checked": "2026-07-25",
