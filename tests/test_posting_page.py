@@ -128,6 +128,30 @@ def test_fetch_posting_markdown_strips_ashby_application_suffix_before_calling_f
     assert kwargs["json"]["url"] == "https://jobs.ashbyhq.com/acme/abc123"
 
 
+# --- Task E: Google careers search-results-listing-shell extraction bug ---
+
+def test_extract_content_skips_google_careers_listing_shell():
+    """Real bug, confirmed 2026-07-26 on both Google dossiers sourced via
+    Freehire (BS and MS tracks): the fetched markdown contains a whole
+    unrelated search-results listing page (~20 job titles, 'Back to jobs
+    search' nav, 'N jobs matched', pagination) before the real posting's own
+    content. classify() fired on an unrelated listed job's title
+    ('Senior Product Engineer, Machine Learning Accelerators') as a result.
+    Fixture is the real captured content (tests/fixtures/posting_google_careers.md)."""
+    md = (FIXTURES / "posting_google_careers.md").read_text(encoding="utf-8")
+    content = extract_content(md)
+
+    assert content.startswith("## Software Engineering Intern, MS, Summer 2027")
+    assert "pursuing a Master's degree program in Computer Science" in content
+    # none of the unrelated listed jobs survive
+    assert "Regulatory and Litigation Counsel" not in content
+    assert "Staff Software Developer, Embedded Systems" not in content
+    assert "Corporate Development Associate" not in content
+    assert "Senior Product Engineer, Machine Learning Accelerators" not in content
+    assert "jobs matched" not in content
+    assert "Back to jobs search" not in content
+
+
 # --- Task F: content-level PhD-only degree gate ---
 
 def test_phd_only_exclusion_rejects_real_optiver_text():
@@ -171,3 +195,97 @@ def test_phd_only_exclusion_does_not_reject_bachelors_masters_eligible_real_text
 def test_phd_only_exclusion_rejects_explicit_equivalent_phrasing():
     assert phd_only_exclusion("This role is open to doctoral candidates only.") is not None
     assert phd_only_exclusion("PhD required for this position.") is not None
+
+
+# --- Task I: readable, structured dossier body content ---
+
+def test_extract_content_dedupes_repeated_paragraph_real_conagra_case():
+    """Real bug: the Conagra Brands 'Demand Science Rotational Analyst'
+    fixture has its whole 'About Us' paragraph appearing twice verbatim."""
+    about_us = (
+        "At Conagra Brands, we have a rich heritage of making great food. We aspire to have the most "
+        "impactful, energized and inclusive culture in food. As a member of our 18,000+ person team "
+        "across 40+ locations, you are empowered to reach your potential, make an impact and own your "
+        "career."
+    )
+    md = (
+        f"# Demand Science Rotational Analyst - Summer 2027\n\n"
+        f"{about_us}\n\n"
+        f"Some other real content in between.\n\n"
+        f"### About Us\n{about_us}\n"
+    )
+    content = extract_content(md)
+    assert content.count("At Conagra Brands, we have a rich heritage") == 1
+    assert "Some other real content in between." in content
+    assert "### About Us" in content
+
+
+def test_extract_content_splits_ats_chrome_run_ons_real_conagra_case():
+    md = (
+        "# Demand Science Rotational Analyst - Summer 2027\n"
+        "locationsChicago, Illinois\n"
+        "time typeFull time\n"
+        "posted onPosted Today\n"
+        "job requisition idReq-039400\n"
+        "Have a taste for something big?\n"
+    )
+    content = extract_content(md)
+    assert "locations\nChicago, Illinois" in content
+    assert "time type\nFull time" in content
+    assert "posted on\nPosted Today" in content
+    assert "job requisition id\nReq-039400" in content
+
+
+def test_extract_content_renders_real_section_names_as_headings():
+    """Real shape from the Appian/Conagra fixtures: a fully-bolded standalone
+    line naming a canonical section (Qualifications/Benefits/Compensation)
+    becomes a real '###' heading; a non-canonical bolded line ('Why should
+    you kick off your career with Conagra?') stays flattened prose — no
+    invented section boundary."""
+    md = (
+        "# Software Engineering Intern\n"
+        "**Why should you kick off your career with Conagra?**\n"
+        "**Basic Qualifications**\n"
+        "- Currently pursuing a degree in Computer Science.\n"
+        "**Benefits**\n"
+        "Comprehensive healthcare plans.\n"
+    )
+    content = extract_content(md)
+    assert "### Basic Qualifications" in content
+    assert "### Benefits" in content
+    assert "**Why should you kick off your career with Conagra?**" in content  # not invented as a heading
+
+
+def test_extract_content_strips_read_more_and_follow_us_chrome_real_manhattan_case():
+    """Real: the Manhattan Associates 'A.I. Developer Co-Op' fixture ends
+    with a 'Read More' truncation marker and a duplicated LinkedIn/X/Facebook
+    'Follow Us' link block."""
+    md = (
+        "# A.I. Developer Co-Op (Boston, MA)\n"
+        "### About Us\n"
+        "At Manhattan Associates our supply chain and omnichannel technology positively affect how "
+        "people work, shop and live.\n"
+        "Read More\n"
+        "#### Follow Us\n"
+        "- [LinkedIn](https://www.linkedin.com/company/4376)\n"
+        "- [X](https://twitter.com/ManhAssocNews)\n"
+        "- [Facebook](https://www.facebook.com/pages/Manhattan-Associates/113391905337615)\n"
+    )
+    content = extract_content(md)
+    assert "Read More" not in content
+    assert "Follow Us" not in content
+    assert "linkedin.com" not in content
+    assert "twitter.com" not in content
+
+
+def test_extract_content_with_no_internal_structure_stays_one_block():
+    """A posting with no stated section names at all must not have section
+    boundaries invented — same real-content-only rule as the heading test."""
+    md = (
+        "# Summer Intern 2027 - Software Developer\n"
+        "About Five Rings. We are a proprietary trading firm.\n"
+        "We are looking for driven students to join our team.\n"
+    )
+    content = extract_content(md)
+    assert "###" not in content
+    assert "About Five Rings" in content

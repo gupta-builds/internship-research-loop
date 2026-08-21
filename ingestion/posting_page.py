@@ -146,19 +146,105 @@ _NOISE = re.compile(
     r"^(\[?!\[|\[back to jobs|\[apply\]|apply\b|select\.\.\.|✱|.*✱\s*$|resume/cv|full name|email\b"
     r"|phone\b|current location|current company|linkedin url|github url|portfolio url|loading$"
     r"|no location found|couldn't auto-read|analyzing resume|success!$|file exceeds|-{3,}$"
-    r"|cookie|jobs powered by|©|powered by\s|\[.*\]\(https?://[^)]*\)\s*$)", re.I)
+    r"|cookie|jobs powered by|©|powered by\s|\[.*\]\(https?://[^)]*\)\s*$|read more$)", re.I)
+
+# Real, distinct bug from the Ashby application-URL one — confirmed 2026-07-26
+# on both Google dossiers sourced via Freehire (BS and MS tracks): Google's
+# careers site returns a *search-results listing page* shell (~20 unrelated
+# job titles, "Back to jobs search" nav, "N jobs matched", pagination) ahead
+# of the specific posting's own content in the SAME fetched markdown — not a
+# wrong-URL problem like Ashby's /application suffix, the real posting text is
+# right there further down. classify() fired on an unrelated listed job's
+# title as a result. Whenever one of these listing-shell markers appears,
+# everything gathered so far is shell noise — reset and wait for the next
+# real heading, which lands on the actual posting content once the shell ends.
+_LISTING_SHELL_RESET_RE = re.compile(
+    r"^(_arrow_back_|back to jobs search|##?\s*jobs search results|[\d,]+\s+jobs matched"
+    r"|showing \d+ to \d+ of|_navigate_next_)", re.I,
+)
+
+# ATS UI labels jammed against their values with no separator, real examples
+# from the Conagra Brands fixture (List/Dossiers/Other/Demand Science
+# Rotational Analyst - Conagra Brands.md): "locationsChicago, Illinois",
+# "time typeFull time", "posted onPosted Today", "job requisition idReq-039400".
+_ATS_LABEL_RUN_ON_RE = re.compile(
+    r"^(locations|time type|posted on|job requisition id|time left to apply)(?=\S)", re.M,
+)
+
+# A posting's own section names, real shape confirmed against the Appian
+# ("**Basic Qualifications**", "**Benefits**") and Conagra ("**Compensation**",
+# "**Our Benefits**") fixtures: a fully-bolded standalone line naming one of
+# these sections. Deliberately narrow — only fires when the *whole* line is
+# one bold span ending in a real section keyword, so inline bold emphasis
+# ("our values of **Intensity** and **Excellence**...") and non-section bold
+# lines ("**Why should you kick off your career with Conagra?**") are left as
+# flattened prose, per the "don't invent section boundaries" rule.
+_BOLD_SECTION_RE = re.compile(r"^\*\*([^*]+?)\*\*:?$")
+_SECTION_KEYWORD_RE = re.compile(r"(responsibilities|qualifications|requirements|benefits|compensation)$", re.I)
+
+# Real, from the Manhattan Associates fixture (List/Dossiers/1 - AI & ML/A.I.
+# Developer Co-Op (Boston, MA) - Manhattan Associates.md): a "Follow Us"
+# heading followed by a bulleted LinkedIn/X/Facebook link list, pure chrome.
+_FOLLOW_US_HEADING_RE = re.compile(r"^#{1,6}\s*follow us\s*$", re.I)
+# Real Manhattan Associates link shape includes a markdown title after the
+# URL ('[LinkedIn](https://...4376?trk=tyah "LinkedIn")') — the optional
+# quoted-title group handles that, not just a bare '(url)'.
+_LINK_BULLET_RE = re.compile(r'^-\s*\[.+\]\(https?://\S+?(?:\s+"[^"]*")?\)\s*$')
+
+
+def _dedupe_paragraphs(markdown: str, min_len: int = 40) -> str:
+    """Drops a paragraph line that repeats verbatim later in the same fetch,
+    keeping the first occurrence — real example: the Conagra fixture's whole
+    'About Us' paragraph appears twice. Real fetched markdown from this
+    pipeline's sources renders each prose paragraph as one continuous line
+    (confirmed against the Manhattan Associates/Appian/Optiver fixtures), so
+    line-level comparison catches this without needing blank-line block
+    boundaries the source markdown may not consistently have. min_len guards
+    against deduping short, legitimately-repeated lines (labels, headings)
+    that aren't real paragraph content."""
+    seen, kept = set(), []
+    for line in markdown.splitlines():
+        key = line.strip()
+        if len(key) >= min_len:
+            if key in seen:
+                continue
+            seen.add(key)
+        kept.append(line)
+    return "\n".join(kept)
+
+
+def _strip_trailing_social_chrome(lines: list) -> list:
+    out, skip_links = [], False
+    for line in lines:
+        if _FOLLOW_US_HEADING_RE.match(line.strip()):
+            skip_links = True
+            continue
+        if skip_links and _LINK_BULLET_RE.match(line.strip()):
+            continue
+        skip_links = False
+        out.append(line)
+    return out
 
 
 def extract_content(markdown: str, limit: int = CONTENT_LIMIT) -> str:
     """The posting's substantive text: from the first real heading up to the
     application-form/EEO chrome, minus nav/form/boilerplate lines. Verbatim
-    lines, never a summary. Blank lines and '---' rules dropped to satisfy
-    the vault's format conventions (see validate.check_format_compliance)."""
+    lines, never a summary — but deduped (no repeated paragraph), chrome-split
+    (ATS UI labels get their own line), and structured (a source's own bolded
+    section names become real '###' headings) per the Internship Notes
+    Standard §2. Blank lines and '---' rules dropped to satisfy the vault's
+    format conventions (see validate.check_format_compliance)."""
+    markdown = _dedupe_paragraphs(markdown)
+    markdown = _ATS_LABEL_RUN_ON_RE.sub(lambda m: m.group(1) + "\n", markdown)
+
     out, started = [], False
     for line in markdown.splitlines():
         s = line.strip()
         if _CUT_MARKERS.match(s):
             break
+        if _LISTING_SHELL_RESET_RE.match(s):
+            started, out = False, []
+            continue
         if not started:
             if s.startswith("#") and len(s) > 4:
                 started = True
@@ -166,7 +252,10 @@ def extract_content(markdown: str, limit: int = CONTENT_LIMIT) -> str:
                 continue
         if not s or _NOISE.match(s):
             continue
+        section = _BOLD_SECTION_RE.match(s)
+        if section and _SECTION_KEYWORD_RE.search(section.group(1).strip()):
+            s = f"### {section.group(1).strip()}"
         out.append(s)
         if len("\n".join(out)) > limit:
             break
-    return "\n".join(out)
+    return "\n".join(_strip_trailing_social_chrome(out))
