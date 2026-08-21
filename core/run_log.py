@@ -66,14 +66,39 @@ Weekly rollup from the internship-research-loop automation, appended automatical
 """
 
 
-def append_weekly_rollup(run_log_md_path, line: str, created_date: str) -> None:
-    path = Path(run_log_md_path)
+def _append_markdown_line(path, line: str, header: str) -> None:
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        header = _HEADER_TEMPLATE.format(created=created_date).rstrip("\n") + "\n"
-        path.write_text(header + line + "\n")
+        path.write_text(header.rstrip("\n") + "\n" + line + "\n")
         return
     existing = path.read_text()
     if not existing.endswith("\n"):
         existing += "\n"
     path.write_text(existing + line + "\n")
+
+
+def append_weekly_rollup(run_log_md_path, line: str, created_date: str) -> None:
+    _append_markdown_line(run_log_md_path, line, _HEADER_TEMPLATE.format(created=created_date))
+
+
+_EXCLUDED_LOG_HEADER_TEMPLATE = """---
+type: dashboard
+status: active
+created: {created}
+tags:
+  - internship
+  - automation
+  - debate
+---
+# Excluded — Losing The Debate
+A posting lands here the first time it loses the per-bucket debate comparator's sort {max_losses} consecutive runs — not a silent, permanent exclusion, a reviewable one. If you disagree with the comparator's call on any of these, promote the posting by hand; this log exists so that decision has something concrete to look at. Appended automatically, never rewritten.
+"""
+
+
+def append_excluded_log(excluded_log_md_path, line: str, created_date: str, max_losses: int) -> None:
+    """Task N (Prompt 5) — one line per uid the first time it's excluded,
+    same append-only pattern as append_weekly_rollup above."""
+    _append_markdown_line(
+        excluded_log_md_path, line, _EXCLUDED_LOG_HEADER_TEMPLATE.format(created=created_date, max_losses=max_losses)
+    )

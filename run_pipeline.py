@@ -8,17 +8,20 @@ Invoked by .github/workflows/run.yml as `python run_pipeline.py`.
 import json
 import os
 import subprocess
+from functools import cmp_to_key
 
 import requests
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from core.classify import BUCKET_FOLDERS, classification_callout, classify
+from core.debate import compute_bucket_urgency, debate_compare
 from core.filter import load_profile, matches
 from core.git_ops import GitPushError, commit_and_push_with_retry
 from core.identity import compute_uid
 from core.relevance import stage1_reject, stage2_confirm
 from core.run_log import (
+    append_excluded_log,
     append_run_log,
     append_weekly_rollup,
     format_weekly_rollup,
@@ -29,7 +32,7 @@ from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
 from ingestion.freehire import fetch_freehire
-from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion
+from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion, phd_only_exclusion
 from ingestion.sources import (
     fetch_ai_jobs,
     fetch_ashby,
@@ -40,7 +43,7 @@ from ingestion.sources import (
     fetch_zshah101,
 )
 from vault_writer.validate import check_format_compliance, validate
-from vault_writer.writer import render_dossier, scan_dossiers, write_dossier
+from vault_writer.writer import DOSSIER_SUBPATH, render_dossier, scan_dossiers, write_dossier
 
 SOURCES = (
     ("SimplifyJobs", fetch_simplify),
@@ -63,19 +66,149 @@ SOURCES = (
 # exists across all 6 sources (Greenhouse sometimes has one via metadata, the
 # other 5 sources never do) — most-recently-posted first is the prioritization
 # that's actually available everywhere, not a compromise on the chosen rule.
-MAX_NEW_WRITES_PER_RUN = 18
+#
+# Revised 2026-07-29 (Task A): split per bucket instead of one flat number —
+# a tunable dict, not magic numbers spread through the function. Still caps
+# at roughly 10/run to protect Firecrawl budget and review throughput; a
+# bucket with 0 eligible candidates this run never lets another bucket borrow
+# its unused slots (each bucket only draws from its own ordered queue).
+MAX_NEW_WRITES_PER_RUN = {"AI/ML": 3, "Fullstack": 3, "CyS & Finance": 3, "Other": 1}
+
+# Per-bucket vault capacity, per the original design (Dossiers-to-Create.md,
+# Source of Truth.md) — but per the user's explicit 2026-07-29 override, this
+# is a NOTIFICATION mechanism, never a write refusal: the false-exclusion-
+# worse-than-false-inclusion asymmetry that governs every other gate in this
+# codebase applies here too (a hard-refusal cap would silently drop a real,
+# currently-open posting for no benefit — the scarce resource is human review
+# attention, not vault storage). See run_once()'s bucket_at_capacity handling.
+BUCKET_CAPACITY = 50
+# Global total across List/Dossiers/ excluding Viewed/. 150/170 are logged in
+# the run record only (informational); 190/200 additionally file a GitHub
+# issue the first time each is crossed (same "notify once" state as buckets).
+GLOBAL_INFO_THRESHOLDS = (150, 170)
+GLOBAL_ISSUE_THRESHOLDS = (190, 200)
+CAPACITY_STATE_FILENAME = "capacity_notified.json"
 
 
-def _prioritize_and_cap(new_listings: list, limit: int) -> tuple:
-    """Most-recently-posted first; missing date_posted sorts last, never first
-    (an unknown post date must not win priority over a known-recent one).
-    Returns (this_run, deferred) — deferred items are simply not passed to
-    validate_and_write and therefore never marked seen, so dedup_new()
-    naturally re-offers them next run without any extra state to manage."""
-    ordered = sorted(new_listings, key=lambda item: item[1].date_posted or 0, reverse=True)
-    return ordered[:limit], ordered[limit:]
+def _prioritize_and_cap(new_listings: list, budget: dict, preferred_companies: dict = None) -> tuple:
+    """Scoped per-bucket per the tunable budget dict — each bucket fills only
+    from its own ordered queue, so an empty bucket this run can't let another
+    bucket's items borrow its slots. Bucket is the same degraded-signal
+    classify() (title/category only, no fetched content yet)
+    validate_and_write() itself falls back to before a posting's content is
+    fetched — pacing doesn't need the refined, content-informed bucket, only
+    the final written folder does. Returns (this_run, deferred) — deferred
+    items are simply not passed to validate_and_write and therefore never
+    marked seen, so dedup_new() naturally re-offers them next run without any
+    extra state to manage.
+
+    Ordering within each bucket is now the Task L "debate" comparator
+    (preferred-company tier -> bucket fill-need -> recency) instead of a bare
+    recency sort — preferred_companies=None degrades to the original
+    recency-only order (every candidate ties at stage 1, and stage 2 never
+    fires within a single bucket's own list regardless, so recency alone
+    decides), which is also exactly what every pre-Task-L caller/test gets
+    for free."""
+    by_bucket = {}
+    for uid, listing in new_listings:
+        bucket, _ = classify(listing.title, listing.category, "")
+        by_bucket.setdefault(bucket, []).append((uid, listing))
+
+    bucket_urgency = compute_bucket_urgency(new_listings, budget)
+    cmp_key = cmp_to_key(lambda x, y: debate_compare(x, y, preferred_companies or {}, bucket_urgency))
+
+    this_run, deferred = [], []
+    for bucket, items in by_bucket.items():
+        ordered = sorted(items, key=cmp_key)
+        limit = budget.get(bucket, 0)
+        this_run.extend(ordered[:limit])
+        deferred.extend(ordered[limit:])
+    return this_run, deferred
+
+
+def count_dossiers_by_bucket(vault_root) -> dict:
+    """Real per-bucket file counts in the vault checkout — Viewed/ isn't one
+    of BUCKET_FOLDERS' values, so it's excluded automatically, matching the
+    Standard's '201 total excluding Viewed/' scope."""
+    vault_root = Path(vault_root)
+    counts = {}
+    for bucket, folder in BUCKET_FOLDERS.items():
+        d = vault_root / DOSSIER_SUBPATH / folder
+        counts[bucket] = len(list(d.glob("*.md"))) if d.is_dir() else 0
+    return counts
+
+
+def load_capacity_notified(state_dir) -> dict:
+    path = Path(state_dir) / CAPACITY_STATE_FILENAME
+    if not path.exists():
+        return {"buckets": [], "global": []}
+    return json.loads(path.read_text())
+
+
+def save_capacity_notified(state_dir, notified: dict) -> None:
+    path = Path(state_dir) / CAPACITY_STATE_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(notified, indent=2, sort_keys=True) + "\n")
 
 RUN_LOG_MD_SUBPATH = Path("10_Areas/Career/Internships/List/Run Log.md")
+
+# Task N (Prompt 5) — a candidate that loses the debate comparator's sort
+# (falls outside its bucket's budget, i.e. ends up in _prioritize_and_cap's
+# "deferred" list) accumulates a loss count across runs. 5 was chosen to give
+# a real posting several genuine chances across multiple hourly runs before
+# conceding it structurally can't out-rank the field — not an arbitrary
+# guess dressed as one, but still a tunable to retune from real data once
+# this has run for a while, same as every other tunable in this codebase.
+MAX_DEBATE_LOSSES = 5
+DEBATE_LOSSES_FILENAME = "debate_losses.json"
+EXCLUDED_UIDS_FILENAME = "excluded_uids.json"
+EXCLUDED_LOG_SUBPATH = Path("10_Areas/Career/Internships/List/Excluded — Losing The Debate.md")
+
+
+def load_debate_losses(state_dir) -> dict:
+    path = Path(state_dir) / DEBATE_LOSSES_FILENAME
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def save_debate_losses(state_dir, losses: dict) -> None:
+    path = Path(state_dir) / DEBATE_LOSSES_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(losses, indent=2, sort_keys=True) + "\n")
+
+
+def load_excluded_uids(state_dir) -> set:
+    path = Path(state_dir) / EXCLUDED_UIDS_FILENAME
+    if not path.exists():
+        return set()
+    return set(json.loads(path.read_text()))
+
+
+def save_excluded_uids(state_dir, excluded: set) -> None:
+    path = Path(state_dir) / EXCLUDED_UIDS_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(excluded), indent=2) + "\n")
+
+
+def update_debate_losses(losses: dict, deferred: list, written_uids: list) -> tuple:
+    """Returns (updated_losses, newly_excluded: [(uid, listing), ...]).
+    Increments the loss count for every deferred uid (a candidate that lost
+    this run's per-bucket comparator sort); removes any uid that won (got
+    written) this run entirely — it's in seen_ids.json now, its loss history
+    is moot. A uid whose count reaches MAX_DEBATE_LOSSES is returned in
+    newly_excluded and removed from losses — callers add it to the excluded
+    set and log it; this function only does the counting."""
+    losses = dict(losses)
+    for uid in written_uids:
+        losses.pop(uid, None)
+    newly_excluded = []
+    for uid, listing in deferred:
+        losses[uid] = losses.get(uid, 0) + 1
+        if losses[uid] >= MAX_DEBATE_LOSSES:
+            newly_excluded.append((uid, listing))
+            del losses[uid]
+    return losses, newly_excluded
 
 # A required_fields or format_compliance rejection means OUR normalizer/writer
 # produced something malformed — a real bug, worth an issue. url_liveness and
@@ -106,26 +239,39 @@ def build_matched_reason(listing, profile: dict) -> str:
     return "matched"
 
 
-def fetch_and_filter(profile: dict, http_get=None) -> dict:
-    """Returns {source_name: {"fetch_count": int, "matched": [Listing, ...]}}."""
+def fetch_and_filter(profile: dict, http_get=None, excluded_ids: frozenset = frozenset()) -> dict:
+    """Returns {source_name: {"fetch_count": int, "matched": [Listing, ...]}}.
+    excluded_ids (Task N, Prompt 5) drops a uid that already lost the debate
+    comparator MAX_DEBATE_LOSSES consecutive times here, before it's even
+    counted as matched — the earliest seam available, so an excluded uid
+    never reaches the Firecrawl content-fetch in validate_and_write either."""
     results = {}
     for name, fetch_fn in SOURCES:
         listings = fetch_fn(http_get)
         results[name] = {
             "fetch_count": len(listings),
-            "matched": [l for l in listings if matches(l, profile) and not stage1_reject(l.title, l.raw_text)],
+            "matched": [
+                l for l in listings
+                if matches(l, profile) and not stage1_reject(l.title, l.raw_text)
+                and compute_uid(l) not in excluded_ids
+            ],
         }
     return results
 
 
-def dedup_new(matched_by_source: dict, seen_ids: set):
-    """Returns ([(uid, listing), ...] for genuinely new items, already_seen_count)."""
+def dedup_new(matched_by_source: dict, seen_ids: set, excluded_ids: frozenset = frozenset()):
+    """Returns ([(uid, listing), ...] for genuinely new items, already_seen_count).
+    excluded_ids is also checked here (belt-and-suspenders with
+    fetch_and_filter's own check above) so nothing slips through if a caller
+    ever builds matched_by_source some other way."""
     new = []
     already_seen = 0
     seen_this_run = set()
     for _name, info in matched_by_source.items():
         for listing in info["matched"]:
             uid = compute_uid(listing)
+            if uid in excluded_ids:
+                continue
             if uid in seen_ids or uid in seen_this_run:
                 already_seen += 1
                 continue
@@ -169,7 +315,8 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
             rejections.append({"uid": uid, "check": "opt_eligibility",
                               "reason": f"{cached['signal']} (cached {cached['checked']})"})
             continue
-        markdown = render_dossier(listing, uid, date_found, build_matched_reason(listing, profile))
+        markdown = render_dossier(listing, uid, date_found, build_matched_reason(listing, profile),
+                                  preferred_companies=profile.get("preferred_companies"))
         result = validate(listing, uid, markdown, seen_ids, http_head=http_head, dossier_keys=dossier_keys)
         if not result.passed:
             rejections.append({"uid": uid, "check": result.check, "reason": result.reason})
@@ -199,11 +346,16 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
                     opt_cache[uid] = {"verdict": "excluded", "signal": opt_signal, "checked": date_found}
                     rejections.append({"uid": uid, "check": "opt_eligibility", "reason": opt_signal})
                     continue
+                degree_signal = phd_only_exclusion(page_md)
+                if degree_signal:
+                    rejections.append({"uid": uid, "check": "degree_eligibility", "reason": degree_signal})
+                    continue
                 opt_cache[uid] = {"verdict": "eligible", "signal": None, "checked": date_found}
                 bucket, signal = classify(listing.title, listing.category, posting_content)
                 enriched = render_dossier(listing, uid, date_found,
                                           build_matched_reason(listing, profile), posting_content,
-                                          classification_callout(bucket, signal))
+                                          classification_callout(bucket, signal),
+                                          preferred_companies=profile.get("preferred_companies"))
                 # The gate validated the thin render; re-check format on the
                 # enriched one — an extraction bug degrades to thin, never
                 # writes malformed markdown into the vault.
@@ -251,12 +403,17 @@ def run_once(
         "errors": [],
         "halted": False,
         "halt_reason": None,
+        "bucket_at_capacity": [],
+        "dossier_total": 0,
+        "newly_excluded_count": 0,
     }
+
+    excluded_ids = load_excluded_uids(state_dir) if state_dir is not None else set()
 
     try:
         check_schema_drift(http_get)
         seen_ids = load_seen_ids(state_path)
-        matched_by_source = fetch_and_filter(profile, http_get)
+        matched_by_source = fetch_and_filter(profile, http_get, excluded_ids=excluded_ids)
     except (SchemaDriftError, requests.RequestException) as exc:
         # RequestException too — a deleted repo, DNS failure, or 5xx used to
         # crash the process before any run-log record or issue existed (the
@@ -276,11 +433,13 @@ def run_once(
         record["fetch_counts"][name] = info["fetch_count"]
         record["filter_match_counts"][name] = len(info["matched"])
 
-    new_listings, already_seen_count = dedup_new(matched_by_source, seen_ids)
+    new_listings, already_seen_count = dedup_new(matched_by_source, seen_ids, excluded_ids=excluded_ids)
     record["new_count"] = len(new_listings)
     record["already_seen_count"] = already_seen_count
 
-    this_run, deferred = _prioritize_and_cap(new_listings, MAX_NEW_WRITES_PER_RUN)
+    this_run, deferred = _prioritize_and_cap(
+        new_listings, MAX_NEW_WRITES_PER_RUN, preferred_companies=profile.get("preferred_companies")
+    )
     record["deferred_count"] = len(deferred)
 
     opt_cache = {}
@@ -294,6 +453,62 @@ def run_once(
         Path(opt_cache_path).parent.mkdir(parents=True, exist_ok=True)
         Path(opt_cache_path).write_text(json.dumps(opt_cache, indent=2, sort_keys=True) + "\n")
     record["rejections"] = rejections
+
+    # Task N (Prompt 5): count this run's debate loss for every deferred
+    # candidate; a uid that won (got written) has its loss history dropped
+    # entirely. A uid crossing MAX_DEBATE_LOSSES moves to the excluded set
+    # and gets one line in a reviewable markdown log — not a silent,
+    # permanent exclusion.
+    if state_dir is not None:
+        debate_losses = load_debate_losses(state_dir)
+        debate_losses, newly_excluded = update_debate_losses(debate_losses, deferred, written_uids)
+        save_debate_losses(state_dir, debate_losses)
+        record["newly_excluded_count"] = len(newly_excluded)
+        if newly_excluded:
+            excluded_ids = load_excluded_uids(state_dir)
+            excluded_ids.update(uid for uid, _listing in newly_excluded)
+            save_excluded_uids(state_dir, excluded_ids)
+            for uid, listing in newly_excluded:
+                line = (
+                    f"- **{listing.company}** — {listing.title} — [{listing.url}]({listing.url}) — "
+                    f"excluded {now.date().isoformat()} — lost the debate {MAX_DEBATE_LOSSES} consecutive runs"
+                )
+                append_excluded_log(
+                    Path(jarvis_dir) / EXCLUDED_LOG_SUBPATH, line, created_date=now.date().isoformat(),
+                    max_losses=MAX_DEBATE_LOSSES,
+                )
+
+    # Task A resource-limit notification (Standard §5): a bucket at/over
+    # capacity or the global total crossing a threshold is surfaced, never a
+    # write refusal — the writes above already happened regardless.
+    bucket_counts = count_dossiers_by_bucket(jarvis_dir)
+    record["bucket_at_capacity"] = sorted(b for b, c in bucket_counts.items() if c >= BUCKET_CAPACITY)
+    record["dossier_total"] = sum(bucket_counts.values())
+
+    notified = load_capacity_notified(state_dir) if state_dir is not None else {"buckets": [], "global": []}
+    newly_notified = False
+    for bucket in record["bucket_at_capacity"]:
+        if bucket not in notified["buckets"]:
+            notified["buckets"].append(bucket)
+            newly_notified = True
+            issue_fn(
+                issue_repo,
+                f"Bucket '{bucket}' at/over its {BUCKET_CAPACITY}-dossier notification threshold ({timestamp})",
+                f"'{bucket}' now has {bucket_counts[bucket]} dossiers in List/Dossiers/ — this is a "
+                "notification, not a write refusal (a full bucket is a signal to review more urgently, "
+                "not a reason to lose a real posting). New matches keep writing into this bucket.",
+            )
+    for threshold in GLOBAL_ISSUE_THRESHOLDS:
+        if record["dossier_total"] >= threshold and threshold not in notified["global"]:
+            notified["global"].append(threshold)
+            newly_notified = True
+            issue_fn(
+                issue_repo,
+                f"Total dossier count crossed {threshold} ({timestamp})",
+                f"List/Dossiers/ (excluding Viewed/) now has {record['dossier_total']} dossiers total.",
+            )
+    if state_dir is not None and newly_notified:
+        save_capacity_notified(state_dir, notified)
 
     if should_run_weekly_rollup(now):
         week_start = now - timedelta(days=7)

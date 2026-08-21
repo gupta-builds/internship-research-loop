@@ -97,8 +97,11 @@ def _listing_with_date(uid_suffix, date_posted):
 
 
 def test_prioritize_and_cap_keeps_most_recent_first():
+    # _listing_with_date's base fixture (Palantir "Forward Deployed Software
+    # Engineer - Internship - US Government") classifies to the 'Other'
+    # bucket — all three items land in the same bucket's queue.
     items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
-    this_run, deferred = run_pipeline._prioritize_and_cap(items, limit=2)
+    this_run, deferred = run_pipeline._prioritize_and_cap(items, budget={"Other": 2})
 
     assert [d for _, l in this_run for d in [l.date_posted]] == [300, 200]
     assert [l.date_posted for _, l in deferred] == [100]
@@ -106,17 +109,57 @@ def test_prioritize_and_cap_keeps_most_recent_first():
 
 def test_prioritize_and_cap_missing_date_posted_sorts_last():
     items = [_listing_with_date("known", 500), _listing_with_date("unknown", None)]
-    this_run, deferred = run_pipeline._prioritize_and_cap(items, limit=1)
+    this_run, deferred = run_pipeline._prioritize_and_cap(items, budget={"Other": 1})
 
     assert this_run[0][1].date_posted == 500
     assert deferred[0][1].date_posted is None
+
+
+def test_prioritize_and_cap_orders_preferred_company_first_within_bucket():
+    """Task L integration: two 'Other'-bucket candidates, non-preferred one
+    posted more recently — the debate comparator's preferred-company stage
+    must still put the preferred company first when preferred_companies is
+    supplied, overriding the bare-recency behavior of the pre-Task-L sort."""
+    non_preferred_recent = _listing_with_date("recent", 1700000000)
+    non_preferred_recent[1].company = "Random Startup Inc"
+    preferred_older = _listing_with_date("older", 1600000000)
+    preferred_older[1].company = "Google"
+
+    this_run, deferred = run_pipeline._prioritize_and_cap(
+        [non_preferred_recent, preferred_older], budget={"Other": 1},
+        preferred_companies={"Google": "high"},
+    )
+    assert this_run[0][1].company == "Google"
+    assert deferred[0][1].company == "Random Startup Inc"
+
+
+def test_prioritize_and_cap_without_preferred_companies_keeps_recency_only_order():
+    """preferred_companies=None (the default) must reproduce the exact
+    pre-Task-L recency-only behavior — every existing caller/test that
+    doesn't pass it should see no change."""
+    items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
+    this_run, deferred = run_pipeline._prioritize_and_cap(items, budget={"Other": 2})
+    assert [l.date_posted for _, l in this_run] == [300, 200]
+    assert [l.date_posted for _, l in deferred] == [100]
+
+
+def test_prioritize_and_cap_scopes_budget_per_bucket():
+    """A bucket with 0 eligible candidates this run must not let another
+    bucket's items borrow its unused slots — each bucket draws only from its
+    own ordered queue."""
+    other_items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
+    this_run, deferred = run_pipeline._prioritize_and_cap(
+        other_items, budget={"Other": 2, "AI/ML": 5, "Fullstack": 5, "CyS & Finance": 5},
+    )
+    assert len(this_run) == 2  # AI/ML's unused slots don't spill over into Other
+    assert len(deferred) == 1
 
 
 def test_run_once_defers_beyond_the_cap_and_leaves_it_for_next_run(tmp_path, monkeypatch):
     """The core guarantee: a deferred item is not marked seen, so it's neither
     lost (no silent drop) nor duplicated (no re-write) — it just naturally
     reappears as 'new' on the next run, same as any other unseen match."""
-    monkeypatch.setattr(run_pipeline, "MAX_NEW_WRITES_PER_RUN", 1)
+    monkeypatch.setattr(run_pipeline, "MAX_NEW_WRITES_PER_RUN", {"Other": 1})
     kwargs = _run_once_kwargs(tmp_path)
     record = run_pipeline.run_once(**kwargs)
 
@@ -354,10 +397,17 @@ def test_run_once_files_issue_on_systemic_rejection_not_routine_one(tmp_path):
     kwargs["issue_fn"].assert_not_called()
 
 
-def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path):
+def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path, monkeypatch):
+    # Generous per-bucket budget so every fixture match fits in the first run
+    # — this test is about seen-state idempotency across runs, not pacing.
+    monkeypatch.setattr(
+        run_pipeline, "MAX_NEW_WRITES_PER_RUN",
+        {"AI/ML": 20, "Fullstack": 20, "CyS & Finance": 20, "Other": 20},
+    )
     kwargs = _run_once_kwargs(tmp_path)
     first = run_pipeline.run_once(**kwargs)
     assert first["written_count"] > 0
+    assert first["deferred_count"] == 0
 
     kwargs2 = _run_once_kwargs(tmp_path, jarvis_dir=kwargs["jarvis_dir"])
     kwargs2["state_path"] = kwargs["state_path"]
@@ -462,3 +512,75 @@ def test_cross_source_key_punctuation_insensitive_marmon_case():
     from core.identity import cross_source_key
     assert cross_source_key("Marmon Holdings", "Data Engineering Intern Co-op") == \
         cross_source_key("Marmon Holdings", "Data Engineering Intern/Co-op")
+
+
+# --- Task A: per-bucket write budget + capacity notification (not a refusal) ---
+
+DOSSIERS_SUBPATH = Path("10_Areas/Career/Internships/List/Dossiers")
+
+
+def _seed_bucket(jarvis_dir, bucket_folder, count):
+    d = Path(jarvis_dir) / DOSSIERS_SUBPATH / bucket_folder
+    d.mkdir(parents=True, exist_ok=True)
+    for i in range(count):
+        (d / f"seed-{i}.md").write_text("placeholder\n")
+
+
+def test_count_dossiers_by_bucket_counts_real_files(tmp_path):
+    _seed_bucket(tmp_path, "Other", 5)
+    _seed_bucket(tmp_path, "1 - AI & ML", 2)
+    counts = run_pipeline.count_dossiers_by_bucket(tmp_path)
+    assert counts["Other"] == 5
+    assert counts["AI/ML"] == 2
+    assert counts["Fullstack"] == 0
+
+
+@pytest.mark.parametrize("seed_count,expect_at_capacity", [(48, False), (49, True), (50, True)])
+def test_run_once_reports_bucket_at_capacity_without_refusing_writes(tmp_path, seed_count, expect_at_capacity):
+    """Real fixture set writes exactly 1 'Other'-bucket item per run under the
+    default budget — seeding N existing files means the post-write count is
+    N+1. The write must happen either way (49 -> 50, or 50 -> 51); only
+    whether the notification fires differs."""
+    kwargs = _run_once_kwargs(tmp_path, state_dir=tmp_path / "state")
+    _seed_bucket(kwargs["jarvis_dir"], "Other", seed_count)
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["written_count"] > 0  # the write happened regardless
+    assert ("Other" in record["bucket_at_capacity"]) is expect_at_capacity
+
+
+def test_run_once_files_issue_once_per_bucket_crossing_capacity(tmp_path):
+    kwargs = _run_once_kwargs(tmp_path, state_dir=tmp_path / "state")
+    _seed_bucket(kwargs["jarvis_dir"], "Other", 49)
+    first = run_pipeline.run_once(**kwargs)
+    assert "Other" in first["bucket_at_capacity"]
+    capacity_issue_calls = [c for c in kwargs["issue_fn"].call_args_list if "at/over" in c.args[1]]
+    assert len(capacity_issue_calls) == 1
+
+    kwargs2 = _run_once_kwargs(
+        tmp_path, jarvis_dir=kwargs["jarvis_dir"], state_path=kwargs["state_path"],
+        runs_log_path=kwargs["runs_log_path"], state_dir=kwargs["state_dir"],
+    )
+    second = run_pipeline.run_once(**kwargs2)
+    assert "Other" in second["bucket_at_capacity"]  # still at/over capacity
+    capacity_issue_calls_2 = [c for c in kwargs2["issue_fn"].call_args_list if "at/over" in c.args[1]]
+    assert len(capacity_issue_calls_2) == 0  # not refiled — already notified
+
+
+@pytest.mark.parametrize(
+    "seed_total,expect_dossier_total,expect_issue",
+    [(186, 189, False), (187, 190, True), (197, 200, True)],
+)
+def test_run_once_global_total_thresholds(tmp_path, seed_total, expect_dossier_total, expect_issue):
+    """150/170 stay informational-only (logged via dossier_total, no issue);
+    190/200 additionally file a GitHub issue the first time each is crossed.
+    The fixture set writes exactly 3 dossiers/run under the default budget
+    (1 Other + 1 Fullstack + 1 CyS & Finance), so seed_total + 3 lands on the
+    exact milestone under test."""
+    kwargs = _run_once_kwargs(tmp_path, state_dir=tmp_path / "state")
+    _seed_bucket(kwargs["jarvis_dir"], "Other", seed_total)
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["dossier_total"] == expect_dossier_total
+    global_issue_calls = [c for c in kwargs["issue_fn"].call_args_list if "Total dossier count crossed" in c.args[1]]
+    assert bool(global_issue_calls) is expect_issue
