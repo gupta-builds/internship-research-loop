@@ -1834,6 +1834,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:40ee3e02-a678-438e-9f67-af1dae8d523a": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:41aedd07-28e8-4be6-a6ad-0ffb8a16d770": {
     "checked": "2026-08-06",
     "signal": null,
@@ -1916,6 +1921,16 @@
   },
   "vanshb03:69849980-0c55-4822-96cf-724e3c942dfe": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:6a6d4d9c-5866-4b37-984c-93f72b704f1d": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:6ad34b8c-97ef-49cf-8230-cc2fd4d26258": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -2069,6 +2084,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:bec160b4-77d9-4030-b9fd-c38a276c15cd": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:bed160fc-23f7-474e-8720-7a84be2521a9": {
     "checked": "2026-07-27",
     "signal": null,
@@ -2078,6 +2098,11 @@
     "checked": "2026-07-25",
     "signal": null,
     "verdict": "eligible"
+  },
+  "vanshb03:c892c9e4-a343-43b2-93eb-b0212b89389f": {
+    "checked": "2026-08-21",
+    "signal": "export controls (including DOE 10 CFR Part 810 and NRC requirements). U.S. Person",
+    "verdict": "excluded"
   },
   "vanshb03:cede35ac-5bdd-4532-bd54-fef251d977a8": {
     "checked": "2026-08-21",
