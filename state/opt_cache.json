@@ -609,8 +609,18 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:15d3a6ce-277c-4231-b321-686c45849a85": {
+    "checked": "2026-08-21",
+    "signal": "U.S. citizenship is required",
+    "verdict": "excluded"
+  },
   "SimplifyJobs:167546b1-fd92-4bc9-94d0-a427ade3104e": {
     "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:1a0df397-2083-456f-9ecb-137eec7603ef": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -636,6 +646,11 @@
   },
   "SimplifyJobs:1e070356-7637-458b-b016-143243ecf95e": {
     "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:212a153a-1fd0-4d17-a022-c1db71569fd9": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -721,6 +736,11 @@
   },
   "SimplifyJobs:3cac9449-de39-427f-a7fd-9b22e0d04497": {
     "checked": "2026-08-19",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:3e9d3b5d-b9b8-4556-8c46-75ca36c2b15d": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
@@ -1294,6 +1314,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:b6461f19-ac97-4787-a3e5-e3529e7f1e28": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:b6f0ed37-c65c-493a-b002-0e540bc09413": {
     "checked": "2026-08-11",
     "signal": null,
@@ -1504,6 +1529,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:e8cedff1-c202-4a0c-82aa-62375733005a": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:e9cc1694-7911-45ac-988b-ff64e77ff9af": {
     "checked": "2026-08-21",
     "signal": null,
@@ -1581,6 +1611,11 @@
   },
   "SimplifyJobs:f683599d-0ac1-4900-8528-722d0bcfb4c4": {
     "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:f7eaba38-fbcf-47fb-88d0-928f5427c0cb": {
+    "checked": "2026-08-21",
     "signal": null,
     "verdict": "eligible"
   },
