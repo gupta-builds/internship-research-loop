@@ -2119,6 +2119,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:c81be192-aa12-4a7c-bcfb-0c29b79d282e": {
+    "checked": "2026-08-21",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:c892c9e4-a343-43b2-93eb-b0212b89389f": {
     "checked": "2026-08-21",
     "signal": "export controls (including DOE 10 CFR Part 810 and NRC requirements). U.S. Person",
