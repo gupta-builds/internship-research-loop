@@ -196,3 +196,29 @@ def test_validate_rejects_duplicate_uid(listing, uid):
     result = validate(listing, uid, md, seen_ids={uid}, http_head=head)
     assert result.passed is False
     assert result.check == "not_duplicate"
+
+
+# --- Task G: notes: field is fail-closed required, like every other field ---
+
+def test_format_compliance_rejects_missing_notes_field(listing, uid):
+    """Confirms REQUIRED_FRONTMATTER_FIELDS actually enforces notes: — adding
+    it to build_frontmatter() without also adding it here would mean the
+    write gate never checks for it, silently defeating the point of the
+    Internship Notes Standard §1 'always present, even null/[]' rule."""
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    lines = [l for l in md.splitlines() if not l.startswith("notes:") and l.strip() != '  - "[[10_Areas/Career/Internships/List/Dossiers MOC]]"']
+    broken = "\n".join(lines) + "\n"
+    result = check_format_compliance(broken)
+    assert result.passed is False
+    assert "notes" in result.reason
+
+
+# --- Task O: preference_tier is fail-closed required, like every other field ---
+
+def test_format_compliance_rejects_missing_preference_tier_field(listing, uid):
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    lines = [l for l in md.splitlines() if not l.startswith("preference_tier:")]
+    broken = "\n".join(lines) + "\n"
+    result = check_format_compliance(broken)
+    assert result.passed is False
+    assert "preference_tier" in result.reason

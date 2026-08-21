@@ -47,3 +47,31 @@ locations_allow: us_remote
 # 592, ("PhD",) 586, empty 4676 — fetched 2026-07-18). Permissive: empty degrees
 # data passes; non-empty must intersect this list.
 degrees_allow: ["Bachelor's"]
+# Preference weight for the debate comparator (Prompt 5 Task L), not a filter
+# gate — a non-matching company still passes everything above unaffected.
+# Seeded from the real, human-vetted target list in the vault's
+# `20_Progress/Internship/Building System/Research Loop - Resources.md`
+# "Named-Program Coverage Check (2026-07-29)" section: 11 named early-talent
+# programs the human already identified as worth prioritizing, of which only
+# 3/11 have ANY dossier coverage today and none confirmed as the specific
+# named program (Jane Street FTTP, Two Sigma First-Year, D.E. Shaw, Citadel
+# Launch, Google ASDI, Microsoft Explore, LinkedIn First Play, MLH
+# Fellowship, NASA OSTEM, Capital One, Bloomberg). This is a starting point
+# for the human to re-tier or add/remove entries directly, not a final
+# answer — company preference is an explicit human judgment call per
+# `30_Order/Workflows/Internship Pipeline.md`'s Step 2 ("Screen"), and this
+# dict only wires that judgment into write-priority ordering, it doesn't
+# automate the judgment itself. All seeded at one tier for now; a
+# multi-tier scheme wasn't asked for.
+preferred_companies:
+  "Jane Street": high
+  "Two Sigma": high
+  "D.E. Shaw": high
+  "Citadel": high
+  "Google": high
+  "Microsoft": high
+  "LinkedIn": high
+  "MLH": high
+  "NASA": high
+  "Capital One": high
+  "Bloomberg": high

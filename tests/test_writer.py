@@ -5,7 +5,15 @@ from pathlib import Path
 import pytest
 
 from ingestion.normalize import normalize_simplify
-from vault_writer.writer import dossier_filename, load_dossier_uids, render_dossier, write_dossier
+from vault_writer.writer import (
+    DOSSIERS_MOC_LINK,
+    build_frontmatter,
+    company_slug,
+    dossier_filename,
+    load_dossier_uids,
+    render_dossier,
+    write_dossier,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 THROWAWAY_VAULT = FIXTURES / "throwaway_vault"
@@ -129,3 +137,69 @@ def test_write_dossier_without_state_dir_records_no_manifest(vault_root, listing
     write_dossier(vault_root, uid, md, listing.title, listing.company, "Other")
 
     assert not (tmp_path / "state" / "dossier_uids.json").exists()
+
+
+# --- Task G: dossier interlinking (Internship Notes Standard §1) ---
+
+def test_build_frontmatter_includes_moc_link_and_company_tag(listing):
+    fm = build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason")
+
+    assert fm["notes"] == [DOSSIERS_MOC_LINK]
+    assert f"company/{company_slug(listing.company)}" in fm["tags"]
+    # field order: notes immediately after next; preference_tier (Task O)
+    # sits between notes and tags; tags stays last.
+    keys = list(fm.keys())
+    assert keys.index("next") + 1 == keys.index("notes")
+    assert keys.index("notes") + 1 == keys.index("preference_tier")
+    assert keys.index("preference_tier") + 1 == keys.index("tags")
+
+
+def test_company_slug_matches_real_standard_examples():
+    assert company_slug("Appian") == "appian"
+    assert company_slug("Aquatic Capital Management") == "aquatic-capital-management"
+
+
+def test_company_slug_normalizes_case_and_whitespace_for_same_company_clustering():
+    """Two dossiers for the same company (varying casing/whitespace) must
+    produce the identical tag — Obsidian's tag pane clusters on exact string
+    match, per the Standard's §1 same-company clustering rule."""
+    assert company_slug("Aquatic Capital Management") == company_slug("  aquatic capital management  ")
+    assert company_slug("Aquatic Capital Management") == company_slug("AQUATIC CAPITAL MANAGEMENT")
+
+
+def test_render_dossier_frontmatter_contains_moc_link_and_company_tag(listing):
+    uid = f"{listing.source}:{listing.raw_id}"
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    assert DOSSIERS_MOC_LINK in md
+
+
+# --- Task O: preference_tier frontmatter field ---
+
+def test_build_frontmatter_preference_tier_null_when_no_preferred_companies_given(listing):
+    fm = build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason")
+    assert fm["preference_tier"] is None
+
+
+def test_build_frontmatter_preference_tier_matches_real_preferred_company(listing):
+    """listing's real company is 'Palantir' (tests/fixtures/simplifyjobs.json)
+    — not itself in preferred_companies, so mutate it to a real preferred
+    entry to show the matched-tier case."""
+    listing.company = "Google"
+    fm = build_frontmatter(
+        listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason",
+        preferred_companies={"Google": "high"},
+    )
+    assert fm["preference_tier"] == "high"
+
+
+def test_render_dossier_shows_real_rendered_frontmatter_with_preference_match(listing):
+    """Real rendered frontmatter (not just the dict) — confirms preference_tier
+    actually serializes into the note, per the Verification section's ask to
+    show a real dossier with a preference match."""
+    listing.company = "Microsoft"
+    uid = f"{listing.source}:{listing.raw_id}"
+    md = render_dossier(
+        listing, uid, "2026-07-17", "reason", preferred_companies={"Microsoft": "high"},
+    )
+    assert "preference_tier: high" in md
+    assert f"company/{company_slug(listing.company)}" in md

@@ -12,7 +12,8 @@ from core.identity import cross_source_key
 REQUIRED_LISTING_FIELDS = ("company", "title", "url", "source", "uid")
 REQUIRED_FRONTMATTER_FIELDS = (
     "company", "title", "url", "source", "terms", "locations",
-    "target_year", "date_posted", "date_found", "matched_reason", "status", "next", "tags",
+    "target_year", "date_posted", "date_found", "matched_reason", "status", "next", "notes",
+    "preference_tier", "tags",
 )
 
 

@@ -75,3 +75,17 @@ def cross_source_key(company: str, title: str, url: str = "") -> str:
     # caught in the 2026-07-18 dossier audit).
     norm = lambda s: re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
     return f"{norm(company)}|{norm(title)}"
+
+
+def company_matches_preference(company: str, preferred: dict) -> str:
+    """The matched preference tier (e.g. 'high'), or None if company isn't in
+    preferred. Same punctuation/case-insensitive normalization as
+    cross_source_key()'s norm(), so 'D.E. Shaw' and 'DE Shaw' both match —
+    preferred_companies (core/profile.yaml) is a human-maintained config dict,
+    not derived from live data, so this is a pure string match with no new
+    network call or source to verify (Prompt 5 Task K)."""
+    target = _norm_company(company)
+    for name, tier in (preferred or {}).items():
+        if _norm_company(name) == target:
+            return tier
+    return None

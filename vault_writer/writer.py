@@ -13,6 +13,8 @@ from pathlib import Path
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from core.identity import company_matches_preference
+
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 DOSSIER_SUBPATH = Path("10_Areas/Career/Internships/List/Dossiers")
 DOSSIER_UIDS_FILENAME = "dossier_uids.json"
@@ -45,12 +47,33 @@ def _iso_date(epoch) -> str:
     return datetime.fromtimestamp(epoch, tz=timezone.utc).date().isoformat() if epoch else None
 
 
-def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str) -> dict:
+DOSSIERS_MOC_LINK = "[[10_Areas/Career/Internships/List/Dossiers MOC]]"
+
+_TAG_ILLEGAL_CHARS = re.compile(r'[\\/:*?"<>|]')
+
+
+def company_slug(company: str) -> str:
+    """Same slugification as dossier_filename(): lowercase, spaces to
+    hyphens, illegal chars stripped — so 'Aquatic Capital Management' and
+    ' aquatic capital management ' both produce company/aquatic-capital-management,
+    per the Standard's same-company clustering rule (§1)."""
+    s = _TAG_ILLEGAL_CHARS.sub("", company).strip().lower()
+    return re.sub(r"\s+", "-", s)
+
+
+def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str,
+                      preferred_companies: dict = None) -> dict:
     """uid and category are deliberately not rendered — uid stays available
     internally via the dossier_uids.json manifest (see write_dossier), and
     category was never surfaced to the reader anywhere else in the note.
     `next:` (not `promoted:`) matches every other note type's convention
-    across the vault."""
+    across the vault. `notes:` (always the Dossiers MOC link) and the
+    `company/<slug>` tag are the Internship Notes Standard §1 interlinking
+    requirement — `notes` sits right after `next`, right before `tags`.
+    `preference_tier` (Prompt 5 Task O) is the matched core/profile.yaml
+    preferred_companies tier, or null — required like every other field
+    here, not omitted when there's no match (fail-closed, same discipline
+    as REQUIRED_FRONTMATTER_FIELDS everywhere else in this file)."""
     return {
         "company": listing.company,
         "title": listing.title,
@@ -64,16 +87,25 @@ def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str) -
         "matched_reason": matched_reason,
         "status": "unreviewed",
         "next": None,
-        "tags": ["internship", "auto-discovered"],
+        "notes": [DOSSIERS_MOC_LINK],
+        "preference_tier": company_matches_preference(listing.company, preferred_companies or {}),
+        "tags": ["internship", "auto-discovered", f"company/{company_slug(listing.company)}"],
     }
 
 
-def render_dossier(listing, uid: str, date_found: str, matched_reason: str, posting_content: str = "",
-                   classification_callout: str = "") -> str:
-    frontmatter = build_frontmatter(listing, uid, date_found, matched_reason)
-    frontmatter_yaml = yaml.dump(
+def dump_frontmatter(frontmatter: dict) -> str:
+    """Shared YAML rendering (None as blank scalar, indented list items) so
+    every dossier-writing code path — including recheck.py's removal-time
+    frontmatter patch — serializes identically."""
+    return yaml.dump(
         frontmatter, Dumper=_FrontmatterDumper, sort_keys=False, default_flow_style=False, allow_unicode=True
     )
+
+
+def render_dossier(listing, uid: str, date_found: str, matched_reason: str, posting_content: str = "",
+                   classification_callout: str = "", preferred_companies: dict = None) -> str:
+    frontmatter = build_frontmatter(listing, uid, date_found, matched_reason, preferred_companies)
+    frontmatter_yaml = dump_frontmatter(frontmatter)
     markdown = _template.render(
         frontmatter_yaml=frontmatter_yaml,
         company=listing.company,

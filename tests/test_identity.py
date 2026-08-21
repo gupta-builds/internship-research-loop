@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from core.identity import compute_uid, cross_source_key, extract_ats_job_id
+from core.filter import load_profile
+from core.identity import company_matches_preference, compute_uid, cross_source_key, extract_ats_job_id
 from ingestion.normalize import normalize_josegael, normalize_simplify
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -79,6 +80,34 @@ def test_extract_ats_job_id_google_careers_results_url():
 
 def test_extract_ats_job_id_none_when_no_recognizable_id():
     assert extract_ats_job_id("https://t.me/getjobss/7795") is None
+
+
+# --- Task K: preferred_companies matching ---
+
+PROFILE = load_profile()
+
+
+def test_company_matches_preference_punctuation_insensitive_real_de_shaw_case():
+    """Real profile.yaml entry 'D.E. Shaw' must match the real vault dossier
+    company string 'DE Shaw' (Software Developer Intern - DE Shaw.md)."""
+    preferred = PROFILE["preferred_companies"]
+    assert company_matches_preference("D.E. Shaw", preferred) == "high"
+    assert company_matches_preference("DE Shaw", preferred) == "high"
+
+
+def test_company_matches_preference_case_insensitive():
+    preferred = PROFILE["preferred_companies"]
+    assert company_matches_preference("google", preferred) == "high"
+    assert company_matches_preference("GOOGLE", preferred) == "high"
+
+
+def test_company_matches_preference_none_for_unlisted_company():
+    preferred = PROFILE["preferred_companies"]
+    assert company_matches_preference("Random Startup Inc", preferred) is None
+
+
+def test_company_matches_preference_none_for_empty_preferred_dict():
+    assert company_matches_preference("Google", {}) is None
 
 
 def test_extract_ats_job_id_google_pattern_is_domain_anchored():
