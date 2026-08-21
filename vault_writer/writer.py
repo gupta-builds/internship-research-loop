@@ -200,3 +200,75 @@ def write_dossier(vault_root, uid: str, markdown: str, role: str, company: str, 
         manifest[str(path.relative_to(vault_root))] = uid
         save_dossier_uids(state_dir, manifest)
     return path
+
+
+REMOVED_DOSSIERS_MOC_LINK = "[[10_Areas/Career/Internships/List/Dossiers/Viewed/Removed Dossiers MOC]]"
+VIEWED_SUBPATH = DOSSIER_SUBPATH / "Viewed"
+
+
+def move_dossier_to_viewed(vault_root, path, reason: str, removed_date: str, state_dir=None) -> Path:
+    """Moves a closed-posting dossier into Viewed/ instead of deleting it
+    (Internship Notes Standard §4) — the posting closing is real information
+    (hiring cadence, why a later duplicate should be rejected, a record of
+    what this pipeline actually saw), not something to throw away. Appends
+    the Removed Dossiers MOC link to the existing notes: list (never
+    replacing the original Dossiers MOC / company links already there), sets
+    status: removed (the field's first real transition away from its static
+    'unreviewed'), and records removed_date/removed_reason. Updates
+    dossier_uids.json to the new path so the next write_dossier() idempotency
+    check for this uid isn't left pointing at a file that moved."""
+    vault_root = Path(vault_root)
+    path = Path(path)
+    text = path.read_text(encoding="utf-8")
+    m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.DOTALL)
+    frontmatter = yaml.safe_load(m.group(1)) or {}
+    body = m.group(2)
+
+    notes = list(frontmatter.get("notes") or [])
+    if DOSSIERS_MOC_LINK not in notes:
+        notes.append(DOSSIERS_MOC_LINK)
+    if REMOVED_DOSSIERS_MOC_LINK not in notes:
+        notes.append(REMOVED_DOSSIERS_MOC_LINK)
+    frontmatter["notes"] = notes
+    frontmatter["status"] = "removed"
+    frontmatter["removed_date"] = removed_date
+    frontmatter["removed_reason"] = reason
+
+    # Fix 2, Prompt 5 review (2026-07-30): two dossiers with identical
+    # filenames can legitimately coexist in two different bucket folders
+    # (bucket-scoped collision checks at write time only look within one
+    # bucket) — moving both into the single flat Viewed/ folder must not let
+    # the second overwrite the first. Reuse dossier_filename()'s existing
+    # '(2)', '(3)'-suffixing collision logic rather than duplicating it: it
+    # already takes a bare "role - company" base and a set of existing names,
+    # so split path.stem back into role/company at the ' - ' this pipeline's
+    # own filenames always use.
+    viewed_dir = vault_root / VIEWED_SUBPATH
+    viewed_dir.mkdir(parents=True, exist_ok=True)
+    existing_names = {p.name for p in viewed_dir.glob("*.md")}
+    stem = path.stem
+    role, sep, company = stem.rpartition(" - ")
+    if sep:
+        new_name = dossier_filename(role, company, existing_names)
+    else:
+        # No ' - ' separator to split on (a hand-renamed or malformed
+        # filename) — fall back to suffixing the whole stem directly, same
+        # collision-avoidance behavior dossier_filename() provides, just
+        # without a role/company split to build on.
+        new_name = path.name
+        n = 2
+        while new_name in existing_names:
+            new_name = f"{stem} ({n}){path.suffix}"
+            n += 1
+    new_path = viewed_dir / new_name
+    new_path.write_text("---\n" + dump_frontmatter(frontmatter) + "---\n" + body)
+    path.unlink()
+
+    if state_dir is not None:
+        manifest = load_dossier_uids(state_dir)
+        old_rel = str(path.relative_to(vault_root))
+        uid = manifest.pop(old_rel, None)
+        if uid is not None:
+            manifest[str(new_path.relative_to(vault_root))] = uid
+            save_dossier_uids(state_dir, manifest)
+    return new_path

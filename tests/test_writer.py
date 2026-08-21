@@ -7,10 +7,12 @@ import pytest
 from ingestion.normalize import normalize_simplify
 from vault_writer.writer import (
     DOSSIERS_MOC_LINK,
+    REMOVED_DOSSIERS_MOC_LINK,
     build_frontmatter,
     company_slug,
     dossier_filename,
     load_dossier_uids,
+    move_dossier_to_viewed,
     render_dossier,
     write_dossier,
 )
@@ -203,3 +205,85 @@ def test_render_dossier_shows_real_rendered_frontmatter_with_preference_match(li
     )
     assert "preference_tier: high" in md
     assert f"company/{company_slug(listing.company)}" in md
+
+
+# --- Task H: recheck.py moves closed postings to Viewed/, doesn't delete ---
+
+def test_move_dossier_to_viewed_moves_file_and_updates_frontmatter(vault_root, listing, state_dir):
+    uid = f"{listing.source}:{listing.raw_id}"
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    path = write_dossier(vault_root, uid, md, listing.title, listing.company, "Other", state_dir=state_dir)
+
+    new_path = move_dossier_to_viewed(
+        vault_root, path, "absent from live feed", "2026-07-30", state_dir=state_dir
+    )
+
+    assert not path.exists()
+    assert new_path.exists()
+    assert new_path.parent == vault_root / DOSSIERS_SUBPATH / "Viewed"
+
+    text = new_path.read_text()
+    assert "status: removed" in text
+    assert "removed_date: '2026-07-30'" in text or "removed_date: 2026-07-30" in text
+    assert "removed_reason: absent from live feed" in text
+    assert DOSSIERS_MOC_LINK in text
+    assert REMOVED_DOSSIERS_MOC_LINK in text
+
+
+def test_move_dossier_to_viewed_updates_uid_manifest(vault_root, listing, state_dir):
+    uid = f"{listing.source}:{listing.raw_id}"
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    path = write_dossier(vault_root, uid, md, listing.title, listing.company, "Other", state_dir=state_dir)
+
+    new_path = move_dossier_to_viewed(
+        vault_root, path, "active: false upstream", "2026-07-30", state_dir=state_dir
+    )
+
+    manifest = load_dossier_uids(state_dir)
+    assert manifest[str(new_path.relative_to(vault_root))] == uid
+    assert str(path.relative_to(vault_root)) not in manifest
+
+
+def test_move_dossier_to_viewed_does_not_overwrite_filename_collision(vault_root):
+    """Fix 2, Prompt 5 review (2026-07-30): two dossiers with the identical
+    filename can legitimately coexist in two different bucket folders
+    (bucket-scoped collision checks at write time only look within one
+    bucket folder). Moving both into the single flat Viewed/ folder must not
+    let the second move silently overwrite the first — real data loss with
+    zero prior test coverage. Constructed directly rather than relying on a
+    real collision existing in the current vault."""
+    fm_template = """---
+company: Acme
+title: SWE Intern
+url: https://acme.example/{slug}
+source: SimplifyJobs
+terms: []
+locations: []
+target_year: []
+date_posted:
+date_found: '2026-07-17'
+matched_reason: reason
+status: unreviewed
+next:
+notes:
+  - "[[10_Areas/Career/Internships/List/Dossiers MOC]]"
+tags:
+  - internship
+---
+# SWE Intern
+Content {label}
+"""
+    a_dir = vault_root / DOSSIERS_SUBPATH / "Other"
+    b_dir = vault_root / DOSSIERS_SUBPATH / "1 - AI & ML"
+    a_dir.mkdir(parents=True, exist_ok=True)
+    b_dir.mkdir(parents=True, exist_ok=True)
+    (a_dir / "SWE Intern - Acme.md").write_text(fm_template.format(slug="a", label="A"))
+    (b_dir / "SWE Intern - Acme.md").write_text(fm_template.format(slug="b", label="B"))
+
+    p1 = move_dossier_to_viewed(vault_root, a_dir / "SWE Intern - Acme.md", "absent from live feed", "2026-07-30")
+    p2 = move_dossier_to_viewed(vault_root, b_dir / "SWE Intern - Acme.md", "absent from live feed", "2026-07-30")
+
+    assert p1 != p2
+    assert p1.exists() and p2.exists()
+    assert "Content A" in p1.read_text()
+    assert "Content B" in p2.read_text()

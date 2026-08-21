@@ -2,10 +2,11 @@
 """Daily post-write liveness recheck. Scans the dossier files actually present
 in the vault checkout (file existence is the truth — seen_ids.json diverged
 from the vault after the 2026-07-18 manual cleanup and stays untouched here),
-cross-refs each against its source's live feed, and removes any dossier whose
-posting is now inactive or gone from the feed entirely. Runs on its own daily
-cron (.github/workflows/recheck.yml) — postings don't close often enough to
-justify rechecking every hour.
+cross-refs each against its source's live feed, and moves any dossier whose
+posting is now inactive or gone from the feed entirely into Viewed/ (never
+deletes — Internship Notes Standard §4: a closed posting's history is real
+information). Runs on its own daily cron (.github/workflows/recheck.yml) —
+postings don't close often enough to justify rechecking every hour.
 
     JARVIS_DIR=... python recheck.py [--dry-run]
 """
@@ -27,7 +28,7 @@ from ingestion.sources import (
     fetch_zshah101,
 )
 from run_pipeline import file_github_issue
-from vault_writer.writer import load_dossier_uids, scan_dossiers
+from vault_writer.writer import load_dossier_uids, move_dossier_to_viewed, scan_dossiers
 
 # 2026-07-25: was still SimplifyJobs/JGCL only after the 4-source batch shipped
 # earlier the same day — dossiers from vanshb03/zshah101/Greenhouse/Ashby were
@@ -107,34 +108,39 @@ def main():
         "halt_reason": None,
     }
 
-    # ponytail: crude mass-deletion brake — a truncated/glitched feed must not
-    # wipe the vault. Threshold is arbitrary but safe; tune if it ever trips wrongly.
+    # ponytail: crude mass-move brake — a truncated/glitched feed must not
+    # empty the vault into Viewed/. Threshold is arbitrary but safe; tune if it
+    # ever trips wrongly. Same protective logic as before this was a move
+    # instead of a delete — the risk (a feed glitch wiping real dossiers out
+    # of the live buckets) is identical either way.
     if len(removals) > max(5, len(dossiers) // 2):
         record["halted"] = True
-        record["halt_reason"] = f"would remove {len(removals)} of {len(dossiers)} dossiers — feed glitch?"
+        record["halt_reason"] = f"would move {len(removals)} of {len(dossiers)} dossiers to Viewed/ — feed glitch?"
         if not args.dry_run:
             _commit_log(record, now)
             file_github_issue(
                 ISSUE_REPO,
-                f"Recheck halted: mass-deletion brake at {now.isoformat()}",
-                f"{record['halt_reason']}\n\nNothing was removed. Removal list:\n"
+                f"Recheck halted: mass-move brake at {now.isoformat()}",
+                f"{record['halt_reason']}\n\nNothing was moved. Removal list:\n"
                 + "\n".join(f"- `{r['uid']}`: {r['reason']}" for r in removals),
             )
         print(record["halt_reason"])
         sys.exit(1)
 
     for r in removals:
-        print(f"{'would remove' if args.dry_run else 'removing'}: {r['uid']} — {r['reason']}")
+        print(f"{'would move' if args.dry_run else 'moving'}: {r['uid']} — {r['reason']}")
     if args.dry_run:
-        print(f"dry run: {len(removals)} of {len(dossiers)} would be removed")
+        print(f"dry run: {len(removals)} of {len(dossiers)} would be moved to Viewed/")
         return
 
     if removals:
         for r in removals:
-            Path(r["path"]).unlink()
+            move_dossier_to_viewed(
+                jarvis_dir, r["path"], r["reason"], now.date().isoformat(), state_dir=STATE_DIR
+            )
         try:
             commit_and_push_with_retry(
-                jarvis_dir, f"Remove {len(removals)} closed posting(s) — recheck {now.date().isoformat()}"
+                jarvis_dir, f"Move {len(removals)} closed posting(s) to Viewed/ — recheck {now.date().isoformat()}"
             )
         except GitPushError as exc:
             record["errors"].append(f"Jarvis push failed: {exc}")
@@ -144,7 +150,7 @@ def main():
                 f"Removals were made in the checkout but the push failed after retry:\n\n```\n{exc}\n```",
             )
     _commit_log(record, now)
-    print(f"removed {len(removals)} of {len(dossiers)} dossiers; {len(errors)} fetch error(s)")
+    print(f"moved {len(removals)} of {len(dossiers)} dossiers to Viewed/; {len(errors)} fetch error(s)")
     if record["errors"]:
         sys.exit(1)
 
