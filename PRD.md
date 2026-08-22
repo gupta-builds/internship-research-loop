@@ -1,6 +1,6 @@
 # Internship Research Loop — PRD
 
-**Status:** Verified against live repo/GitHub state on 2026-07-18 (git log, `pytest` [167/167], `gh run list`, `gh api`, live feed fetches — not assumed from memory). Still not independently product-reviewed; this was built spec-first in conversation, not PRD-first. Read this file alone for orientation — it does not require the Jarvis vault to make sense. For build history, decisions, and how each number below was verified, see `20_Progress/Internship/Building System/Phases 1-3 Run.md` in the Jarvis vault; it is not required reading to pick this project up, only to understand *why* it looks this way.
+**Status:** Verified against live repo/GitHub state on 2026-08-22 (git log, `pytest` [329/329], `gh run list`, `gh api`, live vault dossier counts — not assumed from memory). Still not independently product-reviewed; this was built spec-first in conversation, not PRD-first. Read this file alone for orientation — it does not require the Jarvis vault to make sense. For build history, decisions, and how each number below was verified, see `20_Progress/Internship/Building System/Phases 1-3 Run.md` (original build) and `System - Build Log.md` (ongoing) in the Jarvis vault; neither is required reading to pick this project up, only to understand *why* it looks this way.
 
 ## Problem
 
@@ -49,14 +49,14 @@ daily: recheck (remove closed postings)     weekly: rollup into vault Run Log
 
 Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `core/` (`filter.py`, `identity.py`, `profile.yaml`, `schema_drift.py`, `git_ops.py`, `run_log.py`), `vault_writer/` (template + `validate.py` + `writer.py`), `run_pipeline.py`, `recheck.py`, `enrich.py`, `grade_resume.py`, `tests/` (167 tests), `state/` (`seen_ids.json`, `opt_cache.json`), `logs/`, `.github/workflows/` (`run.yml` hourly, `recheck.yml` daily 06:30 UTC, `test.yml` on push).
 
-## Current Status (verified 2026-07-18)
+## Current Status (verified 2026-08-22)
 
-- `pytest`: **167/167 passing**; CI green on every push
-- `run.yml`: firing on schedule and succeeding — 8/8 most recent scheduled runs successful (GitHub cron jitter skips some hours; that's platform behavior, not failures). `recheck.yml`: registered and active, **zero runs yet** — first scheduled opportunity 2026-07-19 06:30 UTC
-- Vault dossiers: **20**, every one individually re-audited 2026-07-18 against all three criteria and carrying real posting content. `state/seen_ids.json` holds 137 — deliberately larger than the vault (117 uids belong to audited-out postings that must never be rewritten)
-- Filter yield against live feeds at final config: SimplifyJobs 14,907 fetched → **36** match, JGCL 112 → **5** (was 103+17+22 before the phase 5–6 gates)
-- `FIRECRAWL_API_KEY` present as an Actions secret (set 2026-07-18); first live discovery-time enriched write still pending a new upstream match
-- Zero GitHub issues filed to date
+- `pytest`: **329/329 passing**; CI green on every push. A local `scripts/hooks/pre-push` test gate now blocks a `git push` if the suite fails — this repo has no PR-based CI gate, so this is the only thing standing between a broken commit and `origin/master` before the next scheduled run
+- `run.yml`: firing hourly and succeeding — 20/20 most recent scheduled runs successful. `recheck.yml`: firing daily, 10/10 most recent runs successful, moving closed postings to `Dossiers/Viewed/` (never deleting, since 2026-08-21)
+- Vault dossiers: **391 total** across the four priority buckets (146 AI/ML, 43 Fullstack, 63 CyS & Finance, 139 Other), plus 5 in `Viewed/`. `state/seen_ids.json` holds 606 entries. Eight discovery sources live (SimplifyJobs, Jose-Gael-Cruz-Lopez, vanshb03, zshah101, Greenhouse, Ashby, Freehire, AIJobs), up from the original two
+- **Dossier resource-limit system live since 2026-08-21**: a per-bucket 50-dossier notification threshold and a global 190/200 issue-filing threshold, both notification-only (never a write refusal) — confirmed firing for real, not just designed: issues #4-8 were auto-filed the first time these were actually crossed. Write priority within each bucket now runs through a deterministic "debate" comparator (preferred-company tier → bucket fill-need → recency); a candidate that loses 5 consecutive runs moves to a reviewable exclusion log, never a silent drop
+- `FIRECRAWL_API_KEY` present as an Actions secret; live discovery-time content enrichment confirmed firing (391 dossiers carry real fetched posting content)
+- **8 GitHub issues filed to date** — 3 closed (transient `raw.githubusercontent.com` rate-limiting from 2026-08-17/18, self-resolved, closed 2026-08-21 with evidence), 5 open (the new capacity-notification issues #4-8, informational by design)
 
 ## Success Metrics
 
@@ -69,17 +69,18 @@ Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `co
 
 ## Open Backlog
 
-- Confirm the first real Sunday 23:00 UTC weekly rollup (opportunity: 2026-07-19; check `Run Log.md` Monday 2026-07-20)
-- Confirm the first scheduled recheck run (2026-07-19 06:30 UTC) behaves against the post-audit vault
-- Confirm the first live discovery-time enriched write (needs a new upstream match; the 7 Winter-2027 additions were unseen at push time and should exercise it within hours)
-- Cadence decision on/after 2026-07-24
-- Layer 5 `enrich.py` first live end-to-end run (key now exists; run it at the next real promotion)
+- ~~Confirm the first real Sunday 23:00 UTC weekly rollup~~ — **done**: `Run Log.md` shows five weekly rollups firing continuously since 2026-07-19, most recently 2026-08-09 to 2026-08-16
+- ~~Confirm the first scheduled recheck run behaves against the post-audit vault~~ — **done**: `recheck.yml` has run daily since, 10/10 most recent runs successful, now moving closed postings to `Viewed/` (2026-08-21)
+- ~~Confirm the first live discovery-time enriched write~~ — **done**: all 391 current dossiers carry real fetched posting content
+- Cadence decision on/after 2026-07-24 — still hourly, unchanged; over a month of clean runs since (20/20 recent success) makes this the settled default, though no explicit decision note exists
+- Layer 5 `enrich.py` first live end-to-end run — **still unconfirmed**; the `/promote-dossier` skill and `contact-researcher` agent (built on `enrich.py`'s functions, see `CLAUDE.md`) have run live for the Appian promotion, but no direct evidence `enrich.py`'s own CLI has been run end-to-end was found this pass
 
 ## Risks
 
 - **Fine-grained PAT (`JARVIS_PUSH_TOKEN`) expires or is revoked.** Fails the checkout step before Python runs — no run-log entry, no issue; only GitHub's failed-workflow email. Expiry date still recorded nowhere. *Unchanged, still the biggest silent-failure risk.*
 - **Firecrawl dependency.** The discovery loop now calls a paid third-party API. Failure mode is deliberately soft (fail-open thin dossiers, no run failure), but quota exhaustion would silently degrade dossiers back to thin — watch `opt_cache.json` growth and Firecrawl usage; no in-repo monitoring exists.
-- **GitHub Actions public-repo minutes policy changes.** Unchanged; no minutes monitoring.
+- **Neither secret's expiry date is checkable programmatically.** GitHub deliberately doesn't expose a fine-grained PAT's expiry via `gh`/the API, and Firecrawl has no such API either — confirmed 2026-08-22, not assumed. This needs a one-time **manual** check by the human: `JARVIS_PUSH_TOKEN` at github.com/settings/tokens, `FIRECRAWL_API_KEY` on Firecrawl's own dashboard. Recorded here as a dated, visible gap rather than a silent one.
+- **GitHub Actions public-repo minutes policy changes; usage still unmonitored.** Confirmed 2026-08-22: the billing/usage API (`/users/gupta-builds/settings/billing/actions`) returns 404 with this token's scopes (`gist`, `read:org`, `repo`, `workflow` — no `user` scope, which the endpoint requires); the org-billing variant also 404s since `gupta-builds` is a user account, not an org. Actual current minutes usage could not be verified with the available token — this risk stays noted as still-unmonitored, not guessed at.
 - ~~Source repo goes offline → uncaught crash with no record~~ — **mitigated 2026-07-18**: any `requests` failure during drift-check/fetch now halts with a logged record and an auto-filed issue.
 
 ## Source Of Truth
