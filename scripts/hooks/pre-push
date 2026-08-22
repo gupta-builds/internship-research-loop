@@ -3,6 +3,12 @@
 # protection gate (single-branch, direct-to-master convention), so this is
 # the only thing standing between a broken commit and origin/master before
 # the next scheduled run.yml/recheck.yml executes against it.
+#
+# Sanity-checked 2026-08-22 against the graphify post-commit/post-checkout/
+# post-merge hooks also installed in .git/hooks/ — different hook type
+# (pre-push runs before the network push, graphify's hooks run after commit/
+# checkout/merge), no conflict observed; commit+push still completes quickly
+# with all four hooks present.
 set -e
 cd "$(git rev-parse --show-toplevel)"
 if [ ! -x .venv/bin/python ]; then
