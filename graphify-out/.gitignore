@@ -1,0 +1,23 @@
+# Machine-local / transient - regenerated automatically, never portable across machines.
+.graphify_python
+.graphify_root
+.rebuild.lock
+.pending_changes
+cache/
+
+# Per-run token-cost log (graphify-out/cost.json): appends a new timestamped
+# entry on every `graphify update`/pipeline run, and - since the git hooks now
+# trigger AST-only incremental rebuilds on every commit - is only written by
+# the full skill pipeline's Step 9, not by the hook's `graphify update` path.
+# Confirmed absent after multiple hook-driven rebuilds tonight (2026-08-21):
+# it's inconsistent/ephemeral under this workflow, not a stable versioned file.
+cost.json
+
+# graphify's own dated backup snapshot (graphify/export.py backup_if_protected()):
+# fires on every rebuild once the graph has curated community labels, duplicating
+# graph.json/GRAPH_REPORT.md/manifest.json/cost.json/etc. into graphify-out/<YYYY-MM-DD>/.
+# Confirmed live tonight (~/.cache/graphify-jarvis-sync.log): it fired on real
+# post-commit hook runs and rewrote graphify-out/2026-08-21/ each time. A new dated
+# folder appears every calendar day and its contents churn on every rebuild that
+# day - pure local churn, not meant to be version-controlled.
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
