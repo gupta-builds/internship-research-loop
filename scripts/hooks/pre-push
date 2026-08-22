@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Blocks a push if the test suite doesn't pass — this repo has no PR/branch-
+# protection gate (single-branch, direct-to-master convention), so this is
+# the only thing standing between a broken commit and origin/master before
+# the next scheduled run.yml/recheck.yml executes against it.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if [ ! -x .venv/bin/python ]; then
+  echo "pre-push: .venv/bin/python not found, skipping test gate (set up the venv per README.md)" >&2
+  exit 0
+fi
+.venv/bin/python -m pytest tests/ -q

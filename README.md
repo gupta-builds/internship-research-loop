@@ -28,3 +28,5 @@ cadence past hourly.
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest tests/ -v
 ```
+
+One-time: `cp scripts/hooks/pre-push .git/hooks/pre-push` — this repo has no PR gate, so this local hook is what blocks a `git push` with a failing test suite.
