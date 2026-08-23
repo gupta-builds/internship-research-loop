@@ -98,9 +98,55 @@ def stage1_reject(title: str, raw_text: str) -> bool:
 # classify.py's now-fixed bare-'threat' match on an unrelated workplace-safety
 # disclaimer. Adding these hints routes it through the real software-signal
 # content check below, which correctly rejects it.
+#
+# 'space'/'defense' dropped 2026-08-23 (dossier audit): both were confirmed
+# real false positives on ordinary English, not industry usage — Jane
+# Street "Cybersecurity Analyst Intern" ("we consider ourselves to be tapped
+# into developments in the broader cybersecurity **space**") and Appian
+# "Information Security Engineer Intern" ("modern cloud architecture
+# **defense**") both wrongly required a software-signal match on real,
+# genuine security-engineering content. Unlike 'threat' (tightened with a
+# co-occurrence window built from real cited phrasing —
+# threat.{0,30}(model|actor|intelligence|detection)), no real dossier in the
+# current vault has a genuine space- or defense-industry posting with
+# fetched content to build an equally evidence-based replacement pattern
+# from (Varda Space Industries/Astranis postings never reached the fetch
+# stage — they lost the debate first, per the same audit's Task 4 finding).
+# Dropped rather than guessed at a plausible-looking pattern with no
+# citation; 'aerospace'/'satellite'/'astro' below still catch genuine
+# space-adjacent postings by company/title. Add 'space'/'defense' back with
+# a real citation if a genuine live false-negative ever surfaces.
+#
+# Company hints added 2026-08-23 (dossier audit, Task 7 (a)#4): each of
+# these companies had a real dossier pass stage2_confirm unconditionally
+# despite genuinely non-technical content (Excel/PowerPoint/BI/consulting
+# work, zero real programming), because none of their industries hit any
+# existing hint word — KeyBank "Data Intern - Key Technology & Services -
+# Data Track" (matched classify.py on a bare "Vulnerability" team-name
+# mention), FTI Consulting "Technology Intern" x2 (matched on "Cybersecurity"
+# inside a preferred-majors list; real duties are e-discovery/digital-
+# forensics consulting), Truist Bank "Technology and Operations Intern -
+# Data" (same "Cybersecurity"-in-majors-list pattern), Vertiv (Product
+# Management/Planning Analytics/Sales Data Analytics/Thermal Application
+# Engineer interns — pure BI/PM, Excel/PowerPoint only), UHY "Data
+# Operations Intern" (audit support, Excel only), CNO Financial Group
+# "Reporting Analyst Intern" (requirements-gathering/testing-triage, no
+# coding), Dimensional Fund Advisors (its "...Data and Tools..." posting is
+# Excel-only — verified its sibling "...Operations Insights..." posting
+# still passes on real "SQL, Python" content, so gating the whole company is
+# safe), Continental Resources "Geoscience Intern" (Excel-only geology role
+# — verified the company's other posting, "Data Analyst Intern", still
+# passes on real "SQL, R, Python" content). Walleye Capital is deliberately
+# NOT company-gated: verified 5 of its 6 other real dossiers pass on real
+# signal (Python/unit-test mentions), but "Investment Data Science Intern"
+# has none in its fetched content despite being a genuine role — gating the
+# whole company would have wrongly failed it, so only its one confirmed-bad
+# sibling is caught below by title phrase instead.
 _ADJACENT_FIELD_COMPANY_HINT_RE = re.compile(
-    r"\b(space|aerospace|robotics|astro|satellite|defense|automotive|firmware"
-    r"|embedded|hardware|chemical|industrial|plant operations|\bplc\b|\bdcs\b|\bscada\b)\b", re.I,
+    r"\b(aerospace|robotics|astro|satellite|automotive|firmware"
+    r"|embedded|hardware|chemical|industrial|plant operations|\bplc\b|\bdcs\b|\bscada\b"
+    r"|fti consulting|truist|vertiv|\buhy\b|cno financial|dimensional fund"
+    r"|keybank|continental resources|finance\s*&\s*accounting|finance and accounting)\b", re.I,
 )
 
 # Real content signals confirmed against live vault dossiers 2026-07-26: Bosch

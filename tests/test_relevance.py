@@ -187,3 +187,274 @@ def test_stage2_passes_through_non_adjacent_titles_without_content_check():
     """No adjacent-field hint at all — already cleared stage 1, content
     (even empty) never gates it."""
     assert stage2_confirm("Software Engineer Intern", "Acme Corp", "") is True
+
+
+# --- 2026-08-23 dossier audit: 'space'/'defense' false positives, new
+# generic-business/finance/BI company hints (Task 7 (a)#4, (f)#2) ---
+
+# Real content, trimmed, from the live "Cybersecurity Analyst Intern - Jane
+# Street.md" dossier (source vanshb03, fetched 2026-07-25). Bare 'space' in
+# "the broader cybersecurity space" wrongly triggered the old hint list, and
+# this real content has no _SOFTWARE_CONTENT_SIGNAL_RE match at all (no
+# python/sql/database/etc — just "a strong programmer", "code", "tools"),
+# so the old code incorrectly required (and failed to find) a software
+# signal on a genuine security-engineering role.
+JANE_STREET_CYBERSECURITY_CONTENT = (
+    "Our Cybersecurity Analysts are responsible for being on the front lines of guarding the firm "
+    "from cyber threats through investigations and incident response, as well as building tools and "
+    "automation to streamline, automate, and enhance workflows. Our Cybersecurity team is a skilled "
+    "group of programmers and security experts who are dedicated to keeping the firm safe. We "
+    "consider ourselves to be tapped into developments in the broader cybersecurity space. You should "
+    "be a strong programmer who can demonstrate high potential and an aptitude for learning."
+)
+
+# Real content, trimmed, from the live "Information Security Engineer Intern
+# - Appian.md" dossier (source vanshb03, fetched 2026-07-27). Bare 'defense'
+# in "modern cloud architecture defense" wrongly triggered the old hint
+# list, same no-signal-word problem as the Jane Street case above.
+APPIAN_INFOSEC_CONTENT = (
+    "Appian's Information Security team operates at the heart of our Enterprise-Grade Orchestration "
+    "ecosystem. We continuously evaluate the evolving cyber threat landscape, assess security risks, "
+    "and enforce modern security frameworks. As an Information Security Intern at Appian, you will "
+    "actively contribute to live security operations, modern cloud architecture defense, and "
+    "compliance automation, gaining hands-on exposure to cutting-edge cloud infrastructure, automated "
+    "governance, and enterprise threat analysis."
+)
+
+
+def test_stage2_confirms_jane_street_cybersecurity_from_real_content():
+    assert stage2_confirm(
+        "Cybersecurity Analyst Intern", "Jane Street", JANE_STREET_CYBERSECURITY_CONTENT
+    ) is True
+
+
+def test_stage2_confirms_appian_infosec_from_real_content():
+    assert stage2_confirm(
+        "Information Security Engineer Intern", "Appian", APPIAN_INFOSEC_CONTENT
+    ) is True
+
+
+# Real content, trimmed, from the live "Technology Intern - FTI Consulting.md"
+# dossier (source SimplifyJobs, fetched 2026-07-28) — e-discovery/digital-
+# forensics/document-review consulting, zero programming content, matched
+# classify.py's CyS & Finance bucket only on "Cybersecurity" appearing in a
+# preferred-majors list.
+FTI_CONSULTING_CONTENT = (
+    "Our technology interns work with corporations, governments and law firms to meet critical legal "
+    "and regulatory needs, including investigations, e-discovery, information governance, digital "
+    "forensics, data privacy, document review consulting as well as project management. Preferred "
+    "majors: Business, Computer Forensics, Cybersecurity, Data Analytics, Data Science, Digital "
+    "Forensics, Economics, Information Technology Management, Management Information Systems, Law."
+)
+
+
+def test_stage2_rejects_real_fti_consulting_content():
+    assert stage2_confirm("Technology Intern", "FTI Consulting", FTI_CONSULTING_CONTENT) is False
+
+
+# Real content, trimmed, from the live "Technology and Operations Intern -
+# Data - Truist Bank.md" dossier (source SimplifyJobs, fetched 2026-08-18) —
+# generic bank rotational, business-acumen/leadership-development duties.
+# Deliberately includes the real "Software Development" team-name mention:
+# even with 'truist' now hinted, this still passes on that literal phrase
+# (a coincidental, real limitation of the keyword-only signal check this
+# fix doesn't close — see the 2026-08-23 audit's Phase 1/2 report).
+TRUIST_CONTENT = (
+    "The Technology, Data, and Operations Internship Program is a summer intern program that "
+    "provides future leaders of Truist with a strong foundation within technology and the financial "
+    "services industry as a whole. Participants will gain experience within Software Development, "
+    "Cybersecurity, AI & Data, and Operations teams. Build business acumen and leadership skills."
+)
+
+
+def test_stage2_still_confirms_real_truist_content_on_coincidental_team_name_mention():
+    """Real, documented limitation: adding 'truist' to the hint list doesn't
+    flip this dossier to a reject, because its real content happens to
+    literally say 'Software Development' as one of several team names an
+    intern is exposed to, not as a real duty description — a false pass the
+    keyword-only signal check can't distinguish. Recorded here as the actual
+    behavior, not the hoped-for one."""
+    assert stage2_confirm("Technology and Operations Intern - Data", "Truist Bank", TRUIST_CONTENT) is True
+
+
+# Real content, trimmed, from "Planning Analytics Intern - Summer 2027 -
+# Vertiv.md" (source SimplifyJobs, fetched 2026-08-14) — pure BI/dashboard
+# work, no programming requirement anywhere.
+VERTIV_PLANNING_ANALYTICS_CONTENT = (
+    "This internship offers an excellent opportunity to gain hands-on experience in various aspects "
+    "of data analysis and business intelligence within our organization. Develop and maintain "
+    "dashboards, charts, and reports to visually represent data insights. Must be pursuing a degree "
+    "in Data Science, Statistics, Computer Science, or a related field."
+)
+
+# Real content, trimmed, from "Operations Intern - Summer 2027 - Vertiv.md"
+# (source SimplifyJobs, fetched 2026-08-13) — genuinely different from the
+# other Vertiv postings above despite the shared company: explicit required
+# Python/SQL/data-pipeline skills. Confirms the company hint discriminates
+# correctly within the same company rather than blanket-failing it.
+VERTIV_OPERATIONS_CONTENT = (
+    "Build data structure and data lake intake method to support future analytics tools use. "
+    "Proficiency in Python, including experience with libraries such as Pandas, NumPy, or similar "
+    "data manipulation tools. Foundational understanding of SQL and relational database concepts. "
+    "Familiarity with Microsoft Fabric, Azure Data Factory, or similar Data Pipeline (ETL/ELT) tools."
+)
+
+
+def test_stage2_rejects_real_vertiv_planning_analytics_content():
+    assert stage2_confirm(
+        "Planning Analytics Intern - Summer 2027", "Vertiv", VERTIV_PLANNING_ANALYTICS_CONTENT
+    ) is False
+
+
+def test_stage2_confirms_real_vertiv_operations_intern_content():
+    """A genuinely technical Vertiv posting must still pass even though the
+    company is now hinted — the hint only routes content through the real
+    signal check, it isn't itself a reject."""
+    assert stage2_confirm(
+        "Operations Intern - Summer 2027", "Vertiv", VERTIV_OPERATIONS_CONTENT
+    ) is True
+
+
+# Real content, trimmed, from "Data Operations Intern - UHY.md" (source
+# SimplifyJobs, fetched 2026-08-11) — audit support, Excel-only.
+UHY_CONTENT = (
+    "The Data Operations Intern supports the Shared Resources team in compiling, manipulating, and "
+    "analyzing client data. Use Excel and firm-provided analytic tools to help organize and review "
+    "financial information. Convert client-provided reports (such as PDFs) into Excel to support "
+    "audit and data analysis workflows. Strong knowledge of Excel."
+)
+
+
+def test_stage2_rejects_real_uhy_content():
+    assert stage2_confirm("Data Operations Intern", "UHY", UHY_CONTENT) is False
+
+
+# Real content, trimmed, from "Reporting Analyst Intern - CNO Financial
+# Group.md" (source SimplifyJobs, fetched 2026-08-20) — requirements-
+# gathering/testing-triage, no coding.
+CNO_CONTENT = (
+    "CNO Financial Group is hiring a Reporting Analyst Intern. Core responsibilities and deliverables: "
+    "Participate in requirements elicitation meetings. Document the requirements using different "
+    "techniques. Collaborate with business and development teams. Triage testing defects as related "
+    "to requirements."
+)
+
+
+def test_stage2_rejects_real_cno_financial_content():
+    assert stage2_confirm("Reporting Analyst Intern", "CNO Financial Group", CNO_CONTENT) is False
+
+
+# Real content, trimmed, from the two live sibling Walleye Capital dossiers
+# — "Finance & Accounting Intern (Summer 2027)" (bad, Greenhouse, fetched
+# 2026-08-19) and "Investment Data Science Intern" (good, SimplifyJobs,
+# fetched 2026-07-17). Walleye Capital is deliberately NOT company-gated
+# (verified 5 of its 6 other real dossiers pass on real Python/unit-test
+# signal, but Investment Data Science Intern has none despite being a
+# genuine role) — only the confirmed-bad sibling is caught, by title phrase.
+WALLEYE_FINANCE_ACCOUNTING_CONTENT = (
+    "The Finance & Accounting team plays a critical role in supporting the firm's financial "
+    "operations, overseeing financial reporting, budgeting, forecasting, and analysis. Help improve "
+    "and maintain financial models, reporting processes, and internal FP&A tools. Support financial "
+    "statement preparation and analysis."
+)
+WALLEYE_DATA_SCIENCE_CONTENT = (
+    "As an intern, you'll engage in high-impact projects focused on alternative data research "
+    "supporting long/short discretionary investment strategies. Learn and implement core data "
+    "science and data engineering workflows on the firm's Cloud and Linux infrastructure. Clean, "
+    "transform, and join large structured and unstructured datasets."
+)
+
+
+def test_stage2_rejects_real_walleye_finance_and_accounting_content():
+    assert stage2_confirm(
+        "Finance & Accounting Intern (Summer 2027)", "Walleye Capital Internships",
+        WALLEYE_FINANCE_ACCOUNTING_CONTENT,
+    ) is False
+
+
+def test_stage2_still_confirms_real_walleye_investment_data_science_content():
+    """Not company-gated (see module note above) and no signal-word match
+    in its own real content either — passes today via the 'no hint at all'
+    path, same as before this fix. A real, permissive-by-design outcome,
+    not a bug: no evidence exists that this role is non-technical."""
+    assert stage2_confirm(
+        "Investment Data Science Intern", "Walleye Capital", WALLEYE_DATA_SCIENCE_CONTENT
+    ) is True
+
+
+# Real content, trimmed, from the two live sibling Continental Resources
+# dossiers — "Geoscience Intern" (bad) and "Data Analyst Intern" (good,
+# also the Task 7 (a)#2 Workday cross-source-duplicate example) — both
+# fetched 2026-08-19.
+CONTINENTAL_GEOSCIENCE_CONTENT = (
+    "Geoscience Interns will be involved in generating geologic interpretations of current CLR "
+    "development assets and/or exploration prospects. Generate sequence stratigraphic models, "
+    "various subsurface and petrophysical maps, production analysis, geosteering interpretations "
+    "and mud log analysis. Proficient with Microsoft Office."
+)
+CONTINENTAL_DATA_ANALYST_CONTENT = (
+    "The Data Analyst Intern will collaborate with Engineering teams to solve problems, automate "
+    "processes and improve business performance using the plethora of data, analytics and artificial "
+    "intelligence capabilities available at Continental. Basic proficiency in coding languages "
+    "including SQL, R, Python, HTML and analytics software."
+)
+
+
+def test_stage2_rejects_real_continental_resources_geoscience_content():
+    assert stage2_confirm(
+        "Geoscience Intern", "Continental Resources", CONTINENTAL_GEOSCIENCE_CONTENT
+    ) is False
+
+
+def test_stage2_confirms_real_continental_resources_data_analyst_content():
+    assert stage2_confirm(
+        "Data Analyst Intern", "Continental Resources", CONTINENTAL_DATA_ANALYST_CONTENT
+    ) is True
+
+
+# Real content, trimmed, from the two live sibling Dimensional Fund Advisors
+# dossiers — "...Data and Tools..." (bad) and "...Operations Insights..."
+# (good), both fetched 2026-08-18.
+DIMENSIONAL_DATA_AND_TOOLS_CONTENT = (
+    "The GCG Operations Intern (Data & Tools) will support several sales enablement and asset "
+    "reporting initiatives. Collect and analyze data to support various sales goals and campaigns. "
+    "Strong knowledge of Excel and general computer skills with the ability to learn additional "
+    "computer applications as needed."
+)
+DIMENSIONAL_OPERATIONS_INSIGHTS_CONTENT = (
+    "The GCG Operations Intern (Insights) will support several sales enablement initiatives. Assist "
+    "with developing business intelligence capabilities utilizing Power BI and Snowflake. Strong "
+    "computer skills (advanced Excel, SQL, Python, etc.)."
+)
+
+
+def test_stage2_rejects_real_dimensional_fund_data_and_tools_content():
+    assert stage2_confirm(
+        "Global Client Group Intern - Data and Tools", "Dimensional Fund Advisors",
+        DIMENSIONAL_DATA_AND_TOOLS_CONTENT,
+    ) is False
+
+
+def test_stage2_confirms_real_dimensional_fund_operations_insights_content():
+    assert stage2_confirm(
+        "Global Client Group Operations Insights Intern", "Dimensional Fund Advisors",
+        DIMENSIONAL_OPERATIONS_INSIGHTS_CONTENT,
+    ) is True
+
+
+def test_stage2_still_rejects_real_keybank_content_on_coincidental_tool_list_mention():
+    """Same documented limitation as Truist above: KeyBank's real content
+    (from 'Data Intern - Key Technology & Services - Data Track') lists
+    Python/SQL/JavaScript among many tools interns MIGHT be exposed to, not
+    as required skills for this specific role — a coincidental literal
+    match the keyword-only signal check can't tell apart from a real
+    requirement. Recorded as the actual behavior."""
+    content = (
+        "KTS Operations, spanning Origination through Default Management, Deposit Operations, ACH, "
+        "Wire & Check Payment Operations. Opportunities to use industry leading software (examples "
+        "include: Tableau, ServiceNow, Visual Studio, Jira, Automation Anywhere, Jenkins, PowerShell, "
+        "HTML, C#, Python, SQL, JavaScript). Experience in Excel, PowerPoint, Project."
+    )
+    assert stage2_confirm(
+        "Data Intern - Key Technology & Services - Data Track", "KeyBank", content
+    ) is True
