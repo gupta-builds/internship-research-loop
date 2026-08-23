@@ -119,6 +119,39 @@ def test_content_fetch_url_leaves_ashby_non_application_urls_alone():
     assert _content_fetch_url(url) == url
 
 
+# --- Zipline SPA board-index bug (2026-08-23 dossier audit) ---
+
+def test_content_fetch_url_rewrites_real_zipline_query_url_to_path_form():
+    """Real listing.url shape stored on every AIJobs-sourced Zipline dossier
+    ('Aerodynamics Intern (Spring 2027)', gh_jid=7904002003) — the query form
+    resolves to the generic /open-roles board; the board's own job links use
+    the path form for the same id, confirmed live (WebFetch, 2026-08-23) to
+    carry the specific job's title in the page's own <title>, unlike the
+    query form."""
+    url = "https://www.zipline.com/open-roles?gh_jid=7904002003"
+    assert _content_fetch_url(url) == "https://www.zipline.com/open-roles/7904002003"
+
+
+def test_content_fetch_url_leaves_zipline_path_urls_alone():
+    url = "https://www.zipline.com/open-roles/7904002003"
+    assert _content_fetch_url(url) == url
+
+
+def test_content_fetch_url_leaves_zipline_urls_without_job_id_alone():
+    assert _content_fetch_url("https://www.zipline.com/open-roles") == "https://www.zipline.com/open-roles"
+
+
+def test_extract_content_treats_real_zipline_board_index_as_unconfirmed():
+    """Real fetched content, verbatim from three separate live Zipline
+    dossiers ('Aerodynamics Intern (Spring 2027)', 'Perception Intern (Summer
+    2027)', 'Software Engineer Intern - Spring 2027') — all three are
+    byte-for-byte the same board-index dump regardless of the actual role.
+    Must degrade to '' (thin dossier), not pass stage2_confirm on an
+    unrelated title elsewhere on the shared page."""
+    md = (FIXTURES / "posting_zipline_open_roles.md").read_text(encoding="utf-8")
+    assert extract_content(md) == ""
+
+
 def test_fetch_posting_markdown_strips_ashby_application_suffix_before_calling_firecrawl():
     resp = Mock(status_code=200)
     resp.json.return_value = {"data": {"markdown": "# A Job"}}

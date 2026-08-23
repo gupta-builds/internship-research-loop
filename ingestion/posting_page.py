@@ -14,7 +14,7 @@ real data 2026-07-18: Palantir's US Government and Commercial internships
 differ on exactly this axis within the same company.
 """
 import re
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
@@ -33,15 +33,37 @@ CONTENT_LIMIT = 7000
 # an extraction bug — the fetched page genuinely never had the content.
 _ASHBY_APPLICATION_SUFFIX_RE = re.compile(r"/application/?$")
 
+# Real bug, confirmed 2026-08-23 (2026-08-23 dossier audit): every AIJobs-sourced
+# Zipline dossier stores listing.url as the query-param form
+# "zipline.com/open-roles?gh_jid=<id>" — a client-side-filtered SPA route that
+# Firecrawl fetches as Zipline's entire unfiltered /open-roles job board (100+
+# unrelated titles), not the one job's content (confirmed against the real
+# stored fetched content of "Aerodynamics Intern (Spring 2027)", "Perception
+# Intern (Summer 2027)", and "Software Engineer Intern - Spring 2027" — all
+# three are byte-for-byte the same board-index dump). The board's own job links
+# use a *different* URL shape for the same id — the path form
+# "zipline.com/open-roles/<id>" — and a live fetch of that path form (WebFetch,
+# 2026-08-23) returns the specific job's title in the page's own <title>
+# element (unlike the query form, which never does), confirming it's the real
+# per-job route; a plain non-JS fetch still can't see the rendered body, but
+# Firecrawl's `waitFor: 8000` below already exists precisely to render
+# JS-heavy ATS pages like this one, same as every other successfully-extracted
+# dossier in this pipeline.
+_ZIPLINE_OPEN_ROLES_QUERY_RE = re.compile(r"^/open-roles/?$")
+
 
 def _content_fetch_url(url: str) -> str:
-    """The URL to actually fetch for posting content — strips an Ashby
-    application-form suffix so the fetch lands on the real posting page.
-    listing.url itself (used for display/apply) is never touched, only the
-    URL passed to Firecrawl here."""
+    """The URL to actually fetch for posting content — rewrites known
+    board-index-only URL shapes to their real per-posting route. listing.url
+    itself (used for display/apply) is never touched, only the URL passed to
+    Firecrawl here."""
     parsed = urlparse(url)
     if parsed.netloc == "jobs.ashbyhq.com" and _ASHBY_APPLICATION_SUFFIX_RE.search(parsed.path):
         return url[: url.rindex("/application")]
+    if parsed.netloc in ("zipline.com", "www.zipline.com") and _ZIPLINE_OPEN_ROLES_QUERY_RE.match(parsed.path):
+        job_id = (parse_qs(parsed.query).get("gh_jid") or [None])[0]
+        if job_id:
+            return f"{parsed.scheme}://{parsed.netloc}/open-roles/{job_id}"
     return url
 
 # Built from the actual exclusion language found on live posting pages
@@ -158,9 +180,21 @@ _NOISE = re.compile(
 # title as a result. Whenever one of these listing-shell markers appears,
 # everything gathered so far is shell noise — reset and wait for the next
 # real heading, which lands on the actual posting content once the shell ends.
+
+# Zipline's /open-roles board (see _ZIPLINE_OPEN_ROLES_QUERY_RE above) renders
+# a "## Open roles" heading (real fetched dossiers show it twice, back to
+# back) followed by "Search\nFilter by\nLocation\nDepartments" widget chrome
+# before the job-link rows — a distinct enough shape from a real posting's own
+# heading that it's safe to treat the same way as the Google listing-shell
+# case below: reset and wait for the next real heading. Unlike Google's case,
+# Zipline's board has no further real per-job heading afterward (confirmed
+# against the same three real dossiers cited above), so this correctly
+# degrades the dossier to thin (extract_content returns "") rather than
+# passing stage2_confirm on an unrelated title elsewhere on the same page —
+# safety net for if the URL rewrite above ever still lands on the board.
 _LISTING_SHELL_RESET_RE = re.compile(
     r"^(_arrow_back_|back to jobs search|##?\s*jobs search results|[\d,]+\s+jobs matched"
-    r"|showing \d+ to \d+ of|_navigate_next_)", re.I,
+    r"|showing \d+ to \d+ of|_navigate_next_|#+\s*open roles\s*$)", re.I,
 )
 
 # ATS UI labels jammed against their values with no separator, real examples
