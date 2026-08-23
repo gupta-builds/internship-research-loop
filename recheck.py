@@ -62,10 +62,20 @@ def plan_removals(dossiers: list, feeds_by_source: dict, uid_by_path: dict, jarv
     entirely, never treated as gone. A dossier with no dossier_uids.json
     manifest entry (written before the manifest existed, or hand-edited into
     the vault, e.g. Software Engineer - Ellipsis Labs.md) is skipped too —
-    unknown means leave alone, not removable."""
+    unknown means leave alone, not removable. A dossier already moved to
+    Viewed/ (status: removed) is skipped too — real, reproducible bug found
+    2026-08-23: scan_dossiers() globs Viewed/ along with every live bucket (by
+    design, for cross-source dedup), so a dossier that stayed closed kept
+    getting swept up here again on every subsequent run and re-moved via
+    move_dossier_to_viewed(), which — finding the base filename already taken
+    by itself — wrote a new '(2)', '(3)', ... suffixed copy and deleted the
+    original every single day. Confirmed live: all 4 real dossiers in Viewed/
+    as of 2026-08-23 already carried a spurious '(2)' suffix from this."""
     removals = []
     jarvis_dir = Path(jarvis_dir)
     for fm in dossiers:
+        if fm.get("status") == "removed":
+            continue
         uid = uid_by_path.get(str(fm["_path"].relative_to(jarvis_dir)))
         if uid is None:
             continue

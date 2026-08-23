@@ -56,3 +56,20 @@ def test_dossier_with_no_manifest_entry_is_skipped_not_removed():
     orphan = _fm("SimplifyJobs:orphan")
     feeds = {"SimplifyJobs": {"aaa": True, "bbb": True}, "Jose-Gael-Cruz-Lopez": {"ccc": True}}
     assert plan_removals(DOSSIERS + [orphan], feeds, UID_BY_PATH, JARVIS_DIR) == []
+
+
+def test_already_removed_dossier_is_not_re_swept():
+    """Real, reproducible bug found 2026-08-23: scan_dossiers() globs Viewed/
+    along with every live bucket, so a dossier that stayed closed across
+    multiple daily recheck runs kept getting re-moved — move_dossier_to_viewed
+    found the base filename already taken (by itself) and wrote a spurious
+    '(2)', '(3)', ... suffixed copy each time. All 4 real dossiers in Viewed/
+    as of 2026-08-23 already carried a '(2)' suffix from this. A dossier
+    already carrying status: removed must be skipped entirely, same as an
+    unknown-manifest dossier."""
+    already_removed = _fm("SimplifyJobs:aaa")
+    already_removed["status"] = "removed"
+    dossiers = [already_removed, _fm("SimplifyJobs:bbb"), _fm("Jose-Gael-Cruz-Lopez:ccc")]
+    feeds = {"SimplifyJobs": {"bbb": True}, "Jose-Gael-Cruz-Lopez": {"ccc": True}}
+    removals = plan_removals(dossiers, feeds, UID_BY_PATH, JARVIS_DIR)
+    assert removals == []
