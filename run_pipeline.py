@@ -174,12 +174,19 @@ RUN_LOG_MD_SUBPATH = Path("10_Areas/Career/Internships/List/Run Log.md")
 
 # Task N (Prompt 5) — a candidate that loses the debate comparator's sort
 # (falls outside its bucket's budget, i.e. ends up in _prioritize_and_cap's
-# "deferred" list) accumulates a loss count across runs. 5 was chosen to give
-# a real posting several genuine chances across multiple hourly runs before
-# conceding it structurally can't out-rank the field — not an arbitrary
-# guess dressed as one, but still a tunable to retune from real data once
-# this has run for a while, same as every other tunable in this codebase.
-MAX_DEBATE_LOSSES = 5
+# "deferred" list) accumulates a loss count across runs. 5 was the original
+# choice, to give a real posting several genuine chances across multiple
+# hourly runs before conceding it structurally can't out-rank the field.
+#
+# Raised 5 -> 48 (Phase 4, 2026-08-23 decision): the 2026-08-21 burst (see
+# NEWLY_EXCLUDED_ALERT_THRESHOLD's citation below) converted 287 candidates
+# to permanent exclusion in about 5 hours — 5 consecutive hourly losses left
+# no real review window once a genuine arrival burst hit. 48 consecutive
+# hourly losses (~2 days) keeps the same "several genuine chances" intent
+# while leaving actual human review time before anything is permanently
+# excluded. Still a tunable to retune from real data, same as every other
+# tunable in this codebase.
+MAX_DEBATE_LOSSES = 48
 DEBATE_LOSSES_FILENAME = "debate_losses.json"
 EXCLUDED_UIDS_FILENAME = "excluded_uids.json"
 EXCLUDED_LOG_SUBPATH = Path("10_Areas/Career/Internships/List/Excluded — Losing The Debate.md")

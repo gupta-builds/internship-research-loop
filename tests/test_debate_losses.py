@@ -27,23 +27,23 @@ def _candidate(uid, company="Acme", title="Software Engineer Intern", url=None):
 
 # --- update_debate_losses: pure-function tests ---
 
-def test_deferred_4_times_still_in_pool_not_excluded():
+def test_deferred_up_to_threshold_minus_one_still_in_pool_not_excluded():
     losses = {}
     deferred = [_candidate("x")]
-    for _ in range(4):
+    for _ in range(run_pipeline.MAX_DEBATE_LOSSES - 1):
         losses, newly_excluded = run_pipeline.update_debate_losses(losses, deferred, written_uids=[])
         assert newly_excluded == []
-    assert losses["SimplifyJobs:x"] == 4
+    assert losses["SimplifyJobs:x"] == run_pipeline.MAX_DEBATE_LOSSES - 1
 
 
-def test_deferred_5th_time_excludes_and_removes_from_losses():
+def test_deferred_nth_time_excludes_and_removes_from_losses():
     losses = {}
     deferred = [_candidate("x")]
-    for _ in range(4):
+    for _ in range(run_pipeline.MAX_DEBATE_LOSSES - 1):
         losses, _ = run_pipeline.update_debate_losses(losses, deferred, written_uids=[])
     losses, newly_excluded = run_pipeline.update_debate_losses(losses, deferred, written_uids=[])
     assert [uid for uid, _listing in newly_excluded] == ["SimplifyJobs:x"]
-    assert "SimplifyJobs:x" not in losses  # removed once excluded, not left at 5
+    assert "SimplifyJobs:x" not in losses  # removed once excluded, not left at threshold
 
 
 def test_wins_on_attempt_3_never_excluded():
