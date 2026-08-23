@@ -10,6 +10,7 @@ from ingestion.normalize import (
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
+    normalize_lever,
     normalize_simplify,
     normalize_vanshb03,
     normalize_zshah101,
@@ -301,6 +302,57 @@ def test_normalize_ashby_maps_fields():
     assert listing.active is True
     assert listing.raw_text == "Real description text."
     assert listing.raw_id == "abc-123"
+
+
+# --- Lever (real jobs on our seeded company boards, 2026-08-24) ---
+
+def test_lever_matches_literal_term_in_description():
+    listing = Listing(company="Hermeus", title="Flight Software Engineering Intern - Summer 2027",
+                       url="https://jobs.lever.co/hermeus/1/apply", source="Lever",
+                       active=True, raw_text="Join our Summer 2027 internship cohort.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_lever_bare_year_with_no_season_word_passes_permissively():
+    """Real case: Belvedere Trading's live 'Quantitative Trading Intern -
+    Summer 2027' description never repeats the season in raw_text, same
+    reasoning as the Greenhouse/Ashby bare-year cases above."""
+    listing = Listing(company="Belvedere Trading", title="Quantitative Trading Intern - 2027",
+                       url="https://jobs.lever.co/belvederetrading/1/apply", source="Lever",
+                       active=True, raw_text="Rotate between Belvedere's trading desks in 2027.")
+    assert matches(listing, PROFILE) is True
+
+
+def test_lever_rejects_explicit_wrong_year():
+    listing = Listing(company="Acme", title="Software Engineering Intern",
+                       url="https://jobs.lever.co/acme/1/apply", source="Lever",
+                       active=True, raw_text="Join us for our Summer 2026 internship program.")
+    assert matches(listing, PROFILE) is False
+
+
+def test_normalize_lever_maps_fields_and_prefers_apply_url():
+    # Real, verbatim shape from belvederetrading's live board, 2026-08-24.
+    raw = {"id": "cbde47db-c60b-4339-a8f4-a8e4f30505ab", "text": "Quantitative Trading Intern - Summer 2027",
+           "categories": {"commitment": "Intern", "location": "Chicago, Illinois"},
+           "hostedUrl": "https://jobs.lever.co/belvederetrading/cbde47db",
+           "applyUrl": "https://jobs.lever.co/belvederetrading/cbde47db/apply",
+           "createdAt": 1785864478389, "descriptionPlain": "Belvedere Trading is a proprietary trading firm."}
+    listing = normalize_lever(raw, "Belvedere Trading")
+    assert listing.company == "Belvedere Trading"
+    assert listing.locations == ["Chicago, Illinois"]
+    assert listing.active is True
+    assert listing.url == "https://jobs.lever.co/belvederetrading/cbde47db/apply"
+    assert listing.raw_text == "Belvedere Trading is a proprietary trading firm."
+    assert listing.raw_id == "cbde47db-c60b-4339-a8f4-a8e4f30505ab"
+    assert listing.date_posted == 1785864478389 // 1000
+
+
+def test_normalize_lever_falls_back_to_hosted_url_when_no_apply_url():
+    raw = {"id": "x", "text": "Software Engineer Intern", "categories": {},
+           "hostedUrl": "https://jobs.lever.co/acme/x", "createdAt": None}
+    listing = normalize_lever(raw, "Acme")
+    assert listing.url == "https://jobs.lever.co/acme/x"
+    assert listing.date_posted is None
 
 
 # --- Spring 2027 (low-weight wanted term, added 2026-07-26) ---

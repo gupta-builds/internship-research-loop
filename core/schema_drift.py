@@ -20,11 +20,12 @@ VANSHB03_REQUIRED_KEYS = {"id", "company_name", "title", "url", "locations", "da
 ZSHAH101_REQUIRED_KEYS = {"id", "company", "title", "url", "location", "posted_at", "is_open", "season", "sponsorship", "category"}
 
 # Only the two curated single-feed JSON sources get a pre-fetch drift check,
-# same as SimplifyJobs/JGCL always have. Greenhouse/Ashby are a dozen
+# same as SimplifyJobs/JGCL always have. Greenhouse/Ashby/Lever are a dozen
 # per-company endpoints, not one feed — checking each company's schema before
 # every run would multiply request volume for a company set that already
-# degrades gracefully per-token in fetch_greenhouse/fetch_ashby (a renamed
-# board silently returns nothing for that one company, not malformed data).
+# degrades gracefully per-token in fetch_greenhouse/fetch_ashby/fetch_lever (a
+# renamed board silently returns nothing for that one company, not malformed
+# data).
 
 
 class SchemaDriftError(Exception):

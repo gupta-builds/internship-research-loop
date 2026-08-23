@@ -8,6 +8,7 @@ from ingestion.normalize import (
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
+    normalize_lever,
     normalize_simplify,
     normalize_vanshb03,
     normalize_zshah101,
@@ -20,6 +21,7 @@ ZSHAH101_URL = "https://raw.githubusercontent.com/zshah101/Automated-List-Of-Sum
 
 GREENHOUSE_JOBS_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
 ASHBY_JOBS_URL = "https://api.ashbyhq.com/posting-api/job-board/{token}"
+LEVER_JOBS_URL = "https://api.lever.co/v0/postings/{token}?mode=json"
 
 # Seed list, 2026-07-25 (quant/prop-trading batch) + 2026-07-26 (AI/ML
 # diversification batch): every token here was verified live to resolve with
@@ -53,6 +55,26 @@ ASHBY_COMPANIES = {
     "cursor": "Cursor (Anysphere)",
     "modal": "Modal",
     "elevenlabs": "ElevenLabs",
+}
+
+# Second real Lever-hosted company beyond Palantir (Task 5, 2026-08-24):
+# Palantir alone was never wired into its own fetcher — every existing
+# Palantir dossier arrived secondhand via SimplifyJobs/vanshb03's own scrape.
+# Every token below confirmed live against LEVER_JOBS_URL: belvederetrading
+# (14 postings, 3 real US-based intern titles — Chicago quant/software roles,
+# matches the belvederetrading URLs already seen in real vanshb03/SimplifyJobs
+# dossiers), hermeus (76 postings, 6 intern titles — Atlanta/LA aerospace
+# software/firmware), xsolla (185 postings, 12 intern titles, most
+# international but two real US ones — Los Angeles, Raleigh — location_eligible()
+# filters the rest same as any other source). "acds" (from the same dossier
+# grep) was checked and rejected: its categories.commitment values are
+# workforce-program names ("ReSkill Arkansas", "Advanced Manufacturing"), not
+# an employment type — a job-training nonprofit, not a tech employer.
+LEVER_COMPANIES = {
+    "palantir": "Palantir",
+    "belvederetrading": "Belvedere Trading",
+    "hermeus": "Hermeus",
+    "xsolla": "Xsolla",
 }
 
 AI_JOBS_URL = "https://artificialintelligencejobs.co/jobs.json"
@@ -124,6 +146,24 @@ def fetch_ashby(http_get=None) -> list:
         for job in jobs:
             if job.get("employmentType") == "Intern":  # structured — use it, not title text
                 listings.append(normalize_ashby(job, company))
+    return listings
+
+
+def fetch_lever(http_get=None) -> list:
+    # Title-text triage, not categories.commitment — see normalize_lever's
+    # docstring for why that field isn't a reliable structured filter here.
+    get = http_get or requests.get
+    listings = []
+    for token, company in LEVER_COMPANIES.items():
+        try:
+            resp = get(LEVER_JOBS_URL.format(token=token), timeout=TIMEOUT)
+            resp.raise_for_status()
+            jobs = resp.json()
+        except requests.RequestException:
+            continue
+        for job in jobs:
+            if "intern" in job.get("text", "").lower():
+                listings.append(normalize_lever(job, company))
     return listings
 
 

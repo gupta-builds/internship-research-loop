@@ -154,6 +154,32 @@ def normalize_ashby(raw: dict, company: str) -> Listing:
     )
 
 
+def normalize_lever(raw: dict, company: str) -> Listing:
+    # Role-type triage (title text) happens in fetch_lever, before this is
+    # ever called — Lever's own categories.commitment field isn't a reliable
+    # substitute: confirmed live 2026-08-24 it's spelled "Intern" at Hermeus
+    # but "Internship" at Xsolla, and at Acds it's not an employment-type
+    # value at all (it holds program/department names like "ReSkill
+    # Arkansas") — same title-text approach as Greenhouse, not Ashby's
+    # trustworthy enum. applyUrl (not hostedUrl) matches the /apply-suffixed
+    # jobs.lever.co URL shape already seen in real SimplifyJobs/vanshb03
+    # dossiers for Palantir. createdAt is epoch milliseconds, not an ISO
+    # string like every other source here.
+    loc = (raw.get("categories") or {}).get("location")
+    created = raw.get("createdAt")
+    return Listing(
+        company=company,
+        title=raw["text"],
+        url=raw.get("applyUrl") or raw["hostedUrl"],
+        source="Lever",
+        locations=[loc] if loc else [],
+        active=True,
+        date_posted=int(created / 1000) if created else None,
+        raw_id=raw["id"],
+        raw_text=raw.get("descriptionPlain", ""),
+    )
+
+
 def normalize_freehire(raw: dict, company: str) -> Listing:
     # Role-type triage (enrichment.seniority == "intern") happens in
     # fetch_freehire, before this is ever called. `location` is a single

@@ -44,6 +44,7 @@ def _fake_http_get(url, timeout=None):
         ASHBY_JOBS_URL,
         GREENHOUSE_JOBS_URL,
         JOSEGAEL_URL,
+        LEVER_JOBS_URL,
         SIMPLIFY_URL,
         VANSHB03_URL,
         ZSHAH101_URL,
@@ -62,6 +63,8 @@ def _fake_http_get(url, timeout=None):
         # per-company board endpoints — pipeline-orchestration tests don't need
         # real per-company data, that's covered in test_sources.py directly
         resp.json.return_value = {"jobs": []}
+    elif url.startswith(LEVER_JOBS_URL.split("{")[0]):
+        resp.json.return_value = []  # Lever's postings endpoint returns a bare list
     elif url.startswith(FREEHIRE_SEARCH_URL.split("{")[0]):
         resp.json.return_value = {"data": []}
     elif url == AI_JOBS_URL:

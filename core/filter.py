@@ -99,6 +99,8 @@ def matches(listing, profile: dict) -> bool:
         ok = _matches_greenhouse(listing, profile)
     elif listing.source == "Ashby":
         ok = _matches_ashby(listing, profile)
+    elif listing.source == "Lever":
+        ok = _matches_lever(listing, profile)
     elif listing.source == "Freehire":
         ok = _matches_freehire(listing, profile)
     elif listing.source == "AIJobs":
@@ -267,6 +269,7 @@ def _matches_free_text_source(listing, profile: dict) -> bool:
 
 _matches_greenhouse = _matches_free_text_source
 _matches_ashby = _matches_free_text_source
+_matches_lever = _matches_free_text_source
 # Freehire's own postings often do state the term literally (Google's real
 # posting title was "Software Engineering Intern, BS, Summer 2027"), but its
 # aggregated sources are uneven — same free-text/bare-year fallback applies.

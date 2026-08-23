@@ -23,6 +23,7 @@ from ingestion.sources import (
     fetch_ashby,
     fetch_greenhouse,
     fetch_josegael,
+    fetch_lever,
     fetch_simplify,
     fetch_vanshb03,
     fetch_zshah101,
@@ -32,11 +33,13 @@ from vault_writer.writer import load_dossier_uids, move_dossier_to_viewed, scan_
 
 # 2026-07-25: was still SimplifyJobs/JGCL only after the 4-source batch shipped
 # earlier the same day — dossiers from vanshb03/zshah101/Greenhouse/Ashby were
-# silently never rechecked. Greenhouse/Ashby/AIJobs never expose an
-# active:false flag (their public APIs only ever return currently-open jobs),
-# so for those three "absent from feed" is the only closure signal there is —
-# which is exactly the existing absent-from-feed branch below, no
-# special-casing needed. Freehire is deliberately NOT here: checked live,
+# silently never rechecked. Greenhouse/Ashby/Lever/AIJobs never expose an
+# active:false flag (their public APIs only ever return currently-open jobs —
+# Lever added 2026-08-24, same per-company postings-list shape, confirmed no
+# closed postings appear in a live query), so for those four "absent from
+# feed" is the only closure signal there is — which is exactly the existing
+# absent-from-feed branch below, no special-casing needed. Freehire is
+# deliberately NOT here: checked live,
 # its own closed_at field lags real closures by days (see
 # ingestion/freehire.py's docstring) and the posting stays present in a
 # fresh company-scoped query even after it's actually closed — "absent from
@@ -49,6 +52,7 @@ FEEDS = {
     "zshah101": fetch_zshah101,
     "Greenhouse": fetch_greenhouse,
     "Ashby": fetch_ashby,
+    "Lever": fetch_lever,
     "AIJobs": fetch_ai_jobs,
 }
 RECHECKS_LOG = Path(__file__).parent / "logs" / "rechecks.jsonl"

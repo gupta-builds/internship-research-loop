@@ -38,6 +38,7 @@ from ingestion.sources import (
     fetch_ashby,
     fetch_greenhouse,
     fetch_josegael,
+    fetch_lever,
     fetch_simplify,
     fetch_vanshb03,
     fetch_zshah101,
@@ -52,6 +53,7 @@ SOURCES = (
     ("zshah101", fetch_zshah101),
     ("Greenhouse", fetch_greenhouse),
     ("Ashby", fetch_ashby),
+    ("Lever", fetch_lever),
     ("Freehire", fetch_freehire),
     ("AIJobs", fetch_ai_jobs),
 )

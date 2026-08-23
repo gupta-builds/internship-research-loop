@@ -147,6 +147,46 @@ def test_fetch_ashby_skips_a_dead_company_board_without_crashing():
     assert listings == []
 
 
+# --- api.lever.co (real jobs on our seeded company boards, 2026-08-24) ---
+
+def _lever_response(jobs):
+    resp = Mock(status_code=200)
+    resp.json.return_value = jobs  # Lever's postings endpoint returns a bare list, not {"jobs": [...]}
+    return resp
+
+
+def test_fetch_lever_polls_every_seeded_company_and_filters_to_intern_titles():
+    # Real, verbatim shape from belvederetrading's live board, 2026-08-24.
+    intern_job = {"id": "cbde47db-c60b-4339-a8f4-a8e4f30505ab", "text": "Quantitative Trading Intern - Summer 2027",
+                  "categories": {"commitment": "Intern", "location": "Chicago, Illinois"},
+                  "hostedUrl": "https://jobs.lever.co/belvederetrading/cbde47db",
+                  "applyUrl": "https://jobs.lever.co/belvederetrading/cbde47db/apply",
+                  "createdAt": 1785864478389, "descriptionPlain": "Belvedere Trading is a proprietary trading firm."}
+    non_intern_job = {"id": "x", "text": "Senior Software Engineer",
+                       "categories": {"commitment": "Full-time", "location": "Chicago, Illinois"},
+                       "hostedUrl": "https://jobs.lever.co/belvederetrading/x",
+                       "applyUrl": "https://jobs.lever.co/belvederetrading/x/apply",
+                       "createdAt": 1785864478389, "descriptionPlain": ""}
+
+    def fake_get(url, timeout=None):
+        return _lever_response([intern_job, non_intern_job])
+
+    listings = sources.fetch_lever(http_get=fake_get)
+    assert len(listings) == len(sources.LEVER_COMPANIES)  # one intern job per seeded company
+    assert all(l.source == "Lever" for l in listings)
+    assert all("Intern" in l.title for l in listings)
+
+
+def test_fetch_lever_skips_a_dead_company_board_without_crashing():
+    def flaky_get(url, timeout=None):
+        if "hermeus" in url:
+            raise requests.ConnectionError("simulated: board renamed")
+        return _lever_response([])
+
+    listings = sources.fetch_lever(http_get=flaky_get)
+    assert listings == []
+
+
 # --- artificialintelligencejobs.co (real record, fetched 2026-07-25) ---
 
 def _ai_jobs_response(jobs):
