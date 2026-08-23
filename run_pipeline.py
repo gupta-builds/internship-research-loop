@@ -32,9 +32,11 @@ from core.identity import cross_source_key
 from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
 from ingestion.freehire import fetch_freehire
+from ingestion.interndock import fetch_interndock_drop, fetch_interndock_drop_candidates, normalize_interndock
 from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion, phd_only_exclusion
 from ingestion.sources import (
     fetch_ai_jobs,
+    fetch_applyguy,
     fetch_ashby,
     fetch_greenhouse,
     fetch_josegael,
@@ -51,6 +53,7 @@ SOURCES = (
     ("Jose-Gael-Cruz-Lopez", fetch_josegael),
     ("vanshb03", fetch_vanshb03),
     ("zshah101", fetch_zshah101),
+    ("ApplyGuy", fetch_applyguy),
     ("Greenhouse", fetch_greenhouse),
     ("Ashby", fetch_ashby),
     ("Lever", fetch_lever),
@@ -193,6 +196,11 @@ DEBATE_LOSSES_FILENAME = "debate_losses.json"
 EXCLUDED_UIDS_FILENAME = "excluded_uids.json"
 EXCLUDED_LOG_SUBPATH = Path("10_Areas/Career/Internships/List/Excluded — Losing The Debate.md")
 
+# InternDock (Task 1, 2026-08-24) — which guide URLs have already been
+# Firecrawl-fetched, so a confirmed drop or confirmed non-drop is each
+# checked at most once, ever. See discover_interndock()'s docstring below.
+INTERNDOCK_SEEN_GUIDES_FILENAME = "interndock_seen_guides.json"
+
 # Task (Phase 4, 2026-08-23 dossier audit): a per-run alert when a burst of
 # new candidates all cross MAX_DEBATE_LOSSES together — real incident,
 # 2026-08-21: 287 of the excluded log's 304 total entries (94%) were
@@ -235,6 +243,58 @@ def save_excluded_uids(state_dir, excluded: set) -> None:
     path = Path(state_dir) / EXCLUDED_UIDS_FILENAME
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(sorted(excluded), indent=2) + "\n")
+
+
+def load_interndock_seen_guides(state_dir) -> set:
+    path = Path(state_dir) / INTERNDOCK_SEEN_GUIDES_FILENAME
+    if not path.exists():
+        return set()
+    return set(json.loads(path.read_text()))
+
+
+def save_interndock_seen_guides(state_dir, seen: set) -> None:
+    path = Path(state_dir) / INTERNDOCK_SEEN_GUIDES_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(seen), indent=2) + "\n")
+
+
+def discover_interndock(http_get, interndock_fetch_fn, state_dir) -> list:
+    """New InternDock Listings from any not-yet-processed drop-shaped guide
+    URL. interndock_fetch_fn(url) -> [{title,url,company,location}, ...] (a
+    closure over the Firecrawl key, built at the __main__ call site — same
+    injection pattern as fetch_page_fn) or None to turn InternDock discovery
+    off entirely, same "absence means off" convention as fetch_page_fn/
+    opt_cache_path.
+
+    Idempotent by design, not time-gated: every candidate guide URL is
+    Firecrawl-fetched at most once ever — state persists which have already
+    been processed, drop or not, so a confirmed non-drop (a career-advice
+    article sharing a drop-shaped slug) isn't re-fetched every run either.
+    Real drops appear roughly every several weeks (the two dated ones
+    confirmed this round are about 6 weeks apart), so running this check
+    every hour costs nothing beyond one free sitemap.xml GET; the Firecrawl
+    spend only happens the rare time a genuinely new candidate URL appears —
+    that decouples cost from cadence, so no separate schedule needed.
+
+    Fails open on the sitemap fetch itself (a real, if unlikely, InternDock
+    outage must not halt the whole run the way a core single-feed source's
+    schema-drift failure does — InternDock is opportunistic, not central)."""
+    if interndock_fetch_fn is None or state_dir is None:
+        return []
+    try:
+        candidates = fetch_interndock_drop_candidates(http_get)
+    except requests.RequestException:
+        return []
+    seen_guides = load_interndock_seen_guides(state_dir)
+    new_candidates = [c for c in candidates if c not in seen_guides]
+    listings = []
+    for url in new_candidates:
+        for posting in interndock_fetch_fn(url):
+            listings.append(normalize_interndock(posting))
+        seen_guides.add(url)  # mark seen either way — a confirmed non-drop must not be re-fetched next run
+    if new_candidates:
+        save_interndock_seen_guides(state_dir, seen_guides)
+    return listings
 
 
 def update_debate_losses(losses: dict, deferred: list, written_uids: list) -> tuple:
@@ -434,6 +494,7 @@ def run_once(
     fetch_page_fn=None,
     opt_cache_path=None,
     state_dir=None,
+    interndock_fetch_fn=None,
 ) -> dict:
     profile = profile or load_profile()
     timestamp = now.isoformat()
@@ -460,6 +521,18 @@ def run_once(
         check_schema_drift(http_get)
         seen_ids = load_seen_ids(state_path)
         matched_by_source = fetch_and_filter(profile, http_get, excluded_ids=excluded_ids)
+        # Not one of the uniform SOURCES fetchers — needs Firecrawl plus its
+        # own persisted state, not just http_get (see discover_interndock's
+        # docstring). Added last so it naturally has lowest cross-source-
+        # duplicate write-priority: InternDock's value is companies the
+        # direct per-company sources don't already reach, not going first.
+        interndock_listings = discover_interndock(http_get, interndock_fetch_fn, state_dir)
+        interndock_matched = [
+            l for l in interndock_listings
+            if matches(l, profile) and not stage1_reject(l.title, l.raw_text)
+            and compute_uid(l) not in excluded_ids
+        ]
+        matched_by_source["InternDock"] = {"fetch_count": len(interndock_listings), "matched": interndock_matched}
     except (SchemaDriftError, requests.RequestException) as exc:
         # RequestException too — a deleted repo, DNS failure, or 5xx used to
         # crash the process before any run-log record or issue existed (the
@@ -625,6 +698,7 @@ if __name__ == "__main__":
         fetch_page_fn=(lambda url: fetch_posting_markdown(url, firecrawl_key)) if firecrawl_key else None,
         opt_cache_path=REPO_ROOT / "state" / "opt_cache.json",
         state_dir=REPO_ROOT / "state",
+        interndock_fetch_fn=(lambda url: fetch_interndock_drop(url, firecrawl_key)) if firecrawl_key else None,
     )
     commit_and_push_with_retry(REPO_ROOT, f"Update state + logs — {now.date().isoformat()}")
 

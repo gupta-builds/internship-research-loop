@@ -5,6 +5,7 @@ import requests
 
 from ingestion.normalize import (
     normalize_ai_jobs,
+    normalize_applyguy,
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
@@ -18,6 +19,12 @@ SIMPLIFY_URL = "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Intern
 JOSEGAEL_URL = "https://raw.githubusercontent.com/Jose-Gael-Cruz-Lopez/underclassmen-opportunities/main/.github/scripts/listings.json"
 VANSHB03_URL = "https://raw.githubusercontent.com/vanshb03/Summer2027-Internships/dev/.github/scripts/listings.json"
 ZSHAH101_URL = "https://raw.githubusercontent.com/zshah101/Automated-List-Of-Summer-2027-and-Fall-2026-Tech-Internships/main/data/jobs.json"
+# Real, live, own-sourced JSON (not a re-scrape of SimplifyJobs/vanshb03 the
+# way SuryaHarikrishnan/2027-internship-tracker's data/listings.json is,
+# checked and rejected 2026-08-24 for exactly that reason). 202 real entries
+# confirmed live, updates roughly every 15 minutes, reaches Workday/Workable/
+# Paylocity ATSes this pipeline has zero other coverage for.
+APPLYGUY_URL = "https://raw.githubusercontent.com/ApplyGuy/2027-Internships/main/data/internships.json"
 
 GREENHOUSE_JOBS_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
 ASHBY_JOBS_URL = "https://api.ashbyhq.com/posting-api/job-board/{token}"
@@ -111,6 +118,12 @@ def fetch_zshah101(http_get=None) -> list:
     resp = (http_get or requests.get)(ZSHAH101_URL, timeout=TIMEOUT)
     resp.raise_for_status()
     return [normalize_zshah101(raw) for raw in resp.json().values()]
+
+
+def fetch_applyguy(http_get=None) -> list:
+    resp = (http_get or requests.get)(APPLYGUY_URL, timeout=TIMEOUT)
+    resp.raise_for_status()
+    return [normalize_applyguy(raw) for raw in resp.json()["jobs"]]
 
 
 def fetch_greenhouse(http_get=None) -> list:

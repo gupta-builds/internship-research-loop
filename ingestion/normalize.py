@@ -117,6 +117,32 @@ def normalize_zshah101(raw: dict) -> Listing:
     )
 
 
+def normalize_applyguy(raw: dict) -> Listing:
+    # url is applyguy.ai's own tracking-redirect page (utm_source=github,
+    # etc.) — listingUrl is the real employer ATS link (confirmed live
+    # 2026-08-24: 100% of 202 real entries carry one — Workday/Greenhouse/
+    # Ashby/Workable/Paylocity/Lever/direct-company domains), preferred the
+    # same way Freehire's own tracking query string gets stripped. season is
+    # ApplyGuy's literal "Not specified" placeholder on ~39% of real entries
+    # (78/202) — mapped to no term data (empty list), not the literal string,
+    # so _matches_applyguy's permissive missing-data branch actually fires;
+    # every other value is a real bare or year-qualified cycle word
+    # ("Summer 2027", "Co-op", "Fall 2026", bare "2027", bare "Winter", ...).
+    season = raw.get("season", "")
+    return Listing(
+        company=raw["company"],
+        title=raw["title"],
+        url=raw.get("listingUrl") or raw["url"],
+        source="ApplyGuy",
+        category=raw.get("category", ""),
+        terms=[season] if season and season != "Not specified" else [],
+        locations=[raw["location"]] if raw.get("location") else [],
+        active=True,  # snapshot-style feed (like AIJobs) — no explicit closed flag on any real entry checked
+        date_posted=_parse_iso_ts(raw.get("posted", "")),
+        raw_id=raw["id"],
+    )
+
+
 def normalize_greenhouse(raw: dict, company: str) -> Listing:
     # No structured term field — raw_text (title + scraped content, HTML
     # stripped) is what _matches_greenhouse text-searches for a term string.

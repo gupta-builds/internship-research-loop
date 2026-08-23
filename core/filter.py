@@ -95,12 +95,16 @@ def matches(listing, profile: dict) -> bool:
         ok = _matches_vanshb03(listing, profile)
     elif listing.source == "zshah101":
         ok = _matches_zshah101(listing, profile)
+    elif listing.source == "ApplyGuy":
+        ok = _matches_applyguy(listing, profile)
     elif listing.source == "Greenhouse":
         ok = _matches_greenhouse(listing, profile)
     elif listing.source == "Ashby":
         ok = _matches_ashby(listing, profile)
     elif listing.source == "Lever":
         ok = _matches_lever(listing, profile)
+    elif listing.source == "InternDock":
+        ok = _matches_interndock(listing, profile)
     elif listing.source == "Freehire":
         ok = _matches_freehire(listing, profile)
     elif listing.source == "AIJobs":
@@ -231,6 +235,27 @@ def _matches_zshah101(listing, profile: dict) -> bool:
     return True
 
 
+# ApplyGuy's own literal "Not specified" placeholder is mapped to empty terms
+# at normalize time (normalize_applyguy) — real on ~39% of live entries
+# (78/202, checked 2026-08-24), so this can't be treated as a rare edge case
+# the way an empty vanshb03/JGCL season might be. Permissive by default, same
+# as every other source's missing-field case: no season data passes, real
+# data must actually match (bare cycle word or year-qualified, same
+# either-shape matching as vanshb03).
+def _matches_applyguy(listing, profile: dict) -> bool:
+    allowed_categories = {_norm(c) for c in profile["categories"]}
+    if _norm(listing.category) not in allowed_categories:
+        return False
+    if not listing.terms:
+        return True
+    excluded_terms = {_norm(t) for t in profile.get("exclude_terms", [])}
+    if _has_wrong_cycle_season(listing.terms, excluded_terms):
+        return False
+    wanted_terms = {_norm(t) for t in profile["terms"]}
+    have_terms = {_norm(t) for t in listing.terms}
+    return any(w.split()[0] in have_terms or w.split()[0] == h.split()[0] for w in wanted_terms for h in have_terms)
+
+
 # Neither Greenhouse nor Ashby's public job APIs carry a structured term
 # field — title + description text is all there is, and real postings on our
 # own seeded companies (Marshall Wace's "Technology Intern - 2027", Ellipsis
@@ -270,6 +295,12 @@ def _matches_free_text_source(listing, profile: dict) -> bool:
 _matches_greenhouse = _matches_free_text_source
 _matches_ashby = _matches_free_text_source
 _matches_lever = _matches_free_text_source
+# InternDock's drop pages span every industry (banking, marketing, legal,
+# accounting, not just software), unlike Greenhouse/Ashby/Lever's tech-only
+# curated company seed lists — this term/season check alone does not filter
+# by job function. stage1_reject/stage2_confirm (core/relevance.py) are the
+# real relevance gate downstream, same as for every other free-text source.
+_matches_interndock = _matches_free_text_source
 # Freehire's own postings often do state the term literally (Google's real
 # posting title was "Software Engineering Intern, BS, Summer 2027"), but its
 # aggregated sources are uneven — same free-text/bare-year fallback applies.

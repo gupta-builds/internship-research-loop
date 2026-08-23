@@ -37,10 +37,15 @@ def _zshah101_raw():
     return {r["id"]: r for r in _strip_case_keys(json.loads((FIXTURES / "zshah101.json").read_text()))}
 
 
+def _applyguy_raw():
+    return {"updatedAt": "2026-08-24T00:00:00Z", "jobs": _strip_case_keys(json.loads((FIXTURES / "applyguy.json").read_text()))}
+
+
 def _fake_http_get(url, timeout=None):
     from ingestion.freehire import FREEHIRE_SEARCH_URL
     from ingestion.sources import (
         AI_JOBS_URL,
+        APPLYGUY_URL,
         ASHBY_JOBS_URL,
         GREENHOUSE_JOBS_URL,
         JOSEGAEL_URL,
@@ -59,6 +64,8 @@ def _fake_http_get(url, timeout=None):
         resp.json.return_value = _vanshb03_raw()
     elif url == ZSHAH101_URL:
         resp.json.return_value = _zshah101_raw()
+    elif url == APPLYGUY_URL:
+        resp.json.return_value = _applyguy_raw()
     elif url.startswith(GREENHOUSE_JOBS_URL.split("{")[0]) or url.startswith(ASHBY_JOBS_URL.split("{")[0]):
         # per-company board endpoints — pipeline-orchestration tests don't need
         # real per-company data, that's covered in test_sources.py directly
@@ -636,3 +643,122 @@ def test_run_once_global_total_thresholds(tmp_path, seed_total, expect_dossier_t
     assert record["dossier_total"] == expect_dossier_total
     global_issue_calls = [c for c in kwargs["issue_fn"].call_args_list if "Total dossier count crossed" in c.args[1]]
     assert bool(global_issue_calls) is expect_issue
+
+
+# --- InternDock discovery (Task 1, 2026-08-24) ---
+
+# Real excerpt from https://www.interndock.com/sitemap.xml, fetched 2026-08-24
+# — one real confirmed drop, one real drop-shaped-but-actually-advice guide.
+_INTERNDOCK_SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.interndock.com/pricing</loc></url>
+  <url><loc>https://www.interndock.com/tracker/guides/summer-2027-internship-drop-august-2026</loc></url>
+  <url><loc>https://www.interndock.com/tracker/guides/summer-2027-internship-programs-open-now</loc></url>
+</urlset>"""
+
+
+def _fake_interndock_sitemap_get(url, timeout=None):
+    resp = Mock(status_code=200, text=_INTERNDOCK_SITEMAP)
+    return resp
+
+
+def test_discover_interndock_returns_empty_when_fetch_fn_is_none(tmp_path):
+    """Same 'absence means off' convention as fetch_page_fn."""
+    assert run_pipeline.discover_interndock(_fake_interndock_sitemap_get, None, tmp_path) == []
+
+
+def test_discover_interndock_fetches_only_new_candidates_and_persists_state(tmp_path):
+    real_postings = [
+        {"title": "Software Engineering Intern - Summer 2027", "url": "https://x/1",
+         "company": "Acme", "location": "NYC"},
+    ]
+    calls = []
+
+    def fake_interndock_fetch(url):
+        calls.append(url)
+        return real_postings if "drop-august-2026" in url else []  # the advice-article candidate isn't a real drop
+
+    listings = run_pipeline.discover_interndock(_fake_interndock_sitemap_get, fake_interndock_fetch, tmp_path)
+
+    assert len(listings) == 1
+    assert listings[0].source == "InternDock"
+    assert listings[0].company == "Acme"
+    assert len(calls) == 2  # both drop-shaped candidates were tried, once each
+
+    state_file = tmp_path / run_pipeline.INTERNDOCK_SEEN_GUIDES_FILENAME
+    assert state_file.exists()
+    seen = json.loads(state_file.read_text())
+    assert len(seen) == 2  # the confirmed non-drop is marked seen too — never retried
+
+    # Second call: both candidates already seen — no re-fetch, no new listings.
+    listings2 = run_pipeline.discover_interndock(_fake_interndock_sitemap_get, fake_interndock_fetch, tmp_path)
+    assert listings2 == []
+    assert len(calls) == 2  # unchanged — nothing re-fetched
+
+
+def test_discover_interndock_fails_open_on_sitemap_error(tmp_path):
+    import requests
+
+    def flaky_get(url, timeout=None):
+        raise requests.ConnectionError("simulated: interndock.com down")
+
+    assert run_pipeline.discover_interndock(flaky_get, Mock(), tmp_path) == []
+
+
+def _fake_http_get_only_interndock(url, timeout=None):
+    """Every other source returns empty (in its own real response shape) —
+    isolates this test to InternDock's own wiring, no cross-source debate
+    contention with fixture data."""
+    from ingestion.sources import (
+        AI_JOBS_URL, APPLYGUY_URL, ASHBY_JOBS_URL, GREENHOUSE_JOBS_URL, JOSEGAEL_URL,
+        LEVER_JOBS_URL, SIMPLIFY_URL, VANSHB03_URL, ZSHAH101_URL,
+    )
+    from ingestion.freehire import FREEHIRE_SEARCH_URL
+
+    if "interndock.com" in url:
+        return _fake_interndock_sitemap_get(url)
+    resp = Mock(status_code=200)
+    if url in (SIMPLIFY_URL, JOSEGAEL_URL, VANSHB03_URL):
+        resp.json.return_value = []
+    elif url == ZSHAH101_URL:
+        resp.json.return_value = {}
+    elif url == APPLYGUY_URL:
+        resp.json.return_value = {"jobs": []}
+    elif url.startswith(GREENHOUSE_JOBS_URL.split("{")[0]) or url.startswith(ASHBY_JOBS_URL.split("{")[0]):
+        resp.json.return_value = {"jobs": []}
+    elif url.startswith(LEVER_JOBS_URL.split("{")[0]):
+        resp.json.return_value = []
+    elif url.startswith(FREEHIRE_SEARCH_URL.split("{")[0]):
+        resp.json.return_value = {"data": []}
+    elif url == AI_JOBS_URL:
+        resp.json.return_value = {"jobs": []}
+    else:
+        raise AssertionError(f"unexpected url: {url}")
+    return resp
+
+
+def test_run_once_writes_interndock_listings_when_wired(tmp_path, monkeypatch):
+    """End-to-end: InternDock flows through matches()/stage1_reject() and the
+    normal write gate exactly like every other source, and shows up in the
+    run record under its own name."""
+    real_postings = [
+        {"title": "Frontend Engineer Intern - Summer 2027", "url": "https://job-boards.greenhouse.io/acme/jobs/1",
+         "company": "Acme", "location": "New York, NY"},
+        {"title": "Marketing Intern - Summer 2027", "url": "https://x/2",  # real relevance-gate reject, not a bug
+         "company": "Acme", "location": "New York, NY"},
+    ]
+    monkeypatch.setattr(run_pipeline, "check_schema_drift", lambda http_get=None: None)
+    kwargs = _run_once_kwargs(
+        tmp_path, state_dir=tmp_path / "state",
+        http_get=_fake_http_get_only_interndock,
+        interndock_fetch_fn=lambda url: real_postings,
+    )
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["halted"] is False
+    # 2 drop-shaped sitemap candidates, each yielding real_postings (the fake
+    # interndock_fetch_fn ignores which URL it's given) = 4 raw listings.
+    assert record["fetch_counts"]["InternDock"] == 4
+    assert record["filter_match_counts"]["InternDock"] == 2  # both Marketing Intern copies rejected by stage1_reject
+    written_files = list((kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md"))
+    assert any("Frontend Engineer" in f.read_text() for f in written_files)

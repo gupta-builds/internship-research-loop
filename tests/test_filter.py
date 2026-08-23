@@ -7,6 +7,7 @@ from core.filter import _matches_josegael, degrees_eligible, load_profile, locat
 from ingestion.normalize import (
     Listing,
     normalize_ai_jobs,
+    normalize_applyguy,
     normalize_ashby,
     normalize_greenhouse,
     normalize_josegael,
@@ -227,6 +228,42 @@ def test_zshah101_citizens_only_real_anduril_entry():
     assert listing.sponsorship == "citizens-only"
     assert listing.terms == ["Summer 2027"] and listing.category == "Software"  # everything else about it matches
     assert matches(listing, PROFILE) is False
+
+
+# --- ApplyGuy (Task 2, real feed entries verbatim, 2026-08-24) ---
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("applyguy.json") if r["_case"].startswith("should-match")],
+)
+def test_applyguy_should_match(raw):
+    assert matches(normalize_applyguy(raw), PROFILE) is True, raw["_case"]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [r for r in _load("applyguy.json") if r["_case"].startswith("should-reject")],
+)
+def test_applyguy_should_reject(raw):
+    assert matches(normalize_applyguy(raw), PROFILE) is False, raw["_case"]
+
+
+def test_applyguy_not_specified_season_maps_to_no_term_data():
+    """ApplyGuy's own literal placeholder on real entries with no season data
+    (78/202, checked 2026-08-24) — must map to empty terms, not the literal
+    string, or the permissive missing-data branch in _matches_applyguy never fires."""
+    raw = next(r for r in _load("applyguy.json") if r["_case"] == "should-match-not-specified-season-is-permissive")
+    listing = normalize_applyguy(raw)
+    assert listing.terms == []
+
+
+def test_applyguy_prefers_listing_url_over_tracking_url():
+    """url is applyguy.ai's own utm-tagged redirect page; listingUrl is the
+    real employer ATS link — the dossier must store the real one."""
+    raw = next(r for r in _load("applyguy.json") if r["_case"] == "should-match-real-summer-2027-software-engineering")
+    listing = normalize_applyguy(raw)
+    assert listing.url == raw["listingUrl"]
+    assert "applyguy.ai" not in listing.url
 
 
 # --- Greenhouse / Ashby (real jobs on our seeded company boards, 2026-07-25) ---

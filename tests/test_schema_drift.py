@@ -7,6 +7,7 @@ import pytest
 from core.schema_drift import (
     SchemaDriftError,
     check_all,
+    check_applyguy_schema,
     check_josegael_schema,
     check_simplify_schema,
     check_vanshb03_schema,
@@ -51,6 +52,13 @@ def zshah101_raw():
     # zshah101's real feed is a dict keyed by id, not a list — check_zshah101_schema
     # expects that shape (see is_dict=True in schema_drift.py).
     return {r["id"]: r for r in _strip_case_keys(json.loads((FIXTURES / "zshah101.json").read_text()))}
+
+
+@pytest.fixture
+def applyguy_raw():
+    # ApplyGuy's real feed is {"updatedAt": ..., "jobs": [...]} — a third
+    # shape check_applyguy_schema handles with its own bespoke check.
+    return {"updatedAt": "2026-08-24T00:00:00Z", "jobs": _strip_case_keys(json.loads((FIXTURES / "applyguy.json").read_text()))}
 
 
 # --- happy path, one per source ---
@@ -120,12 +128,14 @@ def test_check_all_raises_on_first_failing_source(simplify_raw, josegael_raw):
     assert call_count["n"] == 1  # halted before ever checking josegael
 
 
-def test_check_all_passes_when_all_sources_are_healthy(simplify_raw, josegael_raw, vanshb03_raw, zshah101_raw):
+def test_check_all_passes_when_all_sources_are_healthy(
+    simplify_raw, josegael_raw, vanshb03_raw, zshah101_raw, applyguy_raw,
+):
     call_log = []
 
     def http_get(url, timeout):
         call_log.append(url)
-        from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, VANSHB03_URL, ZSHAH101_URL
+        from ingestion.sources import APPLYGUY_URL, JOSEGAEL_URL, SIMPLIFY_URL, VANSHB03_URL, ZSHAH101_URL
 
         if url == SIMPLIFY_URL:
             return _json_response(simplify_raw)
@@ -135,10 +145,12 @@ def test_check_all_passes_when_all_sources_are_healthy(simplify_raw, josegael_ra
             return _json_response(vanshb03_raw)
         if url == ZSHAH101_URL:
             return _json_response(zshah101_raw)
+        if url == APPLYGUY_URL:
+            return _json_response(applyguy_raw)
         raise AssertionError(f"unexpected url: {url}")
 
     check_all(http_get=http_get)  # does not raise
-    assert len(call_log) == 4
+    assert len(call_log) == 5
 
 
 # --- vanshb03 / zshah101 ---
@@ -192,3 +204,40 @@ def test_josegael_schema_detects_dropped_permissive_field(josegael_raw, key):
     http_get = Mock(return_value=_json_response(drifted))
     with pytest.raises(SchemaDriftError, match=key):
         check_josegael_schema(http_get=http_get)
+
+
+# --- ApplyGuy (Task 2, 2026-08-24) — a third real shape: {"updatedAt", "jobs": [...]} ---
+
+def test_applyguy_schema_passes_on_real_shape(applyguy_raw):
+    http_get = Mock(return_value=_json_response(applyguy_raw))
+    check_applyguy_schema(http_get=http_get)  # does not raise
+
+
+def test_applyguy_schema_detects_dropped_season_field(applyguy_raw):
+    """season is read via .get() so a rename wouldn't crash the normalizer —
+    every entry would silently become the permissive no-season case instead."""
+    drifted = {**applyguy_raw, "jobs": [{k: v for k, v in r.items() if k != "season"} for r in applyguy_raw["jobs"]]}
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match="season"):
+        check_applyguy_schema(http_get=http_get)
+
+
+def test_applyguy_schema_detects_dropped_listing_url_field(applyguy_raw):
+    drifted = {**applyguy_raw, "jobs": [{k: v for k, v in r.items() if k != "listingUrl"} for r in applyguy_raw["jobs"]]}
+    http_get = Mock(return_value=_json_response(drifted))
+    with pytest.raises(SchemaDriftError, match="listingUrl"):
+        check_applyguy_schema(http_get=http_get)
+
+
+def test_applyguy_schema_detects_wrong_shape():
+    """Not a bare list (SimplifyJobs/JGCL/vanshb03) or a dict keyed by posting
+    id (zshah101) — a dict missing its own "jobs" wrapper key entirely."""
+    http_get = Mock(return_value=_json_response({"updatedAt": "2026-08-24"}))
+    with pytest.raises(SchemaDriftError, match="non-empty 'jobs' list"):
+        check_applyguy_schema(http_get=http_get)
+
+
+def test_applyguy_schema_detects_empty_jobs_list():
+    http_get = Mock(return_value=_json_response({"updatedAt": "2026-08-24", "jobs": []}))
+    with pytest.raises(SchemaDriftError, match="non-empty 'jobs' list"):
+        check_applyguy_schema(http_get=http_get)

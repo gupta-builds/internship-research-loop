@@ -6,7 +6,7 @@ emptied-out results.
 """
 import requests
 
-from ingestion.sources import JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT, VANSHB03_URL, ZSHAH101_URL
+from ingestion.sources import APPLYGUY_URL, JOSEGAEL_URL, SIMPLIFY_URL, TIMEOUT, VANSHB03_URL, ZSHAH101_URL
 
 # Every field normalize_simplify/normalize_josegael read, not just the ones
 # that would KeyError — a renamed "category" wouldn't crash (normalize_*
@@ -18,6 +18,11 @@ SIMPLIFY_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "ter
 JOSEGAEL_REQUIRED_KEYS = {"id", "company_name", "title", "url", "category", "locations", "target_year", "date_posted", "active", "season"}
 VANSHB03_REQUIRED_KEYS = {"id", "company_name", "title", "url", "locations", "date_posted", "active", "season", "sponsorship"}
 ZSHAH101_REQUIRED_KEYS = {"id", "company", "title", "url", "location", "posted_at", "is_open", "season", "sponsorship", "category"}
+# "url" isn't in this set even though normalize_applyguy reads it — it's only
+# a fallback (raw.get("listingUrl") or raw["url"]), so a renamed "url" alone
+# wouldn't KeyError or silently degrade anything; "listingUrl" is the one
+# that's load-bearing (every real entry checked 2026-08-24 has it).
+APPLYGUY_REQUIRED_KEYS = {"id", "company", "title", "listingUrl", "category", "season", "location", "posted"}
 
 # Only the two curated single-feed JSON sources get a pre-fetch drift check,
 # same as SimplifyJobs/JGCL always have. Greenhouse/Ashby/Lever are a dozen
@@ -67,6 +72,24 @@ def check_zshah101_schema(http_get=None) -> None:
     _check_json_source("zshah101", ZSHAH101_URL, ZSHAH101_REQUIRED_KEYS, http_get or requests.get, is_dict=True)
 
 
+def check_applyguy_schema(http_get=None) -> None:
+    # A third real shape, neither of _check_json_source's two: a dict wrapping
+    # a "jobs" list ({"updatedAt": ..., "jobs": [...]}), not a bare list
+    # (SimplifyJobs/JGCL/vanshb03) or a dict keyed by posting id (zshah101) —
+    # not worth generalizing the shared helper for one shape, same "small
+    # dedicated function beats a bent-to-fit shared one" call as elsewhere in
+    # this codebase.
+    resp = (http_get or requests.get)(APPLYGUY_URL, timeout=TIMEOUT)
+    resp.raise_for_status()
+    data = resp.json()
+    jobs = data.get("jobs") if isinstance(data, dict) else None
+    if not isinstance(jobs, list) or not jobs:
+        raise SchemaDriftError(f"ApplyGuy: expected a non-empty 'jobs' list, got {type(data).__name__}")
+    missing = APPLYGUY_REQUIRED_KEYS - set(jobs[0].keys())
+    if missing:
+        raise SchemaDriftError(f"ApplyGuy: missing expected keys {sorted(missing)} (entry keys: {sorted(jobs[0].keys())})")
+
+
 def check_all(http_get=None) -> None:
     """Runs every check in order; raises SchemaDriftError from whichever
     fails first. Callers should treat any exception here as "halt the run,
@@ -75,3 +98,4 @@ def check_all(http_get=None) -> None:
     check_josegael_schema(http_get)
     check_vanshb03_schema(http_get)
     check_zshah101_schema(http_get)
+    check_applyguy_schema(http_get)

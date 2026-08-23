@@ -40,17 +40,30 @@ sits before it. "*Company, See posting*" is InternDock's own placeholder for
 a posting with no location — mapped to no location data, same permissive-by-
 default convention as every other source's missing-location case.
 
-Scope of this module: detect candidate drop pages and parse their postings
-into plain dicts. Deliberately NOT wired into run_pipeline.py's SOURCES/FEEDS
-yet — that needs its own design pass (a raw_id strategy for postings with no
-first-party id at all, a "seen guide URLs" state file, and a cadence decision
-the way recheck.py earned its own daily cron instead of running hourly) —
-flagged as the explicit next step, not assumed here.
+Wired into run_pipeline.py (Task 1, 2026-08-24), NOT via the uniform SOURCES
+tuple — every SOURCES fetcher is a stateless fetch_fn(http_get), but
+InternDock genuinely needs three things none of the others do: a Firecrawl
+call (not just http_get), and read+write access to persisted state (which
+guide URLs have already been Firecrawl-fetched, so a confirmed drop or a
+confirmed non-drop is each checked at most once, ever). run_pipeline.py's
+discover_interndock() is the separate step that threads that state through;
+see its docstring for why idempotent state-gating replaces picking an
+arbitrary cadence outright. Not wired into recheck.py's FEEDS — verifying
+liveness would mean re-Firecrawling every previously-seen drop page just to
+diff its postings, real ongoing Firecrawl cost for content that's largely
+redundant with sources recheck.py already covers directly (Greenhouse/Ashby/
+Lever postings that happen to also appear in an InternDock drop keep getting
+rechecked via whichever of those wrote the one surviving dossier) — same
+"real cost, low signal" reasoning that already keeps Freehire out of FEEDS.
+
+raw_id is the posting's own real Apply URL (not a content hash the way the
+old, now-removed zapplyjobs source needed) — see normalize_interndock below.
 """
 import re
 
 import requests
 
+from ingestion.normalize import Listing
 from ingestion.posting_page import fetch_posting_markdown
 
 INTERNDOCK_SITEMAP_URL = "https://www.interndock.com/sitemap.xml"
@@ -109,6 +122,27 @@ def parse_interndock_postings(markdown: str) -> list:
             "location": loc,
         })
     return postings
+
+
+def normalize_interndock(posting: dict) -> Listing:
+    # raw_id is the posting's own real Apply URL, not a content hash. Unlike
+    # the old zapplyjobs source (removed 2026-07-18 for having no per-posting
+    # url at all), every InternDock posting carries one — it's the actual
+    # employer ATS link (Greenhouse/Ashby/Lever/Workday/SmartRecruiters/etc.),
+    # already unique and stable per posting, so there's no real case for a
+    # hash fallback here. No structured term field (title/company/location
+    # only) — raw_text is the title itself, same free-text matching fallback
+    # as Greenhouse/Ashby/Lever.
+    return Listing(
+        company=posting["company"],
+        title=posting["title"],
+        url=posting["url"],
+        source="InternDock",
+        locations=[posting["location"]] if posting["location"] else [],
+        active=True,
+        raw_id=posting["url"],
+        raw_text=posting["title"],
+    )
 
 
 def fetch_interndock_drop(url: str, api_key: str, http_post=None) -> list:

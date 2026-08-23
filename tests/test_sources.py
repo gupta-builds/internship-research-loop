@@ -76,6 +76,23 @@ def test_fetch_zshah101_handles_dict_shape_and_normalizes():
     assert listings[0].source == "zshah101"
 
 
+def test_fetch_applyguy_calls_correct_url_and_normalizes():
+    """ApplyGuy's real feed shape: {"updatedAt": ..., "jobs": [...]} — a bare
+    list would be sources.py's wrong-shape bug, not just a different fixture."""
+    raw = json.loads((FIXTURES / "applyguy.json").read_text())
+    raw = [{k: v for k, v in r.items() if k != "_case"} for r in raw]
+    fake_resp = Mock(status_code=200)
+    fake_resp.json.return_value = {"updatedAt": "2026-08-24T00:00:00Z", "jobs": raw}
+    with patch("requests.get", return_value=fake_resp) as mock_get:
+        listings = sources.fetch_applyguy()
+
+    mock_get.assert_called_once_with(sources.APPLYGUY_URL, timeout=sources.TIMEOUT)
+    fake_resp.raise_for_status.assert_called_once()
+    assert len(listings) == len(raw)
+    assert listings[0].source == "ApplyGuy"
+    assert listings[0].company == raw[0]["company"]
+
+
 def _gh_response(jobs):
     resp = Mock(status_code=200)
     resp.json.return_value = {"jobs": jobs}
