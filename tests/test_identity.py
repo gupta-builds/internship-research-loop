@@ -70,6 +70,39 @@ def test_extract_ats_job_id_lever_ignores_apply_suffix():
     assert extract_ats_job_id(with_apply) == extract_ats_job_id(without_apply)
 
 
+# --- Workday requisition id — three real 2026-08-23 duplicate incidents ---
+
+def test_extract_ats_job_id_workday_unifies_real_fti_consulting_duplicate():
+    """Real FTI Consulting 'Technology Intern' duplicate: same requisition
+    JR260339 posted under two different Workday site-path segments, one
+    with a trailing -1 variant suffix."""
+    a = "https://fticonsulting.wd108.myworkdayjobs.com/FTIConsultingCareers/job/United-States/XMLNAME-2027-Intern---Technology_JR260339-1"
+    b = "https://fticonsulting.wd108.myworkdayjobs.com/FTIConsultingCareersPrivate/job/United-States/XMLNAME-2027-Intern---Technology_JR260339"
+    assert extract_ats_job_id(a) == "JR260339"
+    assert extract_ats_job_id(a) == extract_ats_job_id(b)
+
+
+def test_extract_ats_job_id_workday_unifies_real_medtronic_duplicate():
+    """Real Medtronic 'Software Engineer(ing) Intern' duplicate: same
+    requisition R73630 under ...medtroniccareers vs
+    ...redeploymentmedtroniccareers, one with a trailing -1."""
+    a = "https://medtronic.wd1.myworkdayjobs.com/en-US/medtroniccareers/job/Fridley-Minnesota-United-States-of-America/Software-Engineering-Intern---Summer-2027_R73630-1"
+    b = "https://medtronic.wd1.myworkdayjobs.com/redeploymentmedtroniccareers/job/Fridley-Minnesota-United-States-of-America/Software-Engineering-Intern---Summer-2027_R73630"
+    assert extract_ats_job_id(a) == "R73630"
+    assert extract_ats_job_id(a) == extract_ats_job_id(b)
+
+
+def test_extract_ats_job_id_workday_unifies_real_continental_resources_duplicate():
+    """Real Continental Resources 'Data Analyst Intern' duplicate: same
+    URL apart from a trailing -1, and the site-path segment itself
+    ('CLR_Careers') has its own underscore — the id must still resolve to
+    the LAST underscore-delimited segment, not that one."""
+    a = "https://clr.wd5.myworkdayjobs.com/CLR_Careers/job/Oklahoma-City-OK/Data-Analyst-Intern--Summer-2027-_R02591-1"
+    b = "https://clr.wd5.myworkdayjobs.com/CLR_Careers/job/Oklahoma-City-OK/Data-Analyst-Intern--Summer-2027-_R02591"
+    assert extract_ats_job_id(a) == "R02591"
+    assert extract_ats_job_id(a) == extract_ats_job_id(b)
+
+
 def test_extract_ats_job_id_google_careers_results_url():
     """Real Google BS/MS Summer 2027 SWE intern duplicate: vanshb03 and
     Freehire both resolve to the identical numeric id embedded in

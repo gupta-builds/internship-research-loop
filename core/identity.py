@@ -34,6 +34,20 @@ _ATS_JOB_ID_PATTERNS = (
     # silently collapse an unrelated posting into the same cross_source_key
     # as a real Google posting and reject it as a duplicate.
     re.compile(r"google\.com/.*?careers/(?:applications/)?jobs/results/(\d+)", re.I),
+    # Workday requisition id, added 2026-08-23 (dossier audit) — real
+    # confirmed duplicate pairs: FTI Consulting "Technology Intern" (same
+    # requisition JR260339, one URL under the ...FTIConsultingCareers site,
+    # the other under ...FTIConsultingCareersPrivate, one with a trailing
+    # -1), Medtronic "Software Engineer(ing) Intern" (same requisition
+    # R73630, one under ...medtroniccareers, the other under
+    # ...redeploymentmedtroniccareers, one with -1), Continental Resources
+    # "Data Analyst Intern" (same requisition R02591, identical URL apart
+    # from the trailing -1). The id is always the last underscore-delimited
+    # path segment, sometimes followed by a '-N' variant suffix — greedy
+    # '.+_' lands on that last underscore regardless of earlier underscores
+    # in the site-path segment (e.g. 'CLR_Careers'), and '-N' is captured
+    # separately so it's excluded from the id, unifying both variants.
+    re.compile(r"myworkdayjobs\.com/.+_([A-Za-z]+\d+)(?:-\d+)?/?$", re.I),
 )
 
 
