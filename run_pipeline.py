@@ -164,6 +164,23 @@ DEBATE_LOSSES_FILENAME = "debate_losses.json"
 EXCLUDED_UIDS_FILENAME = "excluded_uids.json"
 EXCLUDED_LOG_SUBPATH = Path("10_Areas/Career/Internships/List/Excluded — Losing The Debate.md")
 
+# Task (Phase 4, 2026-08-23 dossier audit): a per-run alert when a burst of
+# new candidates all cross MAX_DEBATE_LOSSES together — real incident,
+# 2026-08-21: 287 of the excluded log's 304 total entries (94%) were
+# excluded on that single day, TikTok alone contributing 106. The gap this
+# surfaces isn't "one company needs its own cap" — it's that a transient
+# candidate backlog converts into permanent exclusion within
+# MAX_DEBATE_LOSSES runs (~5 hours) with no signal to a human that it's
+# happening. 20 is comfortably above the normal handful-per-run trickle
+# (every other run in logs/runs.jsonl carries newly_excluded_count of 0-2)
+# while still catching a burst early, not just after the fact in a manual
+# audit.
+NEWLY_EXCLUDED_ALERT_THRESHOLD = 20
+
+
+def should_alert_on_exclusion_spike(newly_excluded_count: int) -> bool:
+    return newly_excluded_count > NEWLY_EXCLUDED_ALERT_THRESHOLD
+
 
 def load_debate_losses(state_dir) -> dict:
     path = Path(state_dir) / DEBATE_LOSSES_FILENAME
@@ -477,6 +494,18 @@ def run_once(
                     Path(jarvis_dir) / EXCLUDED_LOG_SUBPATH, line, created_date=now.date().isoformat(),
                     max_losses=MAX_DEBATE_LOSSES,
                 )
+        if should_alert_on_exclusion_spike(record["newly_excluded_count"]):
+            issue_fn(
+                issue_repo,
+                f"Debate-loss exclusion spike: {record['newly_excluded_count']} in one run ({timestamp})",
+                f"{record['newly_excluded_count']} candidates crossed MAX_DEBATE_LOSSES "
+                f"({MAX_DEBATE_LOSSES} consecutive losses) and were permanently excluded in this single "
+                "run — well above the normal handful-per-run trickle. This usually means a burst of new "
+                "candidates arrived together and lost the debate to each other, not that they're "
+                "individually undesirable (see the 2026-08-21 incident: 287 of 304 total exclusions "
+                "happened in one day). Review the newly-excluded entries in "
+                "`Excluded — Losing The Debate.md` before treating any of them as a real quality signal.",
+            )
 
     # Task A resource-limit notification (Standard §5): a bucket at/over
     # capacity or the global total crossing a threshold is surfaced, never a

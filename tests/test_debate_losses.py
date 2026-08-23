@@ -70,6 +70,17 @@ def test_wins_on_attempt_3_never_excluded():
     assert losses[uid] == 4
 
 
+def test_should_alert_on_exclusion_spike_threshold():
+    """Real incident, 2026-08-21: 287 of 304 total excluded-log entries
+    (94%) were excluded on that single day, TikTok alone contributing 106
+    — the burst the 20-count threshold is picked to catch. Every other run
+    in logs/runs.jsonl carries newly_excluded_count of 0-2, so 20 is
+    comfortably above the normal trickle."""
+    assert run_pipeline.should_alert_on_exclusion_spike(20) is False
+    assert run_pipeline.should_alert_on_exclusion_spike(21) is True
+    assert run_pipeline.should_alert_on_exclusion_spike(0) is False
+
+
 def test_written_uid_not_in_losses_is_a_no_op_pop():
     """A uid that wins without ever having lost before (the common case)
     must not error on the pop — dict.pop(uid, None) already handles this,
@@ -125,3 +136,32 @@ def test_run_once_never_fetches_an_already_excluded_uid(tmp_path):
 
     assert excluded_listing.url not in calls
     assert record["errors"] == []
+
+
+def test_run_once_files_issue_on_exclusion_spike(tmp_path, monkeypatch):
+    """Integration-level confirmation that run_once actually wires
+    should_alert_on_exclusion_spike to issue_fn — the threshold logic
+    itself is covered by the pure-function test above, so this only needs
+    to prove the two are connected. update_debate_losses is monkeypatched
+    to return 25 fake newly-excluded candidates rather than manufacturing
+    5 real prior runs across 25+ distinct fixture listings."""
+    from ingestion.normalize import Listing
+
+    def fake_update_debate_losses(losses, deferred, written_uids):
+        fake_excluded = [
+            (f"SimplifyJobs:spike-{i}", Listing(company="Acme", title="SWE Intern",
+                                                 url=f"https://acme.example/{i}", source="SimplifyJobs"))
+            for i in range(25)
+        ]
+        return losses, fake_excluded
+
+    monkeypatch.setattr(run_pipeline, "update_debate_losses", fake_update_debate_losses)
+    state_dir = tmp_path / "state"
+    state_dir.mkdir(parents=True)
+    kwargs = _run_once_kwargs(tmp_path, state_dir=state_dir)
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["newly_excluded_count"] == 25
+    spike_calls = [c for c in kwargs["issue_fn"].call_args_list if "exclusion spike" in c.args[1]]
+    assert len(spike_calls) == 1
+    assert "25 candidates crossed" in spike_calls[0].args[2]
