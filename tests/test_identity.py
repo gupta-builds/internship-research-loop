@@ -111,6 +111,25 @@ def test_extract_ats_job_id_google_careers_results_url():
     assert extract_ats_job_id(url) == "85564713261245126"
 
 
+def test_extract_ats_job_id_oracle_cloud_hcm_real_amex_url():
+    """Real American Express board URL shape from the 2026-08-23
+    excluded-log audit (egug.fa.us2.oraclecloud.com)."""
+    url = "https://egug.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/26011679"
+    assert extract_ats_job_id(url) == "26011679"
+
+
+def test_cross_source_key_prefers_job_id_over_text_real_amex_duplicate():
+    """Real American Express duplicate: the Oracle Cloud HCM job URL doesn't
+    embed the title (unlike Workday's slug-based URLs), so two entries with
+    the same job id but differently punctuated titles ("...Intern,
+    Enterprise Technology Services" vs "...Intern - Enterprise Technology
+    Services") must still collapse to the same cross_source_key via the id,
+    not the title text."""
+    url = "https://egug.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/26011679"
+    assert cross_source_key("American Express", "Software Engineer Intern, Enterprise Technology Services", url) == \
+        cross_source_key("American Express", "Software Engineer Intern - Enterprise Technology Services", url)
+
+
 def test_extract_ats_job_id_none_when_no_recognizable_id():
     assert extract_ats_job_id("https://t.me/getjobss/7795") is None
 

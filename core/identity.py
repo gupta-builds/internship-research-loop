@@ -48,6 +48,20 @@ _ATS_JOB_ID_PATTERNS = (
     # in the site-path segment (e.g. 'CLR_Careers'), and '-N' is captured
     # separately so it's excluded from the id, unifying both variants.
     re.compile(r"myworkdayjobs\.com/.+_([A-Za-z]+\d+)(?:-\d+)?/?$", re.I),
+    # Oracle Cloud (Fusion) HCM Candidate Experience job id, added 2026-08-23
+    # (Phase 4 Task C) — real observed shape on American Express's board
+    # (egug.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/
+    # job/<id>): of the 18 American Express entries in the excluded-log
+    # audit, 15 are distinct postings and 3 are genuine duplicate pairs —
+    # same job id, differently punctuated title (e.g. "Software Engineer
+    # Intern, Enterprise Technology Services" vs "Software Engineer Intern -
+    # Enterprise Technology Services", both job/26011679). Anchored on the
+    # shared oraclecloud.com domain and the CandidateExperience path shape
+    # (Oracle's own multi-tenant Fusion HCM URL format), not the
+    # Amex-specific subdomain — same platform-anchoring discipline as
+    # greenhouse.io/lever.co/ashbyhq.com. Only Amex data has actually been
+    # observed here; retune if another tenant's URL shape diverges.
+    re.compile(r"\.oraclecloud\.com/hcmUI/CandidateExperience/.+?/job/(\d+)", re.I),
 )
 
 
