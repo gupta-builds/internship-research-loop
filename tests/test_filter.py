@@ -132,10 +132,23 @@ def test_location_us_or_ambiguous_is_eligible(loc):
         "London, UK", "Remote in Canada", "Remote in UK", "Remote in Germany",
         "Remote in India", "Bangalore, India", "Singapore", "Europe",
         "Dubai - United Arab Emirates", "Munich, Germany",
+        # real, from the 2026-08-23 dossier audit's _NON_US denylist-gap finding
+        "Amsterdam, North Holland, Netherlands",  # Optiver "Quantitative Research Internship (2027 Start)"
+        "Tel Aviv, Israel",  # Google "HardwareSilicon Engineering PhD Intern, 2027"
+        "Warsaw, Poland",  # Google "Data Science PhD Intern, 2027"
+        "Hong Kong",  # Marshall Wace "Technology Intern - Hong Kong - 2027"
+        "London",  # Marshall Wace "Technology Intern - London - 2027" — bare city, no country token
     ],
 )
 def test_location_affirmatively_foreign_is_rejected(loc):
     assert location_eligible([loc]) is False, loc
+
+
+def test_location_new_london_ct_is_not_caught_by_bare_london_fallback():
+    """The bare-city fallback added for 'London' alone must be an exact
+    whole-string match, not a substring — a real US city sharing the name
+    ('New London, CT') must still pass."""
+    assert location_eligible(["New London, CT"]) is True
 
 
 def test_location_no_data_is_unrestricted():

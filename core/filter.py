@@ -39,13 +39,31 @@ _US_STATE_NAMES = {
 # Every foreign token actually observed in live data, plus a few obvious neighbors.
 # ponytail: denylist can't name every country — a new foreign token passes until
 # added here; acceptable because a US signal is never falsely rejected.
+# netherlands/hong kong/poland/israel added 2026-08-23 (dossier audit) — three
+# real dossiers passed with no US signal at all despite an affirmative foreign
+# country token already present in their stored locations field: Optiver
+# "Quantitative Research Internship (2027 Start)" and "FPGA Internship (2027
+# Start)" (["Amsterdam, North Holland, Netherlands"]), Google "HardwareSilicon
+# Engineering PhD Intern, 2027" (["Tel Aviv, Israel"]), Google "Data Science
+# PhD Intern, 2027" (["Warsaw, Poland"]), Marshall Wace "Technology Intern -
+# Hong Kong - 2027" (["Hong Kong"]).
 _NON_US = re.compile(
     r"\b(canada|can|uk|united kingdom|germany|india|france|spain|singapore|europe"
-    r"|south america|united arab emirates|mexico|japan|china|ireland|australia)\b"
+    r"|south america|united arab emirates|mexico|japan|china|ireland|australia"
+    r"|netherlands|hong kong|poland|israel)\b"
 )
 # ',' or '.' before the state code tolerates real dirty data ('Dallas. TX');
 # case-insensitive via upper() tolerates 'Carlsbad, Ca'.
 _STATE_SUFFIX = re.compile(r"[.,]\s*([A-Za-z]{2})$")
+
+# Bare foreign city names carrying no country/state token at all — the
+# _NON_US regex above only ever sees a country word, so a location field
+# that's just the bare city name slips through entirely. Real dossier, same
+# 2026-08-23 audit: Marshall Wace "Technology Intern - London - 2027" stores
+# locations as exactly ["London"], no "UK"/"United Kingdom" anywhere. Checked
+# as an exact whole-string match (not a substring) so a real US city sharing
+# the name — e.g. "New London, CT" — is never caught by this.
+_NON_US_BARE_CITIES = {"london"}
 
 
 def _entry_is_us_or_remote(loc: str) -> bool:
@@ -55,6 +73,8 @@ def _entry_is_us_or_remote(loc: str) -> bool:
         return True
     if l.split(",")[-1].strip() in _US_STATE_NAMES:
         return True  # 'New Mexico' before the denylist sees 'mexico'
+    if l in _NON_US_BARE_CITIES:
+        return False
     return not _NON_US.search(l)
 
 
