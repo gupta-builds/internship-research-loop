@@ -155,6 +155,55 @@ def test_prioritize_and_cap_scopes_budget_per_bucket():
     assert len(deferred) == 1
 
 
+def test_prioritize_and_cap_grants_reserved_slot_to_preferred_company_losing_the_debate():
+    """Task A (2026-08-23): two preferred companies compete for a 1-slot
+    budget — stage 1 ties (both 'high'), so recency alone decides the
+    normal slot, and the older preferred company would lose entirely under
+    the pre-Task-A behavior. The reserved slot is additive: both preferred
+    candidates get written, deferred stays empty."""
+    preferred_recent = _listing_with_date("recent", 1700000000)
+    preferred_recent[1].company = "Google"
+    preferred_older = _listing_with_date("older", 1600000000)
+    preferred_older[1].company = "Citadel"
+
+    this_run, deferred = run_pipeline._prioritize_and_cap(
+        [preferred_recent, preferred_older], budget={"Other": 1},
+        preferred_companies={"Google": "high", "Citadel": "high"},
+    )
+    assert {l.company for _, l in this_run} == {"Google", "Citadel"}
+    assert deferred == []
+
+
+def test_prioritize_and_cap_reserved_slot_is_a_noop_with_no_preferred_candidates():
+    """A bucket with zero preferred candidates this run behaves exactly as
+    before — no extra write, budget still caps normally."""
+    items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
+    this_run, deferred = run_pipeline._prioritize_and_cap(
+        items, budget={"Other": 2}, preferred_companies={"Google": "high"},
+    )
+    assert len(this_run) == 2
+    assert len(deferred) == 1
+
+
+def test_prioritize_and_cap_reserved_slot_recency_tiebreak_among_preferred():
+    """Three preferred companies competing for a 1-slot budget + 1 reserved
+    slot — the most recent two get in (normal slot, then reserved slot);
+    the third still loses the debate and stays deferred."""
+    recent = _listing_with_date("recent", 1700000000)
+    recent[1].company = "Google"
+    middle = _listing_with_date("middle", 1600000000)
+    middle[1].company = "Citadel"
+    old = _listing_with_date("old", 1500000000)
+    old[1].company = "Microsoft"
+
+    this_run, deferred = run_pipeline._prioritize_and_cap(
+        [recent, middle, old], budget={"Other": 1},
+        preferred_companies={"Google": "high", "Citadel": "high", "Microsoft": "high"},
+    )
+    assert {l.company for _, l in this_run} == {"Google", "Citadel"}
+    assert [l.company for _, l in deferred] == ["Microsoft"]
+
+
 def test_run_once_defers_beyond_the_cap_and_leaves_it_for_next_run(tmp_path, monkeypatch):
     """The core guarantee: a deferred item is not marked seen, so it's neither
     lost (no silent drop) nor duplicated (no re-write) — it just naturally

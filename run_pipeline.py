@@ -18,7 +18,7 @@ from core.classify import BUCKET_FOLDERS, classification_callout, classify
 from core.debate import compute_bucket_urgency, debate_compare
 from core.filter import load_profile, matches
 from core.git_ops import GitPushError, commit_and_push_with_retry
-from core.identity import compute_uid
+from core.identity import company_matches_preference, compute_uid
 from core.relevance import stage1_reject, stage2_confirm
 from core.run_log import (
     append_excluded_log,
@@ -117,12 +117,32 @@ def _prioritize_and_cap(new_listings: list, budget: dict, preferred_companies: d
     bucket_urgency = compute_bucket_urgency(new_listings, budget)
     cmp_key = cmp_to_key(lambda x, y: debate_compare(x, y, preferred_companies or {}, bucket_urgency))
 
+    preferred_companies = preferred_companies or {}
     this_run, deferred = [], []
     for bucket, items in by_bucket.items():
         ordered = sorted(items, key=cmp_key)
         limit = budget.get(bucket, 0)
-        this_run.extend(ordered[:limit])
-        deferred.extend(ordered[limit:])
+        selected, remainder = ordered[:limit], ordered[limit:]
+        # Task A (Phase 4, 2026-08-23 decision): a reserved preferred-company
+        # slot, additive on top of the bucket's normal budget — never carved
+        # from it, so no non-preferred candidate loses ground to make room.
+        # Real cause: Citadel's posting classified into 'Other' (a generic
+        # "Software Engineer Intern" title hits no bucket-specific regex) —
+        # the smallest budget (1/run) — and kept losing recency ties to
+        # OTHER preferred companies' fresher arrivals, since preference_tier
+        # is a binary gate with no further differentiation (see the Task 7
+        # audit's Archive entry). debate_compare already sorts every
+        # preferred candidate ahead of every non-preferred one within a
+        # bucket, so remainder[0] being preferred means it's the single
+        # best-ranked preferred candidate that still lost the normal-budget
+        # debate — grant it one extra slot. If multiple preferred candidates
+        # are competing for it, debate_compare's existing recency tie-break
+        # already picked the winner; this doesn't redesign that.
+        if remainder and company_matches_preference(remainder[0][1].company, preferred_companies):
+            selected = selected + remainder[:1]
+            remainder = remainder[1:]
+        this_run.extend(selected)
+        deferred.extend(remainder)
     return this_run, deferred
 
 
