@@ -1,0 +1,35 @@
+name: revalidate
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # weekly, Monday — a rule/hint-list fix lands rarely, not fast-moving data like recheck.yml's postings
+  workflow_dispatch: {}   # manual trigger, for verifying end-to-end before trusting the schedule
+
+permissions:
+  contents: read   # read-only: never moves or deletes a dossier itself
+  issues: write    # gh issue create — one digest issue per run with any regressions
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout internship-research-loop
+        uses: actions/checkout@v4
+
+      - name: Checkout gupta-builds/Jarvis
+        uses: actions/checkout@v4
+        with:
+          repository: gupta-builds/Jarvis
+          token: ${{ secrets.JARVIS_PUSH_TOKEN }}
+          path: jarvis-checkout
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Run revalidate
+        env:
+          JARVIS_DIR: ${{ github.workspace }}/jarvis-checkout
+          GH_TOKEN: ${{ github.token }}
+        run: python revalidate.py
