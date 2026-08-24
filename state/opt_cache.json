@@ -689,6 +689,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:21abe7e3-285d-4817-a48a-557228cb2228": {
+    "checked": "2026-08-24",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:22d53d9b-65a0-477b-8dc6-5dc0de1847f5": {
     "checked": "2026-08-11",
     "signal": null,
@@ -1393,6 +1398,11 @@
     "checked": "2026-08-07",
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
     "verdict": "excluded"
+  },
+  "SimplifyJobs:bc4407ea-452d-4ef5-b173-3260a4f7db7b": {
+    "checked": "2026-08-24",
+    "signal": null,
+    "verdict": "eligible"
   },
   "SimplifyJobs:bc4a9aef-6e3a-4f04-b875-8a018e3091a3": {
     "checked": "2026-08-17",
@@ -2258,6 +2268,16 @@
     "checked": "2026-07-26",
     "signal": null,
     "verdict": "eligible"
+  },
+  "zshah101:greenhouse:advancedspace:4324875009": {
+    "checked": "2026-08-24",
+    "signal": "export controlled information. Under U.S. law, this requires that you be a \u2018U.S. Person",
+    "verdict": "excluded"
+  },
+  "zshah101:greenhouse:advancedspace:4333179009": {
+    "checked": "2026-08-24",
+    "signal": "must be a U.S. person",
+    "verdict": "excluded"
   },
   "zshah101:greenhouse:akunacapital:8018847": {
     "checked": "2026-07-26",
