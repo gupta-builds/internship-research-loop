@@ -359,6 +359,16 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "ApplyGuy:1e88759e-1303-49a1-be38-c4251b159ed6": {
+    "checked": "2026-08-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "ApplyGuy:2b0d0e43-0cfb-4d10-be2f-7e41092777f7": {
+    "checked": "2026-08-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "Freehire:data-science-phd-intern-2027-google-7ykbltph": {
     "checked": "2026-08-17",
     "signal": null,
@@ -1969,6 +1979,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "vanshb03:6ab65f25-0d37-49e1-93d6-98942a16db04": {
+    "checked": "2026-08-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "vanshb03:6ad34b8c-97ef-49cf-8230-cc2fd4d26258": {
     "checked": "2026-08-21",
     "signal": null,
@@ -2414,6 +2429,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "zshah101:greenhouse:verkada:5210813007": {
+    "checked": "2026-08-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "zshah101:greenhouse:virtu:8624410002": {
     "checked": "2026-07-26",
     "signal": null,
@@ -2541,6 +2561,11 @@
   },
   "zshah101:oracle:fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com:36722": {
     "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "zshah101:oracle:ibqbjb.fa.ocs.oraclecloud.com:155522": {
+    "checked": "2026-08-25",
     "signal": null,
     "verdict": "eligible"
   },
