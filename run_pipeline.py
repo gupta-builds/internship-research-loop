@@ -24,6 +24,7 @@ from core.run_log import (
     append_excluded_log,
     append_run_log,
     append_weekly_rollup,
+    append_write_gate_excluded_log,
     format_weekly_rollup,
     load_recent_runs,
     should_run_weekly_rollup,
@@ -316,6 +317,93 @@ def update_debate_losses(losses: dict, deferred: list, written_uids: list) -> tu
             del losses[uid]
     return losses, newly_excluded
 
+
+WRITE_GATE_FAILURES_FILENAME = "write_gate_failures.json"
+WRITE_GATE_EXCLUDED_LOG_SUBPATH = Path("10_Areas/Career/Internships/List/Excluded — Failed The Write Gate.md")
+
+# Task (Prompt 20, 2026-08-28 decision): a uid that structurally CANNOT pass
+# the write gate (a dead URL, a company+title already vaulted from another
+# source) still wins its bucket's debate_compare ranking every run — it's
+# never "deferred" (that only happens to items _prioritize_and_cap itself
+# cuts for budget reasons), so it never touches debate_losses.json or
+# MAX_DEBATE_LOSSES, and it's never written, so it never reaches
+# seen_ids.json either. Confirmed against the real incident this is built
+# from: SimplifyJobs:de926b0a-99e7-4dbd-94cd-334ec565be9f failed
+# url_liveness (HTTP 403) in every single one of the 186 runs it appeared in
+# between 2026-08-10 and 2026-08-28 (18 days), while sitting in none of
+# debate_losses.json, excluded_uids.json, or seen_ids.json the entire time —
+# it occupied one of its bucket's limited MAX_NEW_WRITES_PER_RUN slots every
+# run, forever, pushing a real competing candidate into deferred (and toward
+# a debate loss it didn't otherwise deserve) in its place.
+#
+# Scoped to the two checks confirmed to repeat identically run over run for
+# the SAME structural reason — also real, not hypothetical: logs/runs.jsonl's
+# 684 records show url_liveness rejected 3274 times and cross_source_duplicate
+# 2801 times. required_fields/format_compliance are deliberately excluded —
+# SYSTEMIC_REJECTION_CHECKS below already means OUR normalizer/template is
+# broken, not the uid; excluding the uid would hide our bug instead of
+# surfacing it (and both are 0/684 in the same log, i.e. have never actually
+# fired). not_duplicate is excluded too: dedup_new's own seen_ids/
+# seen_this_run check already guarantees a new_listings item can't be in
+# seen_ids, so this check structurally can't fail for the same uid across two
+# runs — and, in the same 684-run log, it never has (0 occurrences).
+WRITE_GATE_FAILURE_CHECKS = {"url_liveness", "cross_source_duplicate"}
+# A dead link doesn't deserve MAX_DEBATE_LOSSES' 48-run benefit of the doubt
+# — that number exists for genuinely ambiguous ranking losses (see that
+# constant's own comment above). Dead-is-dead in a way out-ranked isn't. 3
+# consecutive same-check failures is enough real confirmation (the cited
+# SimplifyJobs case failed its check 186/186 times it ever appeared, with
+# zero recoveries) while still tolerant of a single transient network blip
+# on any one run.
+WRITE_GATE_FAILURE_THRESHOLD = 3
+
+
+def load_write_gate_failures(state_dir) -> dict:
+    path = Path(state_dir) / WRITE_GATE_FAILURES_FILENAME
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def save_write_gate_failures(state_dir, failures: dict) -> None:
+    path = Path(state_dir) / WRITE_GATE_FAILURES_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(failures, indent=2, sort_keys=True) + "\n")
+
+
+def update_write_gate_failures(failures: dict, rejections: list, written_uids: list, now_iso: str) -> tuple:
+    """Returns (updated_failures, newly_excluded: [(uid, check, reason), ...]).
+    Tracks only WRITE_GATE_FAILURE_CHECKS — see that constant's citation for
+    why the other checks are excluded. A uid that wins (gets written) this
+    run has its failure history cleared entirely, same "a win wipes the
+    slate" semantics as update_debate_losses's written_uids handling above —
+    a dead URL can come back alive, a cross-source duplicate can leave the
+    vault.
+
+    A uid whose failing check CHANGES between runs restarts its streak at 1
+    rather than continuing to accumulate: the count only means something as
+    consecutive-same-reason evidence of one structural problem, not two
+    different one-off failures added together."""
+    failures = {k: dict(v) for k, v in failures.items()}
+    for uid in written_uids:
+        failures.pop(uid, None)
+    newly_excluded = []
+    for r in rejections:
+        check = r["check"]
+        if check not in WRITE_GATE_FAILURE_CHECKS:
+            continue
+        uid = r["uid"]
+        entry = failures.get(uid)
+        if entry is None or entry["check"] != check:
+            failures[uid] = {"check": check, "count": 1, "first_seen": now_iso}
+        else:
+            entry["count"] += 1
+        if failures[uid]["count"] >= WRITE_GATE_FAILURE_THRESHOLD:
+            newly_excluded.append((uid, check, r["reason"]))
+            del failures[uid]
+    return failures, newly_excluded
+
+
 # A required_fields or format_compliance rejection means OUR normalizer/writer
 # produced something malformed — a real bug, worth an issue. url_liveness and
 # not_duplicate rejections are routine (a stale posting, an already-seen item)
@@ -513,6 +601,7 @@ def run_once(
         "bucket_at_capacity": [],
         "dossier_total": 0,
         "newly_excluded_count": 0,
+        "write_gate_excluded_count": 0,
     }
 
     excluded_ids = load_excluded_uids(state_dir) if state_dir is not None else set()
@@ -608,6 +697,35 @@ def run_once(
                 "happened in one day). Review the newly-excluded entries in "
                 "`Excluded — Losing The Debate.md` before treating any of them as a real quality signal.",
             )
+
+    # Task (Prompt 20): a uid that fails the SAME write-gate check
+    # WRITE_GATE_FAILURE_THRESHOLD consecutive runs it appears in is
+    # structurally doomed (a dead URL, a company+title already in the vault),
+    # not merely out-ranked — see WRITE_GATE_FAILURE_CHECKS's own citation.
+    # It joins the SAME excluded_ids set debate losses use (a single source
+    # of truth fetch_and_filter/dedup_new already check), so it stops
+    # winning a this_run slot every run — logged to its own reviewable
+    # markdown, not silently dropped.
+    if state_dir is not None:
+        write_gate_failures = load_write_gate_failures(state_dir)
+        write_gate_failures, newly_wg_excluded = update_write_gate_failures(
+            write_gate_failures, rejections, written_uids, timestamp
+        )
+        save_write_gate_failures(state_dir, write_gate_failures)
+        record["write_gate_excluded_count"] = len(newly_wg_excluded)
+        if newly_wg_excluded:
+            excluded_ids = load_excluded_uids(state_dir)
+            excluded_ids.update(uid for uid, _check, _reason in newly_wg_excluded)
+            save_excluded_uids(state_dir, excluded_ids)
+            for uid, check, reason in newly_wg_excluded:
+                line = (
+                    f"- `{uid}` — excluded {now.date().isoformat()} — failed `{check}` "
+                    f"{WRITE_GATE_FAILURE_THRESHOLD} consecutive runs (last: {reason})"
+                )
+                append_write_gate_excluded_log(
+                    Path(jarvis_dir) / WRITE_GATE_EXCLUDED_LOG_SUBPATH, line,
+                    created_date=now.date().isoformat(), threshold=WRITE_GATE_FAILURE_THRESHOLD,
+                )
 
     # Task A resource-limit notification (Standard §5): a bucket at/over
     # capacity or the global total crossing a threshold is surfaced, never a

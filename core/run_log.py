@@ -102,3 +102,27 @@ def append_excluded_log(excluded_log_md_path, line: str, created_date: str, max_
     _append_markdown_line(
         excluded_log_md_path, line, _EXCLUDED_LOG_HEADER_TEMPLATE.format(created=created_date, max_losses=max_losses)
     )
+
+
+_WRITE_GATE_EXCLUDED_LOG_HEADER_TEMPLATE = """---
+type: dashboard
+status: active
+created: {created}
+tags:
+  - internship
+  - automation
+  - write-gate
+---
+# Excluded — Failed The Write Gate
+A posting lands here the first time it fails the SAME write-gate check (vault_writer/validate.py) {threshold} consecutive runs it appears in — not a ranking loss (see Excluded — Losing The Debate.md for that), a structural one: a dead URL or a company+title already in the vault from another source. Appended automatically, never rewritten.
+"""
+
+
+def append_write_gate_excluded_log(excluded_log_md_path, line: str, created_date: str, threshold: int) -> None:
+    """Task (Prompt 20) — same append-only pattern as append_excluded_log,
+    for a distinct exclusion reason (structurally-doomed write-gate check,
+    not an out-ranked debate loss) that reads wrong under that log's header."""
+    _append_markdown_line(
+        excluded_log_md_path, line,
+        _WRITE_GATE_EXCLUDED_LOG_HEADER_TEMPLATE.format(created=created_date, threshold=threshold),
+    )
