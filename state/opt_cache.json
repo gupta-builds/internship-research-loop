@@ -1289,6 +1289,11 @@
     "signal": "export controls (including DOE 10 CFR Part 810 and NRC requirements). U.S. Person",
     "verdict": "excluded"
   },
+  "SimplifyJobs:9388e6b1-f360-486e-b324-4bde10bf52a9": {
+    "checked": "2026-08-29",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:96f057ba-4984-4466-ad7a-4e8f75d1ddf9": {
     "checked": "2026-07-27",
     "signal": "U.S. citizenship is required",
@@ -1606,6 +1611,11 @@
   },
   "SimplifyJobs:d94fdfc5-eb6a-4d86-9548-af67b0732bd1": {
     "checked": "2026-08-11",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "SimplifyJobs:de4cd0c6-05b6-4e77-9479-486a018a8683": {
+    "checked": "2026-08-29",
     "signal": null,
     "verdict": "eligible"
   },
