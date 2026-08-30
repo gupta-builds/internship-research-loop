@@ -1,0 +1,33 @@
+---
+description: Write-gate ordering, state invariants, and pre-ship discipline for the unattended discovery pipeline
+globs: core/**,ingestion/**,vault_writer/**,run_pipeline.py,recheck.py,revalidate.py
+alwaysApply: false
+---
+
+# Unattended pipeline invariants
+
+You're editing a file that runs hourly/daily/weekly via GitHub Actions with no human in the loop. See `internship-loop-core.mdc` for the full convention list; this rule restates the two invariants most likely to break silently one file at a time.
+
+## Write-gate order is fixed and cost-ordered
+
+`vault_writer/validate.py`'s `validate()` runs, in this exact order, short-circuiting on first failure:
+
+```
+required_fields → not_duplicate → cross_source_duplicate → url_liveness → format_compliance
+```
+
+Free/local checks run before ones that cost a network call (`url_liveness`). Don't reorder, and don't add a new check without stating where in this cost order it belongs and why. No write path may call `write_dossier` (or a new writer) before `validate()` has returned `passed=True` for that exact item.
+
+## `seen_ids.json` is only updated after a confirmed push
+
+`state/seen_ids.json` must only mark a uid seen once the corresponding vault push has actually succeeded — never mark-then-push. A write that updates seen-state before the push is confirmed can silently drop a real posting if the push later fails.
+
+## Other invariants
+
+- Capacity/dedup/debate-loss limits are notification-only, never a silent write refusal — a candidate that's excluded must land in a reviewable log (e.g. `state/excluded_uids.json`), not vanish.
+- Closed-posting handling (`recheck.py`) moves dossiers to `Viewed/`; it never deletes.
+- Before changing pipeline behavior, verify current live state first — check `logs/runs.jsonl` / `logs/rechecks.jsonl` and, if touching cadence or capacity, recent GitHub Actions run history — documentation in this repo (including `PRD.md`) can lag the real system.
+
+## Before shipping
+
+Run the `review-loop-change` skill against your diff, and run `pytest -q` before any push — this repo has no PR-based CI gate.

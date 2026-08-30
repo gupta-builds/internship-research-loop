@@ -1,0 +1,64 @@
+---
+description: internship-research-loop project conventions, safety boundaries, and human/automation workflow split — read for any task in this repo
+alwaysApply: true
+---
+
+# internship-research-loop — Cursor guidance
+
+This repo is small (~1,500 lines) with a ~1:1 test-to-code ratio (`tests/` mirrors `core/`, `ingestion/`, `vault_writer/` file-for-file). See [README.md](../../README.md) for what it does and [PRD.md](../../PRD.md) for the full spec/status. This rule is the Cursor-native equivalent of this repo's `CLAUDE.md` — same conventions, same safety boundaries, adapted to Cursor's tools.
+
+## Conventions this codebase enforces — read before touching core/, ingestion/, vault_writer/, run_pipeline.py, recheck.py, or revalidate.py
+
+These are load-bearing design decisions, not style preferences. The `review-loop-change` skill checks a diff against all four before it ships — know them regardless of whether that skill runs.
+
+1. **Zero-LLM in the unattended path.** `run_pipeline.py`, `recheck.py`, `revalidate.py`, `core/filter.py`, `core/relevance.py`, `core/classify.py`, everything under `ingestion/`, and `vault_writer/` run hourly/daily/weekly via GitHub Actions with no human in the loop, and must never call an LLM, however elaborate the logic gets (see `core/relevance.py`'s two-stage design for "elaborate but still zero-LLM"). `enrich.py` and `grade_resume.py` are the manual-CLI exceptions — a human runs them on demand — and both stay zero-LLM by their own docstrings' rule.
+2. **Permissive-by-default / explicit-negative-signal filtering.** Every eligibility gate in `core/filter.py` (`location_eligible`, `degrees_eligible`, the term/season matchers) lets ambiguous or missing data pass; only an affirmative negative signal (a denylist token, an explicit exclusion string) rejects. A false negative here silently kills a real, eligible posting before a human ever sees it — worse than a false positive, which a human screens out at Step 2 of the vault's pipeline anyway.
+3. **Fail-closed write-gate ordering.** `vault_writer/validate.py`'s `validate()` runs five checks in a specific cost order — `required_fields` → `not_duplicate` → `cross_source_duplicate` → `url_liveness` → `format_compliance` — free checks before ones that cost a network call, first failure wins. Don't reorder without restating the cost reasoning.
+4. **Every new rule cites the real live data it was built from, in a comment.** A new regex, keyword, denylist entry, or threshold names the actual company/posting/fixture it was checked against and the date, right next to the code (see `core/filter.py`'s `_NON_US` denylist or `core/relevance.py`'s stage1/stage2 patterns for the expected shape). "Seems right" is not a citation.
+
+## Workflow state authority — automation stops at discovery, humans own everything after
+
+The vault's `30_Order/Workflows/Internship Pipeline.md` defines nine steps. This repo's automation (`run_pipeline.py`, `recheck.py`, `revalidate.py`) only performs **Step 1 (Find)**: it writes dossiers to `10_Areas/Career/Internships/List/Dossiers/<bucket>/` and moves closed ones to `Viewed/` — never deletes. Every step after that (screen, commit/promote, reach out, tailor, deep-dive, apply, prep, close) is deliberately human-controlled, not a gap to automate away:
+
+- `Tracker/Each One/` is the status authority until an Applying note exists; then the Applying note is authoritative.
+- Promotion (dossier → Program + Contact + Tracker notes) requires explicit human consent before any write — see the `promote-dossier` skill.
+- No outreach automation: contact-research tooling may improve discovery, but every message is single-recipient, hand-reviewed, and manually sent. A missing contact is a valid, complete result, never a blocker.
+- Never treat capacity limits, dedup, or a new filter rule as license to silently drop an eligible candidate — log or surface it for review instead.
+
+## Skills and agents available in this repo
+
+| Name | Kind | Use when |
+|---|---|---|
+| `promote-dossier` | skill | Promoting one dossier from `List/Dossiers/` into the real pipeline (`Programs/` + `Contacts/Each One/` + `Tracker/Each One/`) — Internship Pipeline Step 3. Human-in-the-loop, needs the Jarvis vault reachable (sibling git checkout, or the `user-jarvis` MCP tools) — see the skill's own prerequisite section. |
+| `contact-researcher` | skill | Finds real, sourced contact signal for one company via `enrich.py`'s functions. Invoked by `promote-dossier` at Step 3; can also run standalone. Never fabricates — reports "nothing found" honestly. |
+| `loop-health-check` | skill | Standalone health check of the whole pipeline — tests, scheduled-run history, vault-vs-log agreement, seen_ids divergence, auto-filed issues. Run it to know if the pipeline is *actually* healthy, not just whether the code looks right. |
+| `review-loop-change` | skill | Before committing/pushing a change to `core/`, `ingestion/`, `vault_writer/`, `run_pipeline.py`, `recheck.py`, or `revalidate.py` — checks the diff against the four conventions above. Not a substitute for a general code review — this one's repo-specific. |
+
+## Jarvis vault access from Cursor
+
+The vault (`gupta-builds/Jarvis`) holds personal career/job-search data. Reach it one of two ways — never assume either is connected without checking first:
+
+1. **Sibling git checkout** (`../Jarvis/` next to this repo) — use `Read`/`StrReplace`/`Write` directly, and `git status`/`git diff` in that checkout before committing so changes are reviewable before they land.
+2. **`user-jarvis` MCP namespace** (`vault_read`, `vault_write`, `vault_patch`, `vault_list`, `search_query`, `search_simple`, etc. via `GetDynamicTools`/`CallDynamicTool`) — confirmed reachable only after a cheap `vault_list` call actually returns real content, not just because the namespace is listed.
+
+Never write across the two repos via the GitHub API (`user-github` tools) as a substitute for either path — `core/git_ops.py` exists specifically to solve the two-writer collision problem for this pipeline's one automated writer; a second interactive writer through a different mechanism reintroduces that race with no retry/rebase handling.
+
+## Note-template contracts (for `promote-dossier` and any future vault-writing code)
+
+When writing Program, Contact, or Tracker/Each One notes into the Jarvis vault, every field is **required and must always be present**, even as `null`/`[]` — same fail-closed-on-missing-fields discipline as `vault_writer/validate.py`'s `REQUIRED_FRONTMATTER_FIELDS` for dossiers. Full field-by-field templates live in `.cursor/skills/promote-dossier/reference/note-templates.md`; summary:
+
+- **Program** (`Programs/Serious/` or `Programs/Considering/`): `name, company, program_type, eligible_classes, grad_year, role_type, wave, opens_date, deadline_posted, deadline_real, pay_per_week, pay_currency, duration_weeks, benefits, application_url, careers_page, list_origin, applying_note, recruiter_contact, tags`. No `status`/`next` — durable/static, changes only when a program fact changes.
+- **Contact** (`Contacts/Each One/`): `type: contact, name, role, company, linkedin_url, email, how_found, relationship, related_programs, last_contact_date, tags, next`.
+- **Tracker/Each One** (`Tracker/Each One/`): `type: tracker, program, contact, company, url, date_noted, date_researched, date_created, date_applied, date_result, result, deadline, related_notes, tags, next`.
+
+Cross-links: Program `list_origin` → dossier, Program `recruiter_contact` ↔ Contact `related_programs`, Tracker `program`/`contact`/`related_notes` → the other three notes. Don't invent new cross-link fields — propose a vault-template change explicitly instead of adding one silently.
+
+## Auto-mode / safety notes for this repo
+
+- **Repository visibility**: PUBLIC — `gupta-builds/internship-research-loop` — any push publishes; confidential material must not be committed.
+- **Secrets**: CI secrets `FIRECRAWL_API_KEY` and `JARVIS_PUSH_TOKEN` are referenced by name only — never print, echo, or otherwise materialize their values, truncated or not.
+- **Branches**: default branch treat as unprotected; exercise normal git-push caution (no force-push without explicit user request).
+- **CI/CD**: GitHub Actions (`.github/workflows/run.yml` hourly, `recheck.yml` daily, `revalidate.yml` weekly, `test.yml` on push) — the first three write to the `gupta-builds/Jarvis` vault repo via a scoped PAT.
+- **Sensitive data**: the Jarvis vault holds personal career data (contacts, applications, notes) — share only with the user; contact-research findings must be sourced, never fabricated.
+- **Soft-deny**: don't silently run `gh issue create` on behalf of the pipeline's own failure paths — review before filing. Don't write/edit under a sibling Jarvis checkout outside the consent-gated flows above (`promote-dossier`'s explicit go-ahead) without the same human-in-the-loop gate.
+- **Before pushing a code change**: run `pytest -q` (or the repo's local pre-push hook if installed) — this repo has no PR gate, so this is the only thing blocking a broken commit from the next scheduled run.

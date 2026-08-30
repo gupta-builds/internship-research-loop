@@ -41,8 +41,49 @@ def _applyguy_raw():
     return {"updatedAt": "2026-08-24T00:00:00Z", "jobs": _strip_case_keys(json.loads((FIXTURES / "applyguy.json").read_text()))}
 
 
+# Real, non-intern-titled shapes (so they don't add to fetch_greenhouse/
+# fetch_ashby/fetch_lever/fetch_ai_jobs's own intern-only counts and disturb
+# existing pipeline-orchestration assertions below) — just complete enough
+# to satisfy core/schema_drift.py's GREENHOUSE/ASHBY/LEVER/AI_JOBS_REQUIRED_KEYS
+# for the one specific company/URL each schema check hits.
+_GREENHOUSE_SCHEMA_CHECK_JOB = {
+    "id": 1, "title": "Senior Software Engineer", "absolute_url": "https://x/1",
+    "location": {"name": "NYC"}, "updated_at": "2026-07-24T15:05:09-04:00",
+}
+_ASHBY_SCHEMA_CHECK_JOB = {
+    "id": "a", "title": "Software Engineer", "jobUrl": "https://x/a", "location": "SF",
+    "isListed": True, "publishedAt": "2026-06-01T00:00:00+00:00", "descriptionPlain": "",
+    "employmentType": "FullTime",
+}
+_LEVER_SCHEMA_CHECK_JOB = {
+    "id": "x", "text": "Senior Software Engineer", "applyUrl": "https://jobs.lever.co/palantir/x/apply",
+    "categories": {"commitment": "Full-time", "location": "Palo Alto, California"},
+    "createdAt": 1785864478389, "descriptionPlain": "",
+}
+_FREEHIRE_SCHEMA_CHECK_JOB = {
+    "title": "Senior Software Engineer", "url": "https://x/senior", "location": "Mountain View, CA",
+    "posted_at": "2026-07-20T16:11:13Z", "public_slug": "senior-swe-google", "description": "",
+    "enrichment": {"seniority": "senior"},
+}
+_AI_JOBS_SCHEMA_CHECK_JOB = {
+    "title": "Senior Software Engineer", "url": "https://x/senior", "company": "Databricks",
+    "location": "San Francisco", "posted": "2026-07-24", "slug": "databricks-senior-swe", "level": "Senior",
+}
+_INTERNDOCK_SITEMAP_XML = (
+    "<urlset><url><loc>https://www.interndock.com/tracker/guides/"
+    "summer-2027-internships-mega-drop-257-roles</loc></url></urlset>"
+)
+
+
 def _fake_http_get(url, timeout=None):
+    from core.schema_drift import (
+        ASHBY_SCHEMA_CHECK_TOKEN,
+        FREEHIRE_SCHEMA_CHECK_SLUG,
+        GREENHOUSE_SCHEMA_CHECK_TOKEN,
+        LEVER_SCHEMA_CHECK_TOKEN,
+    )
     from ingestion.freehire import FREEHIRE_SEARCH_URL
+    from ingestion.interndock import INTERNDOCK_SITEMAP_URL
     from ingestion.sources import (
         AI_JOBS_URL,
         APPLYGUY_URL,
@@ -66,16 +107,26 @@ def _fake_http_get(url, timeout=None):
         resp.json.return_value = _zshah101_raw()
     elif url == APPLYGUY_URL:
         resp.json.return_value = _applyguy_raw()
+    elif url == GREENHOUSE_JOBS_URL.format(token=GREENHOUSE_SCHEMA_CHECK_TOKEN):
+        resp.json.return_value = {"jobs": [_GREENHOUSE_SCHEMA_CHECK_JOB]}
+    elif url == ASHBY_JOBS_URL.format(token=ASHBY_SCHEMA_CHECK_TOKEN):
+        resp.json.return_value = {"jobs": [_ASHBY_SCHEMA_CHECK_JOB]}
     elif url.startswith(GREENHOUSE_JOBS_URL.split("{")[0]) or url.startswith(ASHBY_JOBS_URL.split("{")[0]):
         # per-company board endpoints — pipeline-orchestration tests don't need
         # real per-company data, that's covered in test_sources.py directly
         resp.json.return_value = {"jobs": []}
+    elif url == LEVER_JOBS_URL.format(token=LEVER_SCHEMA_CHECK_TOKEN):
+        resp.json.return_value = [_LEVER_SCHEMA_CHECK_JOB]
     elif url.startswith(LEVER_JOBS_URL.split("{")[0]):
         resp.json.return_value = []  # Lever's postings endpoint returns a bare list
+    elif url == FREEHIRE_SEARCH_URL.format(slug=FREEHIRE_SCHEMA_CHECK_SLUG):
+        resp.json.return_value = {"data": [_FREEHIRE_SCHEMA_CHECK_JOB]}
     elif url.startswith(FREEHIRE_SEARCH_URL.split("{")[0]):
         resp.json.return_value = {"data": []}
     elif url == AI_JOBS_URL:
-        resp.json.return_value = {"jobs": []}
+        resp.json.return_value = {"jobs": [_AI_JOBS_SCHEMA_CHECK_JOB]}
+    elif url == INTERNDOCK_SITEMAP_URL:
+        resp.text = _INTERNDOCK_SITEMAP_XML
     else:
         raise AssertionError(f"unexpected url: {url}")
     return resp

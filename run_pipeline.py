@@ -365,6 +365,35 @@ def load_write_gate_failures(state_dir) -> dict:
     return json.loads(path.read_text())
 
 
+ZERO_MATCH_STREAKS_FILENAME = "zero_match_streaks.json"
+
+# Task 3 (Prompt 19, 2026-08-28): a per-source alert when a source keeps
+# fetching real postings but nothing survives the filter — the exact shape
+# of the real Ashby incident this task was built from: fetch_counts frozen
+# at 4 and filter_match_counts frozen at 0 for 115 consecutive hourly runs
+# (2026-08-21 through 2026-08-28) before a human noticed by reading
+# logs/runs.jsonl by hand. Investigated live (Prompt 19 Task 1) and NOT
+# schema drift: 2 of the 4 postings are legitimately Canada-based
+# (location_eligible correctly rejects them) and the other 2 are
+# legitimately permanently excluded by the debate comparator
+# (MAX_DEBATE_LOSSES) — a real, if coincidental, correctly-filtered
+# outcome. But the pipeline had no way to tell that apart from a silent
+# schema break without a human noticing. 24 (one day of hourly runs) is
+# comfortably shorter than the 115 runs it actually took a human to notice
+# this pass, while still long enough that a source's normal hour-to-hour dry
+# spells (no new postings that hour) don't trip it on their own — this only
+# fires once a source stays at exactly zero for a full day despite still
+# fetching real data.
+ZERO_MATCH_STREAK_ALERT_THRESHOLD = 24
+
+
+def load_zero_match_streaks(state_dir) -> dict:
+    path = Path(state_dir) / ZERO_MATCH_STREAKS_FILENAME
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
 def save_write_gate_failures(state_dir, failures: dict) -> None:
     path = Path(state_dir) / WRITE_GATE_FAILURES_FILENAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -403,6 +432,45 @@ def update_write_gate_failures(failures: dict, rejections: list, written_uids: l
             del failures[uid]
     return failures, newly_excluded
 
+
+def save_zero_match_streaks(state_dir, streaks: dict) -> None:
+    path = Path(state_dir) / ZERO_MATCH_STREAKS_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(streaks, indent=2, sort_keys=True) + "\n")
+
+
+def update_zero_match_streaks(streaks: dict, fetch_counts: dict, filter_match_counts: dict) -> tuple:
+    """Returns (updated_streaks, newly_alerting: [source_name, ...]).
+
+    Per source: fetch_count > 0 and filter_match_count == 0 increments the
+    streak; filter_match_count > 0 resets it to 0 and marks the source as
+    having "ever_matched" — a source that has never once produced a match
+    isn't drifting, it's just structurally not matching anything, and never
+    alerts (permissive-by-default, same spirit as core/filter.py's own
+    gates: only an affirmative bad signal — a real regression from matching
+    to not — fires this). fetch_count == 0 this run leaves the streak
+    untouched: a single fetch hiccup (a transient RequestException already
+    swallowed upstream in fetch_greenhouse/fetch_ashby/fetch_lever) shouldn't
+    reset real streak progress, but it's not new zero-match signal either.
+
+    Fires exactly once per streak, at the run the streak first reaches the
+    threshold (`==`, not `>=`) — otherwise a source stuck at zero would
+    re-file the same issue every run forever, the same "notify once, not
+    every run" shape as run_once()'s bucket_at_capacity handling."""
+    streaks = {k: dict(v) for k, v in streaks.items()}
+    newly_alerting = []
+    for name, fetch_count in fetch_counts.items():
+        if fetch_count == 0:
+            continue
+        entry = streaks.setdefault(name, {"streak": 0, "ever_matched": False})
+        if filter_match_counts.get(name, 0) > 0:
+            entry["streak"] = 0
+            entry["ever_matched"] = True
+        else:
+            entry["streak"] += 1
+            if entry["ever_matched"] and entry["streak"] == ZERO_MATCH_STREAK_ALERT_THRESHOLD:
+                newly_alerting.append(name)
+    return streaks, newly_alerting
 
 # A required_fields or format_compliance rejection means OUR normalizer/writer
 # produced something malformed — a real bug, worth an issue. url_liveness and
@@ -602,6 +670,7 @@ def run_once(
         "dossier_total": 0,
         "newly_excluded_count": 0,
         "write_gate_excluded_count": 0,
+        "zero_match_alerts": [],
     }
 
     excluded_ids = load_excluded_uids(state_dir) if state_dir is not None else set()
@@ -640,6 +709,27 @@ def run_once(
     for name, info in matched_by_source.items():
         record["fetch_counts"][name] = info["fetch_count"]
         record["filter_match_counts"][name] = len(info["matched"])
+
+    if state_dir is not None:
+        zero_match_streaks = load_zero_match_streaks(state_dir)
+        zero_match_streaks, newly_zero_match_alerting = update_zero_match_streaks(
+            zero_match_streaks, record["fetch_counts"], record["filter_match_counts"],
+        )
+        save_zero_match_streaks(state_dir, zero_match_streaks)
+        record["zero_match_alerts"] = newly_zero_match_alerting
+        for name in newly_zero_match_alerting:
+            issue_fn(
+                issue_repo,
+                f"{name}: filter_match_count stuck at 0 for {ZERO_MATCH_STREAK_ALERT_THRESHOLD} consecutive runs ({timestamp})",
+                f"{name} has kept returning real fetched postings (fetch_count > 0) but none have "
+                f"survived the filter for {ZERO_MATCH_STREAK_ALERT_THRESHOLD} consecutive runs, despite "
+                "having produced real matches before. This can be a genuine, if coincidental, run of "
+                "correctly-filtered postings (see the 2026-08-28 Ashby investigation: Canada-based "
+                "postings plus debate-comparator exclusion, not schema drift) — but it's also exactly "
+                f"the shape a silent upstream schema change or a broken filter rule would produce. "
+                f"Check core/schema_drift.py's coverage for {name} and the real current API response "
+                "before assuming it's benign.",
+            )
 
     new_listings, already_seen_count = dedup_new(matched_by_source, seen_ids, excluded_ids=excluded_ids)
     record["new_count"] = len(new_listings)

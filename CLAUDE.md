@@ -45,3 +45,16 @@ The instinct in this codebase has consistently been "write a deterministic scrip
 - **Review** (`/review-loop-change`) → skill, not an agent, and not more Python. The checklist is fixed and known in advance (four conventions, unlikely to grow much), and the repo's small diff size doesn't need an isolated agent context — see that skill's own "why a skill" section. A script *could* grep for some of this (e.g. flagging LLM imports in unattended-path files), but "does this new regex cite real data" needs actual reading comprehension a lint rule doesn't have.
 
 If a new piece of recurring toil shows up and it's mechanical/deterministic (another source feed, another filter rule), it's still Python first, same as everything in `core/` and `ingestion/` today — don't reach for an agent out of habit once a human's judgment isn't actually the bottleneck.
+
+## Auto-mode classifier notes (this repo only)
+
+These notes used to live in the global `~/.claude/settings.json` `autoMode` block, where they didn't belong (Claude Code's auto-mode `environment`/`soft_deny` config is user-global only — there is no project-local override file, confirmed against the live docs) — they were pulled back here since they only make sense for this repo:
+
+- **Repository visibility**: PUBLIC — gupta-builds/internship-research-loop (github.com) — any push here is publishing; confidential material must not be committed.
+- **Secrets management**: CI secrets `FIRECRAWL_API_KEY` and `JARVIS_PUSH_TOKEN` referenced by name only in CI config — no values known here, never print/echo them.
+- **Default / protected branches**: default branch unknown (origin/HEAD unset); no rulesets or protected branches listed via `gh` — treat as unprotected, exercise normal git-push caution.
+- **CI/CD deploy targets**: GitHub Actions (`.github/workflows`) — `run.yml` (hourly), `recheck.yml` (daily), `test.yml` — writes to the gupta-builds/Jarvis vault repo via a scoped PAT (`JARVIS_PUSH_TOKEN`).
+- **Source control**: this repo (gupta-builds/internship-research-loop, public) and its origin remote only.
+- **Key internal services**: `freehire.me` and `boards-api.greenhouse.io` (hosts contacted by this project's ingestion) — job-posting data sources, not credentialed internal infra.
+- **Sensitive data locations & audiences**: the Jarvis Obsidian vault (gupta-builds/Jarvis, reached via sibling git checkout or `jarvis` MCP tools) holds personal career/job-search data (contacts, applications, personal notes) — share only with the user; `contact-researcher` findings must be sourced, never fabricated.
+- **Soft-deny for this repo**: auto-filed issues from `run_pipeline.py`/`recheck.py` failure paths (`gh issue create` here) should be reviewed, not silently created by an agent session; Write/Edit under a sibling Jarvis vault checkout outside the two-consent-gated flows documented above (`/promote-dossier`'s explicit go-ahead) needs the same human-in-the-loop gate.
