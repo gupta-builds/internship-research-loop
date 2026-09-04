@@ -21,3 +21,16 @@ cost.json
 # folder appears every calendar day and its contents churn on every rebuild that
 # day - pure local churn, not meant to be version-controlled.
 [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
+# Main graph output, previously tracked in 89fd543 on the theory that a synced
+# graph snapshot was worth versioning. Reverted that call (2026-09-04): the very
+# next commit (2fa8b76) rewrote all five of these on a routine code change
+# (graph.json alone: +13419/-lines), and every commit since has repeated that -
+# pure regenerated-on-every-rebuild churn against a public repo, not reviewable
+# history. graphify keeps these live-synced to the Jarvis vault via git hooks
+# regardless of whether git itself tracks them, so nothing is lost by ignoring.
+.graphify_labels.json
+GRAPH_REPORT.md
+graph.html
+graph.json
+manifest.json
