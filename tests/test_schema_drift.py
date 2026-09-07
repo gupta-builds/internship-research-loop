@@ -132,16 +132,31 @@ def interndock_sitemap_text():
     )
 
 
-# --- happy path, one per source ---
+# --- happy path, one per source. Genuinely identical shape across all 10
+# JSON-schema sources (mock the real fixture, call the check, assert no
+# raise) — audited 2026-09-06 and confirmed this is the one family in this
+# file with zero source-specific logic, so it's the one parametrized here.
+# InternDock is excluded: check_interndock_sitemap takes a text response, not
+# a JSON one, a genuinely different shape (see core/schema_drift.py's own
+# "InternDock is different in kind, not just degree" comment) — kept as its
+# own test below rather than forced into this block. ---
 
-def test_simplify_schema_passes_on_real_shape(simplify_raw):
-    http_get = Mock(return_value=_json_response(simplify_raw))
-    check_simplify_schema(http_get=http_get)  # does not raise
-
-
-def test_josegael_schema_passes_on_real_shape(josegael_raw):
-    http_get = Mock(return_value=_json_response(josegael_raw))
-    check_josegael_schema(http_get=http_get)  # does not raise
+@pytest.mark.parametrize("raw_fixture, check_fn", [
+    ("simplify_raw", check_simplify_schema),
+    ("josegael_raw", check_josegael_schema),
+    ("vanshb03_raw", check_vanshb03_schema),
+    ("zshah101_raw", check_zshah101_schema),
+    ("applyguy_raw", check_applyguy_schema),
+    ("greenhouse_raw", check_greenhouse_schema),
+    ("ashby_raw", check_ashby_schema),
+    ("lever_raw", check_lever_schema),
+    ("freehire_raw", check_freehire_schema),
+    ("ai_jobs_raw", check_ai_jobs_schema),
+])
+def test_schema_passes_on_real_shape(request, raw_fixture, check_fn):
+    raw = request.getfixturevalue(raw_fixture)
+    http_get = Mock(return_value=_json_response(raw))
+    check_fn(http_get=http_get)  # does not raise
 
 
 # --- drift: a field the normalizer depends on vanishes ---
@@ -239,21 +254,11 @@ def test_check_all_passes_when_all_sources_are_healthy(
 
 # --- vanshb03 / zshah101 ---
 
-def test_vanshb03_schema_passes_on_real_shape(vanshb03_raw):
-    http_get = Mock(return_value=_json_response(vanshb03_raw))
-    check_vanshb03_schema(http_get=http_get)  # does not raise
-
-
 def test_vanshb03_schema_detects_dropped_sponsorship_field(vanshb03_raw):
     drifted = [{k: v for k, v in r.items() if k != "sponsorship"} for r in vanshb03_raw]
     http_get = Mock(return_value=_json_response(drifted))
     with pytest.raises(SchemaDriftError, match="sponsorship"):
         check_vanshb03_schema(http_get=http_get)
-
-
-def test_zshah101_schema_passes_on_real_shape(zshah101_raw):
-    http_get = Mock(return_value=_json_response(zshah101_raw))
-    check_zshah101_schema(http_get=http_get)  # does not raise
 
 
 def test_zshah101_schema_detects_wrong_shape():
@@ -292,11 +297,6 @@ def test_josegael_schema_detects_dropped_permissive_field(josegael_raw, key):
 
 # --- ApplyGuy (Task 2, 2026-08-24) — a third real shape: {"updatedAt", "jobs": [...]} ---
 
-def test_applyguy_schema_passes_on_real_shape(applyguy_raw):
-    http_get = Mock(return_value=_json_response(applyguy_raw))
-    check_applyguy_schema(http_get=http_get)  # does not raise
-
-
 def test_applyguy_schema_detects_dropped_season_field(applyguy_raw):
     """season is read via .get() so a rename wouldn't crash the normalizer —
     every entry would silently become the permissive no-season case instead."""
@@ -327,18 +327,47 @@ def test_applyguy_schema_detects_empty_jobs_list():
         check_applyguy_schema(http_get=http_get)
 
 
-# --- Greenhouse (Task 2, 2026-08-28) — one representative company (scaleai) ---
+# --- Greenhouse/Ashby/Lever/Freehire/AIJobs (Task 2, 2026-08-28), one
+# representative company/slug each — the URL-construction check and the
+# allow_empty "one company's hiring lull isn't drift" check (see the
+# allow_empty block comment in core/schema_drift.py) are genuinely identical
+# in structure across these five/four sources respectively, audited and
+# parametrized 2026-09-06. The dropped-field detectors below stay separate:
+# each drops a different, source-specific field with a different match
+# string and a different container shape (Freehire's is nested under
+# enrichment) — forcing those into one block would hide the real distinction
+# the task's own citation for ApplyGuy's wrong-shape test already warns
+# against. ---
 
-def test_greenhouse_schema_passes_on_real_shape(greenhouse_raw):
-    http_get = Mock(return_value=_json_response(greenhouse_raw))
-    check_greenhouse_schema(http_get=http_get)  # does not raise
+@pytest.mark.parametrize("raw_fixture, check_fn, expected_url", [
+    ("greenhouse_raw", check_greenhouse_schema, GREENHOUSE_JOBS_URL.format(token=GREENHOUSE_SCHEMA_CHECK_TOKEN)),
+    ("ashby_raw", check_ashby_schema, ASHBY_JOBS_URL.format(token=ASHBY_SCHEMA_CHECK_TOKEN)),
+    ("lever_raw", check_lever_schema, LEVER_JOBS_URL.format(token=LEVER_SCHEMA_CHECK_TOKEN)),
+    ("freehire_raw", check_freehire_schema, FREEHIRE_SEARCH_URL.format(slug=FREEHIRE_SCHEMA_CHECK_SLUG)),
+    ("ai_jobs_raw", check_ai_jobs_schema, AI_JOBS_URL),
+])
+def test_schema_check_hits_the_expected_url(request, raw_fixture, check_fn, expected_url):
+    raw = request.getfixturevalue(raw_fixture)
+    http_get = Mock(return_value=_json_response(raw))
+    check_fn(http_get=http_get)
+    assert http_get.call_args[0][0] == expected_url
 
 
-def test_greenhouse_schema_hits_the_schema_check_token(greenhouse_raw):
-    http_get = Mock(return_value=_json_response(greenhouse_raw))
-    check_greenhouse_schema(http_get=http_get)
-    called_url = http_get.call_args[0][0]
-    assert called_url == GREENHOUSE_JOBS_URL.format(token=GREENHOUSE_SCHEMA_CHECK_TOKEN)
+@pytest.mark.parametrize("check_fn, empty_payload", [
+    (check_greenhouse_schema, {"jobs": []}),
+    (check_ashby_schema, {"jobs": []}),
+    (check_lever_schema, []),
+    (check_freehire_schema, {"data": []}),
+])
+def test_schema_passes_on_empty_result_for_allow_empty_sources(check_fn, empty_payload):
+    """One company/slug legitimately having zero open reqs/postings right
+    now is mundane, not drift — must not halt the whole run over it (see the
+    allow_empty block comment in core/schema_drift.py). AIJobs/SimplifyJobs/
+    ApplyGuy are NOT in this group — they aggregate across a whole feed
+    rather than one company, so an empty result there stays a real drift
+    signal (see their own detects_empty tests below/above)."""
+    http_get = Mock(return_value=_json_response(empty_payload))
+    check_fn(http_get=http_get)  # does not raise
 
 
 def test_greenhouse_schema_detects_renamed_absolute_url(greenhouse_raw):
@@ -349,28 +378,6 @@ def test_greenhouse_schema_detects_renamed_absolute_url(greenhouse_raw):
     http_get = Mock(return_value=_json_response(drifted))
     with pytest.raises(SchemaDriftError, match="absolute_url"):
         check_greenhouse_schema(http_get=http_get)
-
-
-def test_greenhouse_schema_passes_on_empty_jobs_list():
-    """One company (scaleai) legitimately having zero open reqs right now
-    is mundane, not drift — must not halt the whole run over it (see the
-    allow_empty block comment in core/schema_drift.py)."""
-    http_get = Mock(return_value=_json_response({"jobs": []}))
-    check_greenhouse_schema(http_get=http_get)  # does not raise
-
-
-# --- Ashby (Task 2, 2026-08-28) — one representative company (elevenlabs) ---
-
-def test_ashby_schema_passes_on_real_shape(ashby_raw):
-    http_get = Mock(return_value=_json_response(ashby_raw))
-    check_ashby_schema(http_get=http_get)  # does not raise
-
-
-def test_ashby_schema_hits_the_schema_check_token(ashby_raw):
-    http_get = Mock(return_value=_json_response(ashby_raw))
-    check_ashby_schema(http_get=http_get)
-    called_url = http_get.call_args[0][0]
-    assert called_url == ASHBY_JOBS_URL.format(token=ASHBY_SCHEMA_CHECK_TOKEN)
 
 
 def test_ashby_schema_detects_dropped_employment_type(ashby_raw):
@@ -384,28 +391,6 @@ def test_ashby_schema_detects_dropped_employment_type(ashby_raw):
         check_ashby_schema(http_get=http_get)
 
 
-def test_ashby_schema_passes_on_empty_jobs_list():
-    """One company (elevenlabs) legitimately having zero open reqs right
-    now is mundane, not drift — same reasoning as Greenhouse's own
-    allow_empty test above."""
-    http_get = Mock(return_value=_json_response({"jobs": []}))
-    check_ashby_schema(http_get=http_get)  # does not raise
-
-
-# --- Lever (Task 2, 2026-08-28) — one representative company (palantir) ---
-
-def test_lever_schema_passes_on_real_shape(lever_raw):
-    http_get = Mock(return_value=_json_response(lever_raw))
-    check_lever_schema(http_get=http_get)  # does not raise
-
-
-def test_lever_schema_hits_the_schema_check_token(lever_raw):
-    http_get = Mock(return_value=_json_response(lever_raw))
-    check_lever_schema(http_get=http_get)
-    called_url = http_get.call_args[0][0]
-    assert called_url == LEVER_JOBS_URL.format(token=LEVER_SCHEMA_CHECK_TOKEN)
-
-
 def test_lever_schema_detects_dropped_text_field(lever_raw):
     """text is what both normalize_lever (raw["text"]) and fetch_lever's own
     role-type triage (job.get("text", "")) read."""
@@ -413,29 +398,6 @@ def test_lever_schema_detects_dropped_text_field(lever_raw):
     http_get = Mock(return_value=_json_response(drifted))
     with pytest.raises(SchemaDriftError, match="text"):
         check_lever_schema(http_get=http_get)
-
-
-def test_lever_schema_passes_on_empty_list():
-    """One company (palantir) legitimately having zero open reqs right now
-    is mundane, not drift — same reasoning as Greenhouse's own allow_empty
-    test above."""
-    http_get = Mock(return_value=_json_response([]))
-    check_lever_schema(http_get=http_get)  # does not raise
-
-
-# --- Freehire (Task 2, 2026-08-28) — a fourth shape: {"data": [...]} plus a
-# nested enrichment.seniority field ---
-
-def test_freehire_schema_passes_on_real_shape(freehire_raw):
-    http_get = Mock(return_value=_json_response(freehire_raw))
-    check_freehire_schema(http_get=http_get)  # does not raise
-
-
-def test_freehire_schema_hits_the_schema_check_slug(freehire_raw):
-    http_get = Mock(return_value=_json_response(freehire_raw))
-    check_freehire_schema(http_get=http_get)
-    called_url = http_get.call_args[0][0]
-    assert called_url == FREEHIRE_SEARCH_URL.format(slug=FREEHIRE_SCHEMA_CHECK_SLUG)
 
 
 def test_freehire_schema_detects_dropped_public_slug(freehire_raw):
@@ -456,28 +418,6 @@ def test_freehire_schema_detects_dropped_nested_seniority(freehire_raw):
     http_get = Mock(return_value=_json_response(drifted))
     with pytest.raises(SchemaDriftError, match="seniority"):
         check_freehire_schema(http_get=http_get)
-
-
-def test_freehire_schema_passes_on_empty_data_list():
-    """The one company (google) legitimately having zero intern-tagged
-    postings right now is mundane, not drift — same reasoning as
-    Greenhouse's own allow_empty test above."""
-    http_get = Mock(return_value=_json_response({"data": []}))
-    check_freehire_schema(http_get=http_get)  # does not raise
-
-
-# --- AIJobs (Task 2, 2026-08-28) — one generated snapshot feed ---
-
-def test_ai_jobs_schema_passes_on_real_shape(ai_jobs_raw):
-    http_get = Mock(return_value=_json_response(ai_jobs_raw))
-    check_ai_jobs_schema(http_get=http_get)  # does not raise
-
-
-def test_ai_jobs_schema_hits_the_real_url(ai_jobs_raw):
-    http_get = Mock(return_value=_json_response(ai_jobs_raw))
-    check_ai_jobs_schema(http_get=http_get)
-    called_url = http_get.call_args[0][0]
-    assert called_url == AI_JOBS_URL
 
 
 def test_ai_jobs_schema_detects_dropped_level_field(ai_jobs_raw):

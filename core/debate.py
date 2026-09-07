@@ -18,14 +18,13 @@ were ordered the way they were:
   3. Recency (most-recently-posted-first, the pre-existing rule)
 """
 from core.classify import classify
+from core.company_registry import TIER_RANK
 from core.identity import company_matches_preference
-
-_TIER_RANK = {"high": 0}
 
 
 def _preference_rank(company: str, preferred_companies: dict) -> int:
     tier = company_matches_preference(company, preferred_companies)
-    return _TIER_RANK.get(tier, 1) if tier else 1
+    return TIER_RANK.get(tier, 1) if tier else 1
 
 
 def debate_compare(a, b, preferred_companies: dict, bucket_urgency: dict = None) -> int:
@@ -57,8 +56,8 @@ def debate_compare(a, b, preferred_companies: dict, bucket_urgency: dict = None)
         return rank_a - rank_b
 
     if bucket_urgency is not None:
-        bucket_a, _ = classify(listing_a.title, listing_a.category, "")
-        bucket_b, _ = classify(listing_b.title, listing_b.category, "")
+        bucket_a, _ = classify(listing_a.title, listing_a.category, "", listing_a.company)
+        bucket_b, _ = classify(listing_b.title, listing_b.category, "", listing_b.company)
         if bucket_a != bucket_b:
             urgency_a = bucket_urgency.get(bucket_a, 0)
             urgency_b = bucket_urgency.get(bucket_b, 0)
@@ -78,6 +77,6 @@ def compute_bucket_urgency(candidates: list, budget: dict) -> dict:
     relative to budget, not a running fill-count that changes mid-sort."""
     counts = {}
     for _uid, listing in candidates:
-        bucket, _ = classify(listing.title, listing.category, "")
+        bucket, _ = classify(listing.title, listing.category, "", listing.company)
         counts[bucket] = counts.get(bucket, 0) + 1
     return {bucket: max(0, cap - counts.get(bucket, 0)) for bucket, cap in budget.items()}

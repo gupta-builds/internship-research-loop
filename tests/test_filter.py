@@ -3,7 +3,15 @@ from pathlib import Path
 
 import pytest
 
-from core.filter import _matches_josegael, degrees_eligible, load_profile, location_eligible, matches
+from core.filter import (
+    _matches_free_text_source,
+    _matches_josegael,
+    degrees_eligible,
+    load_profile,
+    location_eligible,
+    matched_term_in_free_text,
+    matches,
+)
 from ingestion.normalize import (
     Listing,
     normalize_ai_jobs,
@@ -450,6 +458,23 @@ def test_ashby_matches_spring_2027_literal_term():
                        url="https://jobs.ashbyhq.com/centerfield/2", source="Ashby",
                        active=True, raw_text="Join our team for Spring 2027.")
     assert matches(listing, PROFILE) is True
+
+
+# --- matched_term_in_free_text agrees with _matches_free_text_source on the
+# same real fixtures used above (Task B, 2026-09-06) ---
+
+@pytest.mark.parametrize("title,raw_text", [
+    ("Summer 2027 Software Engineering Intern", ""),  # PDT Partners
+    ("Software Engineering Intern", "Join us for our Summer 2026 internship program."),  # Acme, excluded
+    ("Technology Intern - 2027 - Singapore", "Join our 2027 internship cohort in Singapore."),  # Marshall Wace
+    ("Software Intern - 2026 Cohort", "Our 2026 internship program."),  # Acme, bare wrong year
+    ("Software Engineer Intern", "Ellipsis Labs is a profitable, venture-backed startup."),  # bare-year-free reject
+])
+def test_matched_term_in_free_text_agrees_with_bool_matcher(title, raw_text):
+    listing = Listing(company="Acme", title=title, url="https://example.test/1",
+                       source="Greenhouse", active=True, raw_text=raw_text)
+    term = matched_term_in_free_text(listing, PROFILE)
+    assert (term is not None) == _matches_free_text_source(listing, PROFILE)
 
 
 def test_normalize_ai_jobs_maps_fields_and_matches_real_intern_record():

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from core.relevance import stage1_reject
 from ingestion.posting_page import (
     _content_fetch_url,
     extract_content,
@@ -181,6 +182,35 @@ def test_extract_content_skips_google_careers_listing_shell():
     assert "Staff Software Developer, Embedded Systems" not in content
     assert "Corporate Development Associate" not in content
     assert "Senior Product Engineer, Machine Learning Accelerators" not in content
+
+
+# --- Task A: Microsoft careers search-results-listing-shell extraction bug
+# (2026-09-06 revalidate.py false-positive audit, GitHub issue #9) ---
+
+def test_extract_content_skips_microsoft_careers_listing_shell():
+    """Real bug, confirmed 2026-09-06 against two live dossiers' stored content
+    (List/Dossiers/1 - AI & ML/Software Engineer Intern, CoreAI - Microsoft.md
+    and .../AIML & LLM - Microsoft.md, both source=vanshb03): Microsoft's
+    search-results shell uses a bare '# Jobs' heading and a '## Get
+    personalized job recommendations' promo heading, neither matched by the
+    old reset regex — the 9-job sidebar list (including 'Supply Chain Program
+    Management Intern') bled into extracted content and false-triggered
+    core/relevance.py's stage1_reject('program management intern') on
+    revalidate.py's re-check, flagging a genuinely on-topic dossier as if it
+    were a real non-software role. Fixture is the real captured content
+    (tests/fixtures/posting_microsoft_careers.md)."""
+    md = (FIXTURES / "posting_microsoft_careers.md").read_text(encoding="utf-8")
+    content = extract_content(md)
+
+    assert content.startswith("## AI Software Engineering Intern")
+    assert "Enrolled in a full time bachelor's or master's program" in content
+    # none of the unrelated sidebar listings survive
+    assert "Supply Chain Program Management Intern" not in content
+    assert "Financial Analysis Intern" not in content
+    assert "Executive Business Admin" not in content
+    assert "Applied Scientist II" not in content
+    # the real false positive this fixes: stage1_reject must no longer fire
+    assert stage1_reject("Software Engineer Intern, CoreAI", content) is False
     assert "jobs matched" not in content
     assert "Back to jobs search" not in content
 

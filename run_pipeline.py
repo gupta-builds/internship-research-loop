@@ -16,7 +16,7 @@ from pathlib import Path
 
 from core.classify import BUCKET_FOLDERS, classification_callout, classify
 from core.debate import compute_bucket_urgency, debate_compare
-from core.filter import load_profile, matches
+from core.filter import load_profile, matched_term_in_free_text, matches
 from core.git_ops import GitPushError, commit_and_push_with_retry
 from core.identity import company_matches_preference, compute_uid
 from core.relevance import stage1_reject, stage2_confirm
@@ -117,7 +117,7 @@ def _prioritize_and_cap(new_listings: list, budget: dict, preferred_companies: d
     for free."""
     by_bucket = {}
     for uid, listing in new_listings:
-        bucket, _ = classify(listing.title, listing.category, "")
+        bucket, _ = classify(listing.title, listing.category, "", listing.company)
         by_bucket.setdefault(bucket, []).append((uid, listing))
 
     bucket_urgency = compute_bucket_urgency(new_listings, budget)
@@ -498,6 +498,22 @@ def build_matched_reason(listing, profile: dict) -> str:
         return f"{term}, {listing.category}" if listing.category else term
     if listing.source == "Jose-Gael-Cruz-Lopez":
         return "Junior-eligible" if listing.target_year else "unrestricted (no class-year field)"
+    if listing.source == "vanshb03":
+        term = ", ".join(listing.terms)
+        return f"{term}, {listing.sponsorship}" if listing.sponsorship else term
+    if listing.source in ("zshah101", "ApplyGuy"):
+        # Unlike zshah101 (terms always non-empty on a match), ApplyGuy's own
+        # literal "Not specified" season maps to empty terms at normalize
+        # time and _matches_applyguy passes it permissively (real on ~39% of
+        # live entries, e.g. the live Point72 "Quantitative Developer Intern"
+        # dossier, source=ApplyGuy, terms=[] — confirmed 2026-09-06) — so
+        # category alone, with no leading ", ", must still be a valid reason.
+        term = ", ".join(listing.terms)
+        if term and listing.category:
+            return f"{term}, {listing.category}"
+        return term or listing.category or "matched"
+    if listing.source in ("Greenhouse", "Ashby", "Lever", "Freehire", "AIJobs", "InternDock"):
+        return matched_term_in_free_text(listing, profile) or "matched"
     return "matched"
 
 
@@ -588,7 +604,7 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
         # fetch_page_fn is None) — title/category alone still classify,
         # since every write needs a bucket. Refined below once/if real
         # posting content comes back.
-        bucket, signal = classify(listing.title, listing.category, "")
+        bucket, signal = classify(listing.title, listing.category, "", listing.company)
         if fetch_page_fn is not None:
             try:
                 page_md = fetch_page_fn(listing.url)
@@ -613,7 +629,7 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
                     rejections.append({"uid": uid, "check": "degree_eligibility", "reason": degree_signal})
                     continue
                 opt_cache[uid] = {"verdict": "eligible", "signal": None, "checked": date_found}
-                bucket, signal = classify(listing.title, listing.category, posting_content)
+                bucket, signal = classify(listing.title, listing.category, posting_content, listing.company)
                 enriched = render_dossier(listing, uid, date_found,
                                           build_matched_reason(listing, profile), posting_content,
                                           classification_callout(bucket, signal),
