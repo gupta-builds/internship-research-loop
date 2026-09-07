@@ -24,6 +24,8 @@ performance analytics) regardless of company.
 """
 import re
 
+from core.company_registry import ADJACENT_FIELD_COMPANIES
+
 
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
@@ -142,11 +144,16 @@ def stage1_reject(title: str, raw_text: str) -> bool:
 # has none in its fetched content despite being a genuine role — gating the
 # whole company would have wrongly failed it, so only its one confirmed-bad
 # sibling is caught below by title phrase instead.
+# Company names below moved to core/company_registry.py's
+# ADJACENT_FIELD_COMPANIES (single source of truth, shared with the rest of
+# the registry) — the outer \b(...)\b already bounds every alternative, so
+# joining them in makes the old inner \buhy\b redundant, not a behavior
+# change (verified by test_stage2_rejects_real_uhy_content).
 _ADJACENT_FIELD_COMPANY_HINT_RE = re.compile(
     r"\b(aerospace|robotics|astro|satellite|automotive|firmware"
     r"|embedded|hardware|chemical|industrial|plant operations|\bplc\b|\bdcs\b|\bscada\b"
-    r"|fti consulting|truist|vertiv|\buhy\b|cno financial|dimensional fund"
-    r"|keybank|continental resources|finance\s*&\s*accounting|finance and accounting)\b", re.I,
+    r"|" + "|".join(re.escape(c) for c in ADJACENT_FIELD_COMPANIES) +
+    r"|finance\s*&\s*accounting|finance and accounting)\b", re.I,
 )
 
 # Real content signals confirmed against live vault dossiers 2026-07-26: Bosch

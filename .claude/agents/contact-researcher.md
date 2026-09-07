@@ -49,6 +49,7 @@ Search across all of these; report each independently, with its source:
 2. **Engineering blog byline** — a company eng/tech blog with an author name on a real post.
 3. **GitHub org public member** — `github_org_members(company)`.
 4. **LinkedIn search-snippet hit** — `linkedin_recruiter_snippet(company, key)`. Report the snippet text and URL, never the profile content itself (you never fetched it).
+5. **Hiring focus signal (optional, if the `last30days` global skill is available)** — run `last30days --hiring-signals <company>` to read the company's live job postings and classify hiring focus (e.g. an "enterprise readiness" push, company-size tier). This is a real signal about what the company is actually staffing for right now, not contact info — report it separately from the four categories above, and the same rule applies: report only what the tool actually returned, "nothing found" if it returns nothing.
 
 For each hit, report: **name/title found → source URL → which query surfaced it**. If a category turned up nothing, say "nothing found" for that category explicitly — don't just omit it silently, since a silent omission reads as "not checked" rather than "checked, empty."
 
@@ -77,6 +78,11 @@ For each hit, report: **name/title found → source URL → which query surfaced
 - "<exact snippet text>" — <url> (search-snippet only, not scraped)
   -- or --
 - nothing found
+
+### Hiring focus signal
+- <what last30days --hiring-signals reported>
+  -- or --
+- not run / nothing found
 
 ### Notes
 Anything borderline you skipped and why (e.g. a hit that required a login wall).

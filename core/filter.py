@@ -277,19 +277,31 @@ def _target_years(terms) -> set:
     return {re.search(r"\d{4}", t).group(0) for t in terms if re.search(r"\d{4}", t)}
 
 
-def _matches_free_text_source(listing, profile: dict) -> bool:
+def matched_term_in_free_text(listing, profile: dict) -> str | None:
+    """Same logic as _matches_free_text_source, but returns the actual
+    wanted-term string (or bare target year) that matched, for a real
+    matched_reason instead of a bare bool. None means no match, same
+    condition _matches_free_text_source would reject on."""
     haystack = f"{listing.title} {listing.raw_text}"
     if _text_has_any(haystack, profile.get("exclude_terms", [])):
-        return False
-    if _text_has_any(haystack, profile["terms"]):
-        return True
+        return None
+    t = _norm(haystack)
+    for term in profile["terms"]:
+        if _norm(term) in t:
+            return term
     # Fallback: no exact "Summer 2027"-style phrase, but the bare target year
     # is present — pass, permissive by design. Anything without even a bare
     # target-year digit string (wrong year, or no year mentioned at all)
     # rejects here; that's still permissive relative to the strict-phrase
     # rule, just not unconditionally permissive.
-    t = _norm(haystack)
-    return any(y in t for y in _target_years(profile["terms"]))
+    for y in _target_years(profile["terms"]):
+        if y in t:
+            return y
+    return None
+
+
+def _matches_free_text_source(listing, profile: dict) -> bool:
+    return matched_term_in_free_text(listing, profile) is not None
 
 
 _matches_greenhouse = _matches_free_text_source

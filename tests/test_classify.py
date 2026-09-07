@@ -95,3 +95,70 @@ def test_classify_still_matches_genuine_threat_intelligence_content():
     bucket, signal = classify("Security Engineering Intern", "", "You'll work on threat intelligence and detection.")
     assert bucket == "CyS & Finance"
     assert "threat" in signal.lower()
+
+
+# --- Company registry: quant-trading firms route deterministically to
+# CyS & Finance, ahead of the three regexes (core/company_registry.py) ---
+
+# Real Optiver dossier content (vault path "10_Areas/Career/Internships/List/
+# Dossiers/1 - AI & ML/Quantitative Research Intern, PhD (Summer 2027) -
+# Optiver.md", read 2026-09-06). Without company context this matches
+# "machine learning" and lands in AI/ML — the real, confirmed vault bug this
+# registry entry fixes.
+OPTIVER_PHD_QUANT_CONTENT = (
+    "As a Quantitative Research Intern, you'll work alongside researchers, engineers, and traders to "
+    "tackle some of the most challenging quantitative problems in global financial markets. You'll "
+    "analyze large-scale datasets, develop predictive models and algorithms, and apply statistical and "
+    "machine learning techniques to uncover patterns in market behavior. AI-driven research at Optiver "
+    "is where competitive advantage is built, transforming ideas, models, and insights into trading "
+    "strategies that operate in live markets."
+)
+
+# Real Optiver dossier content (vault path ".../3 - CyS & Finance/Software
+# Engineer Intern (Summer 2027 - Austin) - Optiver.md", read 2026-09-06).
+# Without company context this matches "AI-enabled" and lands in AI/ML too —
+# same company, same real bug, a different keyword tripping the same
+# fixed-order regex.
+OPTIVER_AUSTIN_SWE_CONTENT = (
+    "As a Software Engineer Intern, you'll work side-by-side with your mentor and teammates to build "
+    "real-world applications that power a global trading firm. Optiver is building with cutting edge AI "
+    "technology in the most competitive, data rich landscapes in the world: financial markets. Deep dive "
+    "into trading fundamentals, from theoretical concepts to financial markets, strategies, AI-enabled "
+    "tools and cutting-edge technology."
+)
+
+
+def test_classify_real_optiver_phd_content_lands_in_ai_ml_without_company():
+    """Documents the real bug: no company context, 'machine learning' wins
+    the fixed regex order even though the same posting also reads as
+    finance-adjacent quant research."""
+    bucket, signal = classify("Quantitative Research Intern, PhD (Summer 2027)", "", OPTIVER_PHD_QUANT_CONTENT)
+    assert bucket == "AI/ML"
+    assert signal == "machine learning"
+
+
+def test_classify_real_optiver_phd_content_routes_to_cys_finance_with_company():
+    bucket, signal = classify(
+        "Quantitative Research Intern, PhD (Summer 2027)", "", OPTIVER_PHD_QUANT_CONTENT, "Optiver",
+    )
+    assert bucket == "CyS & Finance"
+    assert signal == "quant/trading firm"
+
+
+def test_classify_real_optiver_austin_swe_content_routes_to_cys_finance_with_company():
+    """Same company, a different real posting, a different keyword ('AI-
+    enabled' vs. 'machine learning') — both must land in the SAME
+    deterministic bucket once company context is supplied."""
+    bucket, signal = classify(
+        "Software Engineer Intern (Summer 2027 - Austin)", "", OPTIVER_AUSTIN_SWE_CONTENT, "Optiver",
+    )
+    assert bucket == "CyS & Finance"
+    assert signal == "quant/trading firm"
+
+
+def test_classify_quant_finance_company_check_is_punctuation_insensitive():
+    """Same normalization as core.identity.company_matches_preference — a
+    trailing space (real dossiers store company as 'Optiver ') must still
+    match."""
+    bucket, _ = classify("Software Engineer Intern", "", "", "Optiver ")
+    assert bucket == "CyS & Finance"

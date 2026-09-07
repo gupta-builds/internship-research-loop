@@ -5,6 +5,11 @@
       "Bash(pytest *)",
       "Bash(python -m pytest)",
       "Bash(python -m pytest *)",
+      "Bash(python3 -m pytest)",
+      "Bash(python3 -m pytest *)",
+      "Bash(python3 -c*)",
+      "Bash(python3 enrich.py*)",
+      "Bash(python enrich.py*)",
       "Bash(git status)",
       "Bash(git status *)",
       "Bash(git diff)",
@@ -28,7 +33,29 @@
       "Bash(gh issue list*)",
       "Bash(gh issue view*)",
       "Bash(gh workflow list*)",
-      "Bash(gh workflow view*)"
+      "Bash(gh workflow view*)",
+      "mcp__jarvis__vault_read",
+      "mcp__jarvis__vault_list",
+      "mcp__jarvis__search_simple",
+      "mcp__jarvis__search_query",
+      "mcp__jarvis__vault_get_document_map",
+      "mcp__jarvis__vault_write",
+      "mcp__jarvis__vault_patch",
+      "mcp__jarvis__vault_move",
+      "mcp__jarvis-fs__read_file",
+      "mcp__jarvis-fs__read_text_file",
+      "mcp__jarvis-fs__read_multiple_files",
+      "mcp__jarvis-fs__read_media_file",
+      "mcp__jarvis-fs__write_file",
+      "mcp__jarvis-fs__edit_file",
+      "mcp__jarvis-fs__move_file",
+      "mcp__jarvis-fs__create_directory",
+      "mcp__jarvis-fs__list_directory",
+      "mcp__jarvis-fs__list_directory_with_sizes",
+      "mcp__jarvis-fs__directory_tree",
+      "mcp__jarvis-fs__search_files",
+      "mcp__jarvis-fs__get_file_info",
+      "mcp__jarvis-fs__list_allowed_directories"
     ],
     "ask": [
       "Bash(git push)",
@@ -36,7 +63,33 @@
       "Bash(gh secret set*)",
       "Bash(gh secret remove*)",
       "Bash(gh secret delete*)",
-      "Bash(gh api *repos/*/actions/secrets*)"
+      "Bash(gh api *repos/*/actions/secrets*)",
+      "Bash(gh issue create*)",
+      "mcp__jarvis__vault_delete"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__jarvis__vault_write|mcp__jarvis__vault_patch|mcp__jarvis__vault_move|mcp__jarvis__vault_delete|mcp__jarvis-fs__write_file|mcp__jarvis-fs__edit_file|mcp__jarvis-fs__move_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/vault-write-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/review-reminder.sh"
+          }
+        ]
+      }
     ]
   }
 }

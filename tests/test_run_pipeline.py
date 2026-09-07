@@ -10,7 +10,14 @@ from core.filter import load_profile
 from core.git_ops import GitPushError
 from core.identity import compute_uid
 from core.schema_drift import SchemaDriftError
-from ingestion.normalize import normalize_josegael, normalize_simplify
+from ingestion.normalize import (
+    Listing,
+    normalize_applyguy,
+    normalize_josegael,
+    normalize_simplify,
+    normalize_vanshb03,
+    normalize_zshah101,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PROFILE = load_profile()
@@ -288,6 +295,81 @@ def test_build_matched_reason_per_source():
 
     josegael_junior = normalize_josegael(_josegael_raw()[0])
     assert run_pipeline.build_matched_reason(josegael_junior, PROFILE) == "Junior-eligible"
+
+
+# --- Task B: real matched_reason for the 9 sources that used to fall through
+# to the bare "matched" literal. One real, currently-matching fixture per
+# source (same fixtures fetch_and_filter's own matching tests already use). ---
+
+def test_build_matched_reason_vanshb03_includes_term_and_sponsorship():
+    raw = next(r for r in _vanshb03_raw() if r["id"] == "3dcc8f0b-f7f0-49db-800f-487fa5be8b4f")
+    listing = normalize_vanshb03(raw)
+    reason = run_pipeline.build_matched_reason(listing, PROFILE)
+    assert "Summer" in reason
+    assert "Other" in reason  # raw sponsorship value, real Point72 fixture
+
+
+def test_build_matched_reason_vanshb03_no_sponsorship_omits_it():
+    raw = next(r for r in _vanshb03_raw() if r["id"] == "ba604553-3741-4561-a3c6-20275c29aee5")
+    listing = normalize_vanshb03(raw)
+    assert listing.sponsorship  # this fixture does carry a value...
+    reason = run_pipeline.build_matched_reason(listing, PROFILE)
+    assert "Summer" in reason
+
+
+def test_build_matched_reason_zshah101_includes_term_and_category():
+    raw = _zshah101_raw()["ashby:centerfield:3279e803-56ab-4e12-8168-c2fd60bc8e60"]
+    listing = normalize_zshah101(raw)
+    reason = run_pipeline.build_matched_reason(listing, PROFILE)
+    assert reason == "Summer 2027, Software"
+
+
+def test_build_matched_reason_applyguy_includes_term_and_category():
+    raw = next(r for r in _applyguy_raw()["jobs"] if r["id"] == "78cbc083-6ed9-4bf6-b0b8-15e8abd6bd13")
+    listing = normalize_applyguy(raw)
+    reason = run_pipeline.build_matched_reason(listing, PROFILE)
+    assert reason == "Summer 2027, Software Engineering"
+
+
+def test_build_matched_reason_applyguy_not_specified_season_omits_bare_comma():
+    """Real live case (Jarvis vault, 2026-09-06): the Point72 'Quantitative
+    Developer Intern' dossier is source=ApplyGuy with terms=[] — ApplyGuy's
+    own 'Not specified' season maps to empty terms at normalize time and
+    still matches permissively (~39% of live entries). Must report the
+    category alone, not a malformed leading ', Software Engineering'."""
+    raw = next(r for r in _applyguy_raw()["jobs"] if r["id"] == "4c9335e6-fa63-47c7-8665-8ce5495a0014")
+    listing = normalize_applyguy(raw)
+    assert listing.terms == []
+    reason = run_pipeline.build_matched_reason(listing, PROFILE)
+    assert reason == "Software Engineering"
+
+
+@pytest.mark.parametrize("source,title,raw_text,expected", [
+    ("Greenhouse", "Summer 2027 Software Engineering Intern", "", "Summer 2027"),
+    ("Ashby", "Software Engineer Intern", "Join our team for Summer 2027.", "Summer 2027"),
+    ("Lever", "Flight Software Engineering Intern - Summer 2027", "Join our Summer 2027 internship cohort.", "Summer 2027"),
+    # Real Marshall Wace case: bare year, no season word anywhere.
+    ("Greenhouse", "Technology Intern - 2027 - Singapore", "Join our 2027 internship cohort in Singapore.", "2027"),
+    # Real InternDock case (raw_text is the title itself): The Nuclear Company.
+    ("InternDock", "Summer 2027 Software Engineering Intern", "Summer 2027 Software Engineering Intern", "Summer 2027"),
+    # Real AI Jobs case: Databricks Product Management Intern.
+    ("AIJobs", "Product Management Intern (Summer 2027)", "", "Summer 2027"),
+])
+def test_build_matched_reason_free_text_sources_report_real_matched_term(source, title, raw_text, expected):
+    listing = Listing(company="Acme", title=title, url="https://example.test/1", source=source,
+                       active=True, raw_text=raw_text)
+    assert run_pipeline.build_matched_reason(listing, PROFILE) == expected
+
+
+def test_build_matched_reason_freehire_real_google_fixture():
+    # Real Freehire fixture (tests/fixtures/freehire.json) — Google's live
+    # "Software Engineering Intern, BS, Summer 2027" posting.
+    listing = Listing(company="Google", title="Software Engineering Intern, BS, Summer 2027",
+                       url="https://example.test/1", source="Freehire", active=True,
+                       raw_text="Join us for a unique 12-14 week paid internship. "
+                                "A 12-14 week paid internship for Bachelor's students "
+                                "to develop scalable software systems.")
+    assert run_pipeline.build_matched_reason(listing, PROFILE) == "Summer 2027"
 
 
 def test_fetch_and_filter_counts_and_matches():

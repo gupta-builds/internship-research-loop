@@ -15,6 +15,8 @@ AI/ML, not CyS & Finance):
 """
 import re
 
+from core.company_registry import is_quant_finance_company
+
 BUCKET_FOLDERS = {
     "AI/ML": "1 - AI & ML",
     "Fullstack": "2 - Fullstack",
@@ -56,10 +58,18 @@ _FULLSTACK_RE = re.compile(
 )
 
 
-def classify(title: str, category: str, posting_content: str) -> tuple:
+def classify(title: str, category: str, posting_content: str, company: str = "") -> tuple:
     """Returns (bucket_name, signal) — signal is the specific real phrase
     that drove the classification (empty string for the Other bucket, since
-    there's nothing bucket-specific to point at)."""
+    there's nothing bucket-specific to point at).
+
+    A known quant-trading/quant-finance company (core/company_registry.py)
+    routes to CyS & Finance unconditionally, before the three regexes below
+    — real confirmed vault bug (2026-09-06): the same company's own generic
+    SWE/FPGA intern postings landed in both AI/ML and CyS & Finance purely
+    based on which keyword the fetched content happened to trip."""
+    if company and is_quant_finance_company(company):
+        return "CyS & Finance", "quant/trading firm"
     haystack = f"{title} {category} {posting_content}"
     for bucket, pattern in (("AI/ML", _AI_ML_RE), ("CyS & Finance", _CYS_FINANCE_RE), ("Fullstack", _FULLSTACK_RE)):
         m = pattern.search(haystack)

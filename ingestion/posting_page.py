@@ -192,9 +192,30 @@ _NOISE = re.compile(
 # degrades the dossier to thin (extract_content returns "") rather than
 # passing stage2_confirm on an unrelated title elsewhere on the same page —
 # safety net for if the URL rewrite above ever still lands on the board.
+#
+# Microsoft's careers site (apply.careers.microsoft.com, source=vanshb03) is
+# the same species of bug as Google's, confirmed 2026-09-06 against the real
+# stored content of two live dossiers (List/Dossiers/1 - AI & ML/Software
+# Engineer Intern, CoreAI - Microsoft.md and .../AIML & LLM - Microsoft.md) —
+# a GitHub issue #9 sample of 6 flagged Microsoft dossiers, all sourced via
+# vanshb03's generic search-results URL. Its shell doesn't use any of Google's
+# wording ("jobs matched"/"Showing X to Y of") — instead a bare "# Jobs"
+# heading and a "## Get personalized job recommendations" AI-resume-match
+# promo heading, either of which the old regex missed and let `started` latch
+# onto, capturing the whole 9-job sidebar list (title/location/posted-date
+# fragments broken across several lines by the site's own markdown line
+# breaks) as if it were posting content. That includes real irrelevant
+# listing titles ("Supply Chain Program Management Intern") whose text
+# happens to hit core/relevance.py's own _STAGE1_REJECT_RE
+# ("program management intern") — a live revalidate.py false-positive
+# rejection of a genuinely on-topic dossier, not a real non-software signal.
+# "# Jobs" is anchored to match only when it's the WHOLE heading (no real
+# posting is titled bare "Jobs"), same narrow-scope posture as every other
+# pattern here.
 _LISTING_SHELL_RESET_RE = re.compile(
     r"^(_arrow_back_|back to jobs search|##?\s*jobs search results|[\d,]+\s+jobs matched"
-    r"|showing \d+ to \d+ of|_navigate_next_|#+\s*open roles\s*$)", re.I,
+    r"|showing \d+ to \d+ of|_navigate_next_|#+\s*open roles\s*$"
+    r"|#+\s*jobs\s*$|#+\s*get personalized job recommendations)", re.I,
 )
 
 # ATS UI labels jammed against their values with no separator, real examples
