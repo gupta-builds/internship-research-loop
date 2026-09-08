@@ -164,6 +164,45 @@ def _listing_with_date(uid_suffix, date_posted):
     return (compute_uid(listing), listing)
 
 
+# One real classify()-matching title per bucket (core/classify.py's own
+# regexes) — for the run_once-level exact-quota/hard-pause tests below,
+# where the real fixture set's organic per-bucket counts (see
+# _run_once_kwargs) don't have enough AI/ML supply to exercise QUOTA_PER_RUN.
+_BUCKET_TITLES = {
+    "AI/ML": "Machine Learning Engineer Intern",
+    "Fullstack": "Full Stack Software Engineer Intern",
+    "CyS & Finance": "Security Engineer Intern",
+    "Other": "Software Engineer Intern",
+}
+
+
+def _listing_for_bucket(bucket, uid_suffix, date_posted, company="Acme"):
+    listing = normalize_simplify(_simplify_raw()[0])
+    listing.raw_id = f"{listing.raw_id}-{uid_suffix}"
+    listing.date_posted = date_posted
+    listing.title = _BUCKET_TITLES[bucket]
+    listing.company = company
+    # Distinct per candidate — every synthetic listing otherwise shares the
+    # base fixture's URL, which extract_ats_job_id() resolves to the SAME
+    # cross_source_key regardless of company/title, collapsing every
+    # candidate but the first into a false cross_source_duplicate rejection.
+    listing.url = f"https://example.test/{uid_suffix}"
+    return (compute_uid(listing), listing)
+
+
+def _stub_fetch_and_filter(monkeypatch, listings):
+    """Bypasses real per-source HTTP-shaped fixtures entirely — feeds
+    run_once a controlled, deterministic candidate pool via a single fake
+    source. Schema-drift/InternDock are untouched (still real http_get)."""
+    matched = [listing for _uid, listing in listings]
+    monkeypatch.setattr(
+        run_pipeline, "fetch_and_filter",
+        lambda profile, http_get=None, excluded_ids=frozenset(): {
+            "Synthetic": {"fetch_count": len(matched), "matched": matched}
+        },
+    )
+
+
 def test_prioritize_and_cap_keeps_most_recent_first():
     # _listing_with_date's base fixture (Palantir "Forward Deployed Software
     # Engineer - Internship - US Government") classifies to the 'Other'
@@ -272,12 +311,65 @@ def test_prioritize_and_cap_reserved_slot_recency_tiebreak_among_preferred():
     assert [l.company for _, l in deferred] == ["Microsoft"]
 
 
-def test_run_once_defers_beyond_the_cap_and_leaves_it_for_next_run(tmp_path, monkeypatch):
+# --- _select_exact_quota: all-or-nothing exact quota (2026-09-07 decision) ---
+
+def test_select_exact_quota_selects_exactly_and_defers_rest_in_debate_order():
+    items = [_listing_with_date(i, date_posted) for i, date_posted in enumerate([100, 300, 200])]
+    this_run, deferred, shortfall = run_pipeline._select_exact_quota(items, quota={"Other": 2})
+
+    assert shortfall == {}
+    assert [l.date_posted for _, l in this_run] == [300, 200]
+    assert [l.date_posted for _, l in deferred] == [100]
+
+
+def test_select_exact_quota_reports_shortfall_and_returns_nothing_when_a_bucket_is_short():
+    """The core all-or-nothing guarantee: one short bucket (Other needs 2,
+    only 1 real candidate) means NOTHING is selected anywhere, not even
+    from a bucket that could have filled exactly — a partial/differently-
+    distributed batch is never written."""
+    items = [_listing_with_date("only", 100)]
+    this_run, deferred, shortfall = run_pipeline._select_exact_quota(items, quota={"Other": 2})
+
+    assert this_run == []
+    assert deferred == items  # everything deferred, including the sole Other candidate
+    assert shortfall == {"Other": 1}
+
+
+def test_select_exact_quota_bucket_missing_from_quota_is_fully_deferred():
+    """A bucket absent from the quota dict entirely is never touched by
+    selection — same convention _prioritize_and_cap's budget.get(bucket, 0)
+    already uses — and doesn't count as a shortfall (there was no target)."""
+    items = [_listing_with_date(i, d) for i, d in enumerate([100, 300])]
+    this_run, deferred, shortfall = run_pipeline._select_exact_quota(items, quota={})
+
+    assert this_run == []
+    assert deferred == items
+    assert shortfall == {}
+
+
+def test_select_exact_quota_does_not_grant_a_reserved_slot_unlike_prioritize_and_cap():
+    """Regression lock: unlike _prioritize_and_cap's Task A reserved slot,
+    a preferred company that loses its bucket's exact quota does NOT get a
+    bonus write — that would break 'exactly N, never N+1'."""
+    preferred_recent = _listing_with_date("recent", 1700000000)
+    preferred_recent[1].company = "Google"
+    preferred_older = _listing_with_date("older", 1600000000)
+    preferred_older[1].company = "Citadel"
+
+    this_run, deferred, shortfall = run_pipeline._select_exact_quota(
+        [preferred_recent, preferred_older], quota={"Other": 1},
+        preferred_companies={"Google": "high", "Citadel": "high"},
+    )
+    assert shortfall == {}
+    assert len(this_run) == 1  # exactly the quota, no reserved-slot bonus
+    assert [l.company for _, l in deferred] == ["Citadel"]
+
+
+def test_run_once_defers_beyond_the_cap_and_leaves_it_for_next_run(tmp_path):
     """The core guarantee: a deferred item is not marked seen, so it's neither
     lost (no silent drop) nor duplicated (no re-write) — it just naturally
     reappears as 'new' on the next run, same as any other unseen match."""
-    monkeypatch.setattr(run_pipeline, "MAX_NEW_WRITES_PER_RUN", {"Other": 1})
-    kwargs = _run_once_kwargs(tmp_path)
+    kwargs = _run_once_kwargs(tmp_path, quota={"Other": 1})
     record = run_pipeline.run_once(**kwargs)
 
     total_matched = sum(len(info["matched"]) for info in
@@ -500,6 +592,15 @@ def test_file_github_issue_calls_gh_with_expected_args():
 # --- run_once integration tests ---
 
 def _run_once_kwargs(tmp_path, **overrides):
+    # Default quota matches exactly what _fake_http_get's real fixture set
+    # supplies (12 matches: 10 Other / 1 Fullstack / 1 CyS & Finance / 0
+    # AI/ML — confirmed 2026-09-07 via fetch_and_filter/dedup_new) —
+    # AI/ML is omitted entirely rather than given a target of 2, since a
+    # bucket with zero real candidates would otherwise be permanently
+    # short and, under all-or-nothing, make every default-fixture test
+    # write nothing. This reproduces the exact same 3-writes-per-run
+    # default behavior (1 Other + 1 Fullstack + 1 CyS & Finance) every
+    # existing test here already assumes.
     kwargs = dict(
         jarvis_dir=tmp_path / "jarvis",
         state_path=tmp_path / "state" / "seen_ids.json",
@@ -510,6 +611,7 @@ def _run_once_kwargs(tmp_path, **overrides):
         http_head=_fake_http_head_all_live,
         push_fn=lambda repo_dir, message: True,
         issue_fn=Mock(),
+        quota={"Fullstack": 1, "CyS & Finance": 1, "Other": 1},
     )
     kwargs.update(overrides)
     (tmp_path / "jarvis").mkdir(parents=True, exist_ok=True)
@@ -589,14 +691,12 @@ def test_run_once_files_issue_on_systemic_rejection_not_routine_one(tmp_path):
     kwargs["issue_fn"].assert_not_called()
 
 
-def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path, monkeypatch):
-    # Generous per-bucket budget so every fixture match fits in the first run
-    # — this test is about seen-state idempotency across runs, not pacing.
-    monkeypatch.setattr(
-        run_pipeline, "MAX_NEW_WRITES_PER_RUN",
-        {"AI/ML": 20, "Fullstack": 20, "CyS & Finance": 20, "Other": 20},
-    )
-    kwargs = _run_once_kwargs(tmp_path)
+def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path):
+    # Quota set to the real max each bucket can supply from the fixture set
+    # (10 Other / 1 Fullstack / 1 CyS & Finance / 0 AI/ML — AI/ML omitted,
+    # see _run_once_kwargs) so every fixture match fits in the first run —
+    # this test is about seen-state idempotency across runs, not pacing.
+    kwargs = _run_once_kwargs(tmp_path, quota={"Fullstack": 1, "CyS & Finance": 1, "Other": 10})
     first = run_pipeline.run_once(**kwargs)
     assert first["written_count"] > 0
     assert first["deferred_count"] == 0
@@ -608,6 +708,109 @@ def test_run_once_second_run_does_not_rewrite_already_seen_items(tmp_path, monke
 
     assert second["written_count"] == 0
     assert second["already_seen_count"] == first["written_count"] + first["already_seen_count"]
+
+
+# --- Exact-quota / hard-pause integration (2026-09-07 decision) ---
+
+def test_run_once_all_or_nothing_short_bucket_writes_nothing(tmp_path, monkeypatch):
+    """2 real AI/ML candidates, 0 Other — Other's quota of 1 can't be filled,
+    so NOTHING writes this run, not even the 2 AI/ML candidates that could
+    have filled their own quota exactly."""
+    listings = [
+        _listing_for_bucket("AI/ML", "ml1", 300),
+        _listing_for_bucket("AI/ML", "ml2", 200),
+    ]
+    _stub_fetch_and_filter(monkeypatch, listings)
+    kwargs = _run_once_kwargs(tmp_path, state_dir=tmp_path / "state", quota={"AI/ML": 2, "Other": 1})
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["written_count"] == 0
+    assert record["quota_shortfall"] == {"Other": 1}
+    assert record["deferred_count"] == 2  # both AI/ML candidates deferred, not written
+    dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
+    assert not dossiers_dir.exists() or not list(dossiers_dir.glob("**/*.md"))
+
+
+def test_run_once_full_quota_writes_exactly_and_in_debate_order(tmp_path, monkeypatch):
+    """Every bucket supplied exactly (or more, for Other) — writes exactly
+    6 (2 AI/ML + 1 Fullstack + 1 CyS & Finance + 2 Other — QUOTA_PER_RUN's
+    own per-bucket values sum to 6, not the 5 the prompt that requested this
+    quota said; per-bucket values are the confirmed decision, so they win
+    over that arithmetic slip), and Other's extra candidate is cut by
+    debate_compare's preferred-company stage, not bare recency."""
+    other_preferred = _listing_for_bucket("Other", "pref", 1000, company="Google")  # oldest, but preferred
+    other_recent = _listing_for_bucket("Other", "recent", 3000, company="Random Co")
+    other_middle_loses = _listing_for_bucket("Other", "loses", 2000, company="Another Co")
+    listings = [
+        # Distinct companies within a bucket, not just distinct uids/urls —
+        # two same-bucket candidates sharing a company+title would otherwise
+        # collide on check_cross_source_duplicate's company+title key and
+        # silently drop one, masking a real distribution bug behind a
+        # coincidentally-correct total.
+        _listing_for_bucket("AI/ML", "ml1", 100, company="Nvidia"),
+        _listing_for_bucket("AI/ML", "ml2", 200, company="OpenAI"),
+        _listing_for_bucket("Fullstack", "fs1", 100, company="Figma"),
+        _listing_for_bucket("CyS & Finance", "cys1", 100, company="Jane Street"),
+        other_preferred, other_recent, other_middle_loses,
+    ]
+    _stub_fetch_and_filter(monkeypatch, listings)
+    profile = {**PROFILE, "preferred_companies": {"Google": "high"}}
+    kwargs = _run_once_kwargs(
+        tmp_path, state_dir=tmp_path / "state", profile=profile,
+        quota={"AI/ML": 2, "Fullstack": 1, "CyS & Finance": 1, "Other": 2},
+    )
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["quota_shortfall"] == {}
+    assert record["written_count"] == 6
+    dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
+    assert len(list(dossiers_dir.glob("1 - AI & ML/*.md"))) == 2
+    assert len(list(dossiers_dir.glob("2 - Fullstack/*.md"))) == 1
+    assert len(list(dossiers_dir.glob("3 - CyS & Finance/*.md"))) == 1
+    other_files = {f.name for f in dossiers_dir.glob("Other/*.md")}
+    assert len(other_files) == 2
+    assert any("Google" in name for name in other_files)
+    assert not any("Another Co" in name for name in other_files)  # the debate loser, cut
+
+
+def test_run_once_hard_pause_disables_workflow_and_writes_nothing(tmp_path):
+    """At/over the 300-dossier hard-pause threshold: run.yml gets disabled,
+    nothing is fetched (http_get would raise if called) or written,
+    regardless of quota-fillability."""
+    kwargs = _run_once_kwargs(
+        tmp_path, state_dir=tmp_path / "state",
+        http_get=Mock(side_effect=AssertionError("must not fetch once hard-paused")),
+        disable_workflow_fn=Mock(),
+    )
+    for bucket_folder, count in [
+        ("1 - AI & ML", 134), ("2 - Fullstack", 42), ("3 - CyS & Finance", 49), ("Other", 75),
+    ]:
+        _seed_bucket(kwargs["jarvis_dir"], bucket_folder, count)  # 300 total
+
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["paused"] is True
+    assert record["dossier_total"] == 300
+    assert record["written_count"] == 0
+    kwargs["disable_workflow_fn"].assert_called_once_with("gupta-builds/internship-research-loop")
+    pause_issue_calls = [c for c in kwargs["issue_fn"].call_args_list if "Hard-paused" in c.args[1]]
+    assert len(pause_issue_calls) == 1
+
+
+def test_run_once_under_hard_pause_threshold_runs_normally(tmp_path):
+    """One dossier under the threshold: no pause, no disable call, normal
+    fetch/selection proceeds."""
+    kwargs = _run_once_kwargs(tmp_path, state_dir=tmp_path / "state", disable_workflow_fn=Mock())
+    for bucket_folder, count in [
+        ("1 - AI & ML", 134), ("2 - Fullstack", 42), ("3 - CyS & Finance", 49), ("Other", 74),
+    ]:
+        _seed_bucket(kwargs["jarvis_dir"], bucket_folder, count)  # 299 total
+
+    record = run_pipeline.run_once(**kwargs)
+
+    assert record["paused"] is False
+    kwargs["disable_workflow_fn"].assert_not_called()
+    assert record["written_count"] > 0  # the ordinary default-quota write still happens
 
 
 def test_run_once_halts_and_files_issue_on_fetch_network_failure(tmp_path):
@@ -885,6 +1088,11 @@ def test_run_once_writes_interndock_listings_when_wired(tmp_path, monkeypatch):
         tmp_path, state_dir=tmp_path / "state",
         http_get=_fake_http_get_only_interndock,
         interndock_fetch_fn=lambda url: real_postings,
+        # Every other source is zeroed out here — only the one Fullstack
+        # match ("Frontend Engineer Intern", confirmed via classify())
+        # exists this run, so the shared default quota (which also expects
+        # Other/CyS & Finance candidates) doesn't fit.
+        quota={"Fullstack": 1},
     )
     record = run_pipeline.run_once(**kwargs)
 

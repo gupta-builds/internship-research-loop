@@ -179,21 +179,15 @@ def test_run_once_excludes_and_never_refetches_real_dead_link_after_threshold(tm
             return Mock(status_code=403)
         return _fake_http_head_all_live(url, timeout=timeout, allow_redirects=allow_redirects)
 
-    # Generous budget so the real dead-link candidate isn't itself squeezed
-    # out by _prioritize_and_cap before ever reaching validate_and_write.
-    import pytest
-    monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(
-        run_pipeline, "MAX_NEW_WRITES_PER_RUN",
-        {"AI/ML": 20, "Fullstack": 20, "CyS & Finance": 20, "Other": 20},
+    # Generous ceiling (run_once's budget= param, the old _prioritize_and_cap
+    # "up to N" path — not the exact-quota default) so the real dead-link
+    # candidate isn't itself squeezed out before ever reaching
+    # validate_and_write.
+    kwargs = _run_once_kwargs(
+        tmp_path, state_dir=state_dir, http_get=http_get_with_dead_link, http_head=http_head_dead_only,
+        budget={"AI/ML": 20, "Fullstack": 20, "CyS & Finance": 20, "Other": 20},
     )
-    try:
-        kwargs = _run_once_kwargs(
-            tmp_path, state_dir=state_dir, http_get=http_get_with_dead_link, http_head=http_head_dead_only,
-        )
-        record = run_pipeline.run_once(**kwargs)
-    finally:
-        monkeypatch.undo()
+    record = run_pipeline.run_once(**kwargs)
 
     assert record["write_gate_excluded_count"] == 1
     excluded = run_pipeline.load_excluded_uids(state_dir)
