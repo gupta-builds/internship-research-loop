@@ -49,3 +49,4 @@
 {"timestamp": "2026-09-05T10:52:19.989322+00:00", "type": "recheck", "scanned": 343, "removals": [{"uid": "SimplifyJobs:167546b1-fd92-4bc9-94d0-a427ade3104e", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-09-06T11:16:41.362783+00:00", "type": "recheck", "scanned": 343, "removals": [], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-09-07T12:57:39.550017+00:00", "type": "recheck", "scanned": 343, "removals": [], "errors": [], "halted": false, "halt_reason": null}
+{"timestamp": "2026-09-08T11:39:38.201555+00:00", "type": "recheck", "scanned": 343, "removals": [{"uid": "SimplifyJobs:bdf86aea-50d0-4dc0-a171-8784bc37c4bb", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
