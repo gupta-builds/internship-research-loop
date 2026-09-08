@@ -1,0 +1,56 @@
+name: reseed
+# Manual cold-start reseed: one large, deliberately resource-intensive pull
+# across all 11 sources, for the specific scenario where the vault's dossier
+# pile is empty or being deliberately relaunched. workflow_dispatch only —
+# never scheduled — and does not touch run.yml's own cadence or budget.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type exactly "yes-drain-budget" to run this one-off burst pull.'
+        required: true
+
+permissions:
+  contents: write  # commit state/seen_ids.json + state/excluded_uids.json + logs/reseed_runs.jsonl back to this repo
+  issues: write    # gh issue create on schema-drift / push-failure (same as run.yml)
+
+jobs:
+  reseed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit confirmation
+        if: ${{ github.event.inputs.confirm != 'yes-drain-budget' }}
+        run: |
+          echo "confirm input must be exactly 'yes-drain-budget' (got '${{ github.event.inputs.confirm }}') — aborting before any checkout or spend."
+          exit 1
+
+      - name: Checkout internship-research-loop
+        uses: actions/checkout@v4
+
+      - name: Checkout gupta-builds/Jarvis
+        uses: actions/checkout@v4
+        with:
+          repository: gupta-builds/Jarvis
+          token: ${{ secrets.JARVIS_PUSH_TOKEN }}
+          path: jarvis-checkout
+          fetch-depth: 0  # full history — a shallow clone can fail `git pull --rebase`
+                          # if the vault's own auto-commit cycle has diverged by more than one commit
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "internship-research-loop bot"
+          git config --global user.email "actions@users.noreply.github.com"
+
+      - name: Run cold-start reseed
+        env:
+          JARVIS_DIR: ${{ github.workspace }}/jarvis-checkout
+          GH_TOKEN: ${{ github.token }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: python reseed.py
