@@ -95,6 +95,39 @@ GLOBAL_INFO_THRESHOLDS = (150, 170)
 GLOBAL_ISSUE_THRESHOLDS = (190, 200)
 CAPACITY_STATE_FILENAME = "capacity_notified.json"
 
+# All-or-nothing exact quota (2026-09-07 decision, on direct human
+# instruction — this session). Unlike MAX_NEW_WRITES_PER_RUN's per-bucket
+# ceiling above ("write up to N, take what's available"), this is an exact
+# per-run target: either every bucket fills exactly, or nothing writes this
+# run at all (see _select_exact_quota). Real counts checked directly via
+# mcp__jarvis__vault_list against gupta-builds/Jarvis on 2026-09-07: 285
+# live dossiers (AI/ML 134, Fullstack 42, CyS & Finance 49, Other 60),
+# excluding Viewed/ — discovery has been outrunning promotion, and this
+# quota is meant to create real, predictable batch-size pacing pressure the
+# old ceiling never did (a ceiling only caps a spike; it doesn't guarantee
+# a batch actually lands). Deliberately NOT layered inside
+# MAX_NEW_WRITES_PER_RUN as an inner bound: the old Other ceiling (1) is
+# smaller than this quota's Other target (2), so combining them would make
+# Other structurally unfillable forever and, under all-or-nothing, would
+# make every run write nothing. MAX_NEW_WRITES_PER_RUN/_prioritize_and_cap
+# are kept (not deleted) as a still-real, still-tested, currently-unreached
+# selection mechanism — same precedent as debate.py's own bucket_urgency
+# stage-2 "not dead code" note.
+QUOTA_PER_RUN = {"AI/ML": 2, "Fullstack": 1, "CyS & Finance": 1, "Other": 2}
+
+# Hard-pause threshold (2026-09-07 decision, this session, on direct human
+# instruction) — a deliberate, one-time reversal of this codebase's own
+# founding "notification, never a write refusal" asymmetry, scoped
+# specifically to total dossier volume (see the dated note added to
+# Source of Truth.md the same day for the full reasoning). At/over this
+# total (excluding Viewed/, computed BEFORE this run does anything), the
+# loop disables run.yml itself via `gh workflow disable run` and writes
+# nothing this run, regardless of quota-fillability. 300 was chosen
+# deliberately close to the real 285-dossier total confirmed live on
+# 2026-09-07, so the loop pauses again soon after landing at most a few
+# more all-or-nothing batches.
+HARD_PAUSE_TOTAL_THRESHOLD = 300
+
 
 def _prioritize_and_cap(new_listings: list, budget: dict, preferred_companies: dict = None) -> tuple:
     """Scoped per-bucket per the tunable budget dict — each bucket fills only
@@ -150,6 +183,55 @@ def _prioritize_and_cap(new_listings: list, budget: dict, preferred_companies: d
         this_run.extend(selected)
         deferred.extend(remainder)
     return this_run, deferred
+
+
+def _select_exact_quota(new_listings: list, quota: dict, preferred_companies: dict = None) -> tuple:
+    """All-or-nothing counterpart to _prioritize_and_cap (2026-09-07
+    decision) — reuses the same bucket-partition + debate_compare ordering,
+    but selects EXACTLY quota[bucket] per bucket rather than "up to". A
+    bucket absent from quota is never touched by this selection (its
+    candidates land in deferred untouched), same convention
+    _prioritize_and_cap's budget.get(bucket, 0) already uses.
+
+    Returns (this_run, deferred, shortfall). shortfall is
+    {bucket: missing_count} for any bucket whose real candidate pool this
+    run is smaller than its quota target. If shortfall is non-empty,
+    this_run is [] and deferred is EVERY item in new_listings — a partial
+    fill (e.g. 4-of-5) is never written, per the 2026-09-07 all-or-nothing
+    decision. Candidates that would have won their bucket's slot still
+    land in deferred in this case, so they still count toward
+    MAX_DEBATE_LOSSES the same way a candidate cut for any other reason
+    already does — no special-casing needed downstream.
+
+    Deliberately does NOT carry over _prioritize_and_cap's reserved
+    preferred-company slot (Task A): that mechanic adds one extra write on
+    top of the budget, which would break "exactly N, never a
+    differently-distributed N+1" — see test_select_exact_quota_does_not_
+    grant_a_reserved_slot_unlike_prioritize_and_cap for the locked-in
+    regression."""
+    by_bucket = {}
+    for uid, listing in new_listings:
+        bucket, _ = classify(listing.title, listing.category, "", listing.company)
+        by_bucket.setdefault(bucket, []).append((uid, listing))
+
+    bucket_urgency = compute_bucket_urgency(new_listings, quota)
+    cmp_key = cmp_to_key(lambda x, y: debate_compare(x, y, preferred_companies or {}, bucket_urgency))
+
+    selected_by_bucket = {}
+    shortfall = {}
+    for bucket, target in quota.items():
+        ordered = sorted(by_bucket.get(bucket, []), key=cmp_key)
+        if len(ordered) < target:
+            shortfall[bucket] = target - len(ordered)
+        selected_by_bucket[bucket] = ordered[:target]
+
+    if shortfall:
+        return [], list(new_listings), shortfall
+
+    this_run = [item for bucket in quota for item in selected_by_bucket[bucket]]
+    written_uids = {uid for uid, _listing in this_run}
+    deferred = [(uid, listing) for uid, listing in new_listings if uid not in written_uids]
+    return this_run, deferred, shortfall
 
 
 def count_dossiers_by_bucket(vault_root) -> dict:
@@ -651,6 +733,15 @@ def file_github_issue(repo: str, title: str, body: str, run_gh=None) -> None:
     run_gh(["gh", "issue", "create", "--repo", repo, "--title", title, "--body", body])
 
 
+def disable_workflow(repo: str, workflow: str = "run", run_gh=None) -> None:
+    """Same injection shape as file_github_issue — real `gh workflow
+    disable` call by default, swappable for a fake in tests. "run" matches
+    run.yml's own `name: run` (unambiguous among this repo's 5 workflows,
+    same identifier a human already used once to pause it by hand)."""
+    run_gh = run_gh or (lambda args: subprocess.run(args, capture_output=True, text=True))
+    run_gh(["gh", "workflow", "disable", workflow, "--repo", repo])
+
+
 def run_once(
     *,
     jarvis_dir,
@@ -667,8 +758,12 @@ def run_once(
     opt_cache_path=None,
     state_dir=None,
     interndock_fetch_fn=None,
+    quota: dict = None,
+    budget: dict = None,
+    disable_workflow_fn=disable_workflow,
 ) -> dict:
     profile = profile or load_profile()
+    quota = quota if quota is not None else QUOTA_PER_RUN
     timestamp = now.isoformat()
     record = {
         "timestamp": timestamp,
@@ -682,12 +777,42 @@ def run_once(
         "errors": [],
         "halted": False,
         "halt_reason": None,
+        "paused": False,
+        "pause_reason": None,
         "bucket_at_capacity": [],
         "dossier_total": 0,
+        "quota_shortfall": {},
         "newly_excluded_count": 0,
         "write_gate_excluded_count": 0,
         "zero_match_alerts": [],
     }
+
+    # Hard-pause check (2026-09-07 decision) — before ANYTHING else, so a
+    # paused run spends zero fetch/Firecrawl budget and never lets a
+    # partial write land the same run the threshold is crossed. Local glob
+    # only (count_dossiers_by_bucket), no network cost either way.
+    dossier_total_before = sum(count_dossiers_by_bucket(jarvis_dir).values())
+    if dossier_total_before >= HARD_PAUSE_TOTAL_THRESHOLD:
+        record["paused"] = True
+        record["dossier_total"] = dossier_total_before
+        record["pause_reason"] = (
+            f"dossier_total {dossier_total_before} at/over the "
+            f"{HARD_PAUSE_TOTAL_THRESHOLD}-dossier hard-pause threshold"
+        )
+        append_run_log(runs_log_path, record)
+        disable_workflow_fn(issue_repo)
+        issue_fn(
+            issue_repo,
+            f"Hard-paused: run.yml disabled at {timestamp} ({dossier_total_before} dossiers)",
+            f"List/Dossiers/ (excluding Viewed/) reached {dossier_total_before}, at/over the "
+            f"{HARD_PAUSE_TOTAL_THRESHOLD}-dossier hard-pause threshold. `run.yml` has been disabled "
+            "via `gh workflow disable run` — nothing was fetched or written this run. This is a "
+            "deliberate, one-time reversal of this repo's usual notification-never-refusal principle "
+            "for total dossier volume specifically (see the dated 2026-09-07 note in Source of "
+            "Truth.md). Re-enable with `gh workflow enable run` once the promotion backlog is worked "
+            "down.",
+        )
+        return record
 
     excluded_ids = load_excluded_uids(state_dir) if state_dir is not None else set()
 
@@ -751,10 +876,23 @@ def run_once(
     record["new_count"] = len(new_listings)
     record["already_seen_count"] = already_seen_count
 
-    this_run, deferred = _prioritize_and_cap(
-        new_listings, MAX_NEW_WRITES_PER_RUN, preferred_companies=profile.get("preferred_companies")
-    )
+    # budget (2026-09-07, added for reseed.py): an explicit escape hatch back
+    # to the old "up to N, take what's available" ceiling via
+    # _prioritize_and_cap — reseed's whole point is draining a wiped vault
+    # with whatever's available, the opposite of exact-quota's "N or
+    # nothing." Mutually exclusive with quota; the real hourly run (neither
+    # passed) gets the new exact-quota behavior.
+    if budget is not None:
+        this_run, deferred = _prioritize_and_cap(
+            new_listings, budget, preferred_companies=profile.get("preferred_companies")
+        )
+        quota_shortfall = {}
+    else:
+        this_run, deferred, quota_shortfall = _select_exact_quota(
+            new_listings, quota, preferred_companies=profile.get("preferred_companies")
+        )
     record["deferred_count"] = len(deferred)
+    record["quota_shortfall"] = quota_shortfall
 
     opt_cache = {}
     if opt_cache_path and Path(opt_cache_path).exists():

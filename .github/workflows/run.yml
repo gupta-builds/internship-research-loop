@@ -7,6 +7,7 @@ on:
 permissions:
   contents: write  # commit state/seen_ids.json + logs/runs.jsonl back to this repo
   issues: write    # gh issue create on schema-drift / push-failure / systemic write-gate rejection
+  actions: write   # gh workflow disable run — the 2026-09-07 hard-pause mechanism (run_pipeline.py)
 
 jobs:
   pipeline:
