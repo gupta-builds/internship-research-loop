@@ -51,3 +51,4 @@
 {"timestamp": "2026-09-07T12:57:39.550017+00:00", "type": "recheck", "scanned": 343, "removals": [], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-09-08T11:39:38.201555+00:00", "type": "recheck", "scanned": 343, "removals": [{"uid": "SimplifyJobs:bdf86aea-50d0-4dc0-a171-8784bc37c4bb", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
 {"timestamp": "2026-09-09T11:45:31.291570+00:00", "type": "recheck", "scanned": 343, "removals": [{"uid": "SimplifyJobs:ce6bb4b3-0f2f-4eb0-b490-e518ef1dba06", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
+{"timestamp": "2026-09-10T11:43:31.911648+00:00", "type": "recheck", "scanned": 343, "removals": [{"uid": "SimplifyJobs:d8419553-b116-44e9-8ec0-d1ae843c6512", "reason": "active: false upstream"}], "errors": [], "halted": false, "halt_reason": null}
