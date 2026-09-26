@@ -42,3 +42,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}  # discovery-time posting fetch; absent = thin dossiers, never a failure
         run: python run_pipeline.py
+
+      - name: Notify if new dossiers are ready to promote
+        # Added 2026-09-08. run_pipeline.py already writes written_count into the last
+        # line of logs/runs.jsonl; issues: write is already granted above (schema-drift
+        # notices use it) so this needs no new permission. Best-effort only (|| true) —
+        # a notification failure must never fail the pipeline run itself.
+        run: |
+          COUNT=$(tail -1 logs/runs.jsonl | python3 -c "import json,sys; print(json.load(sys.stdin).get('written_count', 0))" 2>/dev/null || echo 0)
+          if [ "$COUNT" -gt 0 ] 2>/dev/null; then
+            gh issue create \
+              --title "$COUNT new dossier(s) ready for /promote-dossier" \
+              --body "Run at $(date -u +%Y-%m-%dT%H:%M:%SZ). See logs/runs.jsonl for detail." \
+              --label "dossier-ready" || true
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
