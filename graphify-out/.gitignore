@@ -30,6 +30,7 @@ cost.json
 # history. graphify keeps these live-synced to the Jarvis vault via git hooks
 # regardless of whether git itself tracks them, so nothing is lost by ignoring.
 .graphify_labels.json
+.graphify_labels.json.sig
 GRAPH_REPORT.md
 graph.html
 graph.json
