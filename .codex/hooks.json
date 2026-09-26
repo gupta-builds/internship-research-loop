@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__jarvis__vault_write|mcp__jarvis__vault_patch|mcp__jarvis__vault_move|mcp__jarvis__vault_delete|mcp__jarvis-fs__write_file|mcp__jarvis-fs__edit_file|mcp__jarvis-fs__move_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/home/anant_gupta/projects/work/internship-research-loop/.codex/hooks/vault-write-guard.sh'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/home/anant_gupta/projects/work/internship-research-loop/.codex/hooks/review-reminder.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}
