@@ -9,3 +9,10 @@ __pycache__/
 # actions/checkout's post-job submodule cleanup ("No url found for
 # submodule path 'jarvis-checkout' in .gitmodules").
 jarvis-checkout/
+
+# Project-local agent memory (Claude Code's `memory: local` agent frontmatter field).
+# contact-researcher's company-research cache lives here — real people's found names/
+# emails/LinkedIn URLs, the same shape of found-PII the Contact note already stores in
+# the Jarvis vault. Keeping it out of this repo's git history is deliberate, not an
+# oversight — a second copy here would just be a place for it to drift.
+.claude/agent-memory-local/
