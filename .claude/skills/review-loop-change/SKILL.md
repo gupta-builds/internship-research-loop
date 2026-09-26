@@ -12,6 +12,14 @@ A repo-scoped convention check, not a general code review (use the built-in `/co
 
 This repo is ~1,500 lines with a ~1:1 test-to-code ratio (`tests/` mirrors `core/`, `ingestion/`, `vault_writer/` almost file-for-file) and changes land as small, individually-reviewable diffs (see `git log` — commits like "Four new discovery sources" or a single-file bloat fix, not sprawling multi-file rewrites). A diff this size doesn't need an isolated subagent context to protect the main conversation's window, and the checklist below is fixed and specific rather than open-ended — both are exactly the case where a lightweight, inline skill beats spinning up a separate agent. If this repo ever grows enough that a single diff regularly spans dozens of files, revisit this choice; the checklist would still apply, only the delivery mechanism would need to change.
 
+## Reference
+
+[`reference/example-review.md`](reference/example-review.md) — a worked example of the script below catching a real violation, and passing a fixed version, so you know what a FLAG/NOTE/clean run actually looks like before you rely on one.
+
+## Run the mechanical half first (added 2026-09-06)
+
+Before reasoning through the checklist by hand, run [`scripts/check_conventions.py`](scripts/check_conventions.py) against the actual diff (`git diff`, `--cached`, or `--against <ref>`, matching what the user is reviewing). It mechanically covers checks 1 and 4 in full (a `FLAG` there is a real pattern match — treat it as a likely violation to confirm, not a maybe) and narrows checks 2 and 3 to a `NOTE` on the specific lines/files worth reading closely — it does not replace judgment on those two, it points you at exactly where to apply it. This is what makes this skill work reliably for a model with less capacity to hold the whole checklist in mind at once: the pattern-matching is done by code, not recalled from a description.
+
 ## What to check
 
 Run against the actual diff — `git diff` (unstaged), `git diff --cached` (staged), or a specific file/range if the user names one. This is a **reports-only** check: never modify code as part of this skill; if a violation should be fixed, say so and let the user (or a follow-up edit) do it.
