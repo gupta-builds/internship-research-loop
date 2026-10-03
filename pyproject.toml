@@ -1,0 +1,17 @@
+[project]
+name = "internship-research-loop"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "jinja2==3.1.6",
+    "pytest==9.1.1",
+    "python-docx==1.2.0",
+    "pyyaml==6.0.3",
+    "requests==2.34.2",
+]
+
+[tool.pytest.ini_options]
+# CI (.github/workflows/test.yml) runs `python -m pytest`, which puts the repo root on
+# sys.path automatically. `uv run pytest` invokes pytest's own console script instead,
+# which does not, so `core`/`ingestion`/`vault_writer` are not importable without this.
+pythonpath = ["."]
