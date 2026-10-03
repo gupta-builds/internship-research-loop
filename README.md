@@ -30,3 +30,5 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 One-time: `cp scripts/hooks/pre-push .git/hooks/pre-push` — this repo has no PR gate, so this local hook is what blocks a `git push` with a failing test suite.
+
+For either laptop, run `scripts/setup-two-laptop-git.sh` once instead of installing the hook by hand. Then follow [the two-laptop workflow](docs/TWO_LAPTOP_WORKFLOW.md): update `master` with a fast-forward-only pull, create a task-named branch, and merge through a PR. Never work on the same branch from both laptops at once.
