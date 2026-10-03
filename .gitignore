@@ -16,3 +16,16 @@ jarvis-checkout/
 # the Jarvis vault. Keeping it out of this repo's git history is deliberate, not an
 # oversight — a second copy here would just be a place for it to drift.
 .claude/agent-memory-local/
+
+# Machine-local settings and secrets. Per-user editor and agent config lives in each
+# laptop's own user-level settings (see the two-laptop workflow in CLAUDE.md), so none
+# of it belongs in this repo. .claude/settings.json is deliberately NOT listed here:
+# it is the committed, shared permissions and hooks config for this project.
+.claude/settings.local.json
+.vscode/
+.env
+.env.*
+!.env.example
+.mcp.env
+.ruff_cache/
+.mypy_cache/
