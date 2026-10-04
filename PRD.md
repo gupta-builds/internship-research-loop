@@ -1,6 +1,6 @@
 # Internship Research Loop — PRD
 
-**Status:** Verified against live repo/GitHub state on 2026-08-22 (git log, `pytest` [329/329], `gh run list`, `gh api`, live vault dossier counts — not assumed from memory). Still not independently product-reviewed; this was built spec-first in conversation, not PRD-first. Read this file alone for orientation — it does not require the Jarvis vault to make sense. For build history, decisions, and how each number below was verified, see `20_Progress/Internship/Building System/Phases 1-3 Run.md` (original build) and `System - Build Log.md` (ongoing) in the Jarvis vault; neither is required reading to pick this project up, only to understand *why* it looks this way.
+**Status:** Verified against live repo/GitHub/vault state on 2026-10-03 (`git log`, `pytest` [528 passing], `gh api` workflow list and run history, Jarvis repo commit history, direct vault folder listings — not assumed from memory). Sections not re-verified that day are marked with their own date. Still not independently product-reviewed; this was built spec-first in conversation, not PRD-first. Read this file alone for orientation — it does not require the Jarvis vault to make sense. For build history, decisions, and how each number below was verified, see `20_Progress/Internship/Building System/Phases 1-3 Run.md` (original build) and `System - Build Log.md` (ongoing) in the Jarvis vault; neither is required reading to pick this project up, only to understand *why* it looks this way.
 
 ## Problem
 
@@ -16,17 +16,21 @@ Single user (repo owner) — a rising junior CS student, grad Spring 2028, F-1 s
 
 ## In Scope — Built (Phases 1–6, complete and live)
 
-- Poll two internship-listing sources hourly (GitHub Actions cron); zapplyjobs was removed 2026-07-18 — its entries are program landing pages, not deadline-bearing postings
+- Poll eleven internship-listing sources hourly (GitHub Actions cron): SimplifyJobs, Jose-Gael-Cruz-Lopez, vanshb03, zshah101, ApplyGuy, Greenhouse, Ashby, Lever, Freehire, AIJobs, plus sitemap-detected InternDock. zapplyjobs was removed 2026-07-18 — its entries are program landing pages, not deadline-bearing postings
 - Filter deterministically against the profile: term (incl. `Winter 2027` = Dec 2026–Feb 2027 per live term-adjacency evidence), category, class year, `active` status, `degrees` (Bachelor's), locations (US signal wins / foreign token loses / ambiguous passes), JGCL `season` cycle check
 - Deduplicate two ways: persistent per-source uid seen-set, plus a punctuation-insensitive cross-source company+title key checked against the dossier files actually in the vault
 - Five-check write gate (required fields, uid dedup, cross-source dedup, URL liveness, format compliance), fail-closed
 - **OPT-eligibility gate at discovery:** each new validated match's posting page is fetched once (Firecrawl), checked per-posting for explicit exclusion signals (US-person/citizenship required, clearance required, OPT/CPT not accepted — EEO boilerplate and "no visa sponsorship" deliberately don't trigger), verdict cached in `state/opt_cache.json`
 - **Content-carrying dossiers:** the same fetch fills a verbatim, trimmed "Posting" section (role, requirements, comp) in each dossier — no LLM anywhere; fail-open to a thin dossier if the fetch fails
-- Daily post-write recheck (`recheck.yml`): removes dossiers whose posting went `active: false` or vanished upstream, with a mass-deletion brake and per-source fetch-failure isolation
+- Daily post-write recheck (`recheck.yml`): moves dossiers whose posting went `active: false` or vanished upstream into `Dossiers/Viewed/` (never deletes), with a mass-move brake and per-source fetch-failure isolation. Covers 8 of the 11 sources — ApplyGuy, Freehire and InternDock dossiers are never rechecked (`recheck.py` `FEEDS`)
+- **Write pacing (2026-09-07/08):** the hourly run writes an exact per-bucket quota (`QUOTA_PER_RUN` = 2 AI/ML + 1 Fullstack + 1 CyS & Finance + 2 Other, all-or-nothing), and disables its own workflow at 300 live dossiers (`HARD_PAUSE_TOTAL_THRESHOLD`) — a deliberate, human-decided reversal of the older notify-never-refuse rule for total volume only
+- **Deadlines on every dossier (2026-10-03):** `deadline_posted` (the posting's own stated deadline, read from the fetched text by `ingestion/posting_page.py`'s `extract_deadline`) or, when none is stated, `own_deadline` = `date_found` + 7 days; exactly one is set, enforced by the write gate
+- **Company registry:** `core/company_registry.py` holds the quant-firm bucket-override list and adjacent-field company list that `classify.py` and `relevance.py` share; the preference-tier rank (`debate.py`) is still a single grade
+- Weekly `revalidate.yml` re-checks live dossiers against current rules and files one digest issue (moves nothing); manual `reseed.yml` does a one-off cold-start pull; `screen_report.py` prints a read-only ready-to-screen list
 - Push safely against the vault's own auto-commit cycle (pull-rebase + retry-once, never force-push)
 - Halt, log, and file a GitHub issue on schema drift **or any source fetch failure** (network errors no longer crash unrecorded), push failure, or systemic write-gate rejection
 - Log every run (`logs/runs.jsonl`, `logs/rechecks.jsonl`; weekly rollup into the vault fires Sundays 23:00 UTC)
-- Promotion-triggered tools, outside the automated loop: `enrich.py` (Layer 5 company/contact research — public sources only; built, unit-tested, never yet run end-to-end) and `grade_resume.py` (Layer 6 keyword-overlap resume grader, verified against a real JD)
+- Promotion-triggered tools, outside the automated loop: `enrich.py` (Layer 5 company/contact research — public sources only; built, unit-tested, never yet run end-to-end) and `grade_resume.py` (Layer 6 keyword-overlap resume grader, verified against a real JD; reads `$JARVIS_DIR/...Main Resume.md`, no longer a hardcoded path)
 
 ## Explicitly Out Of Scope
 
@@ -47,16 +51,16 @@ ingestion (fetch + normalize) → filter (term/category/class/active/degrees/loc
 daily: recheck (remove closed postings)     weekly: rollup into vault Run Log
 ```
 
-Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `core/` (`filter.py`, `identity.py`, `profile.yaml`, `schema_drift.py`, `git_ops.py`, `run_log.py`), `vault_writer/` (template + `validate.py` + `writer.py`), `run_pipeline.py`, `recheck.py`, `enrich.py`, `grade_resume.py`, `tests/` (167 tests), `state/` (`seen_ids.json`, `opt_cache.json`), `logs/`, `.github/workflows/` (`run.yml` hourly, `recheck.yml` daily 06:30 UTC, `test.yml` on push).
+Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `core/` (`filter.py`, `identity.py`, `profile.yaml`, `schema_drift.py`, `git_ops.py`, `run_log.py`), `vault_writer/` (template + `validate.py` + `writer.py`), `run_pipeline.py`, `recheck.py`, `enrich.py`, `grade_resume.py`, `tests/` (528 tests), `state/` (`seen_ids.json`, `opt_cache.json`, `excluded_uids.json`, `debate_losses.json`, `write_gate_failures.json`, `dossier_uids.json`, ...), `logs/`, `.github/workflows/` (`run.yml` hourly, `recheck.yml` daily 06:30 UTC, `revalidate.yml` weekly, `reseed.yml` manual, `test.yml` on push/PR). Also `core/debate.py`, `core/classify.py`, `core/relevance.py`, `core/company_registry.py`, `core/company_cache.py` (not yet wired in), `reseed.py`, `revalidate.py`, `screen_report.py`. `.claude/`, `.cursor/`, `.agents/` and `.codex/` hold the agent/skill/hook layer described in `CLAUDE.md`.
 
-## Current Status (verified 2026-08-22)
+## Current Status (verified 2026-10-03)
 
-- `pytest`: **329/329 passing**; CI green on every push. A local `scripts/hooks/pre-push` test gate now blocks a `git push` if the suite fails — this repo has no PR-based CI gate, so this is the only thing standing between a broken commit and `origin/master` before the next scheduled run
-- `run.yml`: firing hourly and succeeding — 20/20 most recent scheduled runs successful. `recheck.yml`: firing daily, 10/10 most recent runs successful, moving closed postings to `Dossiers/Viewed/` (never deleting, since 2026-08-21)
-- Vault dossiers: **391 total** across the four priority buckets (146 AI/ML, 43 Fullstack, 63 CyS & Finance, 139 Other), plus 5 in `Viewed/`. `state/seen_ids.json` holds 606 entries. Eight discovery sources live (SimplifyJobs, Jose-Gael-Cruz-Lopez, vanshb03, zshah101, Greenhouse, Ashby, Freehire, AIJobs), up from the original two
-- **Dossier resource-limit system live since 2026-08-21**: a per-bucket 50-dossier notification threshold and a global 190/200 issue-filing threshold, both notification-only (never a write refusal) — confirmed firing for real, not just designed: issues #4-8 were auto-filed the first time these were actually crossed. Write priority within each bucket now runs through a deterministic "debate" comparator (preferred-company tier → bucket fill-need → recency); a candidate that loses 5 consecutive runs moves to a reviewable exclusion log, never a silent drop
-- `FIRECRAWL_API_KEY` present as an Actions secret; live discovery-time content enrichment confirmed firing (391 dossiers carry real fetched posting content)
-- **8 GitHub issues filed to date** — 3 closed (transient `raw.githubusercontent.com` rate-limiting from 2026-08-17/18, self-resolved, closed 2026-08-21 with evidence), 5 open (the new capacity-notification issues #4-8, informational by design)
+- `pytest`: **528 passing**; local `master` equals `origin/master`; PR #12 (two-laptop cleanup) merged 2026-09-26.
+- **Scheduled automation is not observably running.** The Actions API lists `run`, `recheck`, `revalidate`, `reseed` and `test` as `active` but returns zero workflow runs for any of them (only one unrelated dependency-graph run exists repo-wide). Evidence of last real activity: `logs/runs.jsonl` ends 2026-08-29 09:34 UTC (687 lines; the human paused `run.yml` then — `disabled_manually`; the workflow's `updated_at` of 2026-09-22 suggests it was re-enabled that day, an inference, not a logged fact); the last bot commit in this repo is `Recheck log — 2026-09-20`; the last bot commit in the vault repo is `Move 1 closed posting(s) to Viewed/ — recheck 2026-09-17`. No scheduled run has left a trace since. Cause not determined (history deleted? cron not firing? expired `JARVIS_PUSH_TOKEN` failing the checkout step before any log line?). A `workflow_dispatch` would answer it but was deliberately not run.
+- Vault dossiers (excluding `Viewed/`): **278** — AI/ML 130, Fullstack 41, CyS & Finance 48, Other 59 (the AI/ML figure is the parallel vault sweep's own count; the other three were counted directly from folder listings 2026-10-03), under the 300 hard-pause. Plus 67 in `Viewed/` and 11 in `_Career Fair/` (not counted toward the pause — `count_dossiers_by_bucket` only globs the four bucket folders).
+- Promotion: `Programs/Serious/` and `Considering/` hold the 2026-08/09 batches; no live `Applying/` note exists, so Steps 4–9 of the vault's Internship Pipeline are still unexercised.
+- **Open GitHub issues:** #4–8 (stale 2026-08-21 capacity notifications) and #9–11 (the same 15 dossiers flagged by `revalidate.yml` on 08-31, 09-07 and 09-14; six are Microsoft dossiers whose stored content predates the sidebar-extraction fix and cannot be re-extracted by `revalidate.py`).
+- `FIRECRAWL_API_KEY` and `JARVIS_PUSH_TOKEN` exist as Actions secrets (created 2026-07-18 and 2026-07-17).
 
 ## Success Metrics
 
@@ -77,6 +81,8 @@ Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `co
 
 ## Risks
 
+- **All-or-nothing quota feeds the debate-loss counter (found 2026-10-03, reproduced with the real functions).** When any bucket's pool is smaller than its quota, `_select_exact_quota` returns every candidate as `deferred`, `update_debate_losses` charges each one a loss, and after `MAX_DEBATE_LOSSES` (48) such runs every candidate is permanently excluded with nothing ever written. Only matters while `run.yml` is live; not yet fixed (a design decision — see the 2026-10-03 truth-up report).
+- **Fixes reach new dossiers only.** The Microsoft sidebar fix, the quant-firm override, the denylist additions: none re-evaluates a dossier written before it landed. `revalidate.py` re-checks against *stored* content, so it can flag but not repair a stale-extraction dossier.
 - **Fine-grained PAT (`JARVIS_PUSH_TOKEN`) expires or is revoked.** Fails the checkout step before Python runs — no run-log entry, no issue; only GitHub's failed-workflow email. Expiry date still recorded nowhere. *Unchanged, still the biggest silent-failure risk.*
 - **Firecrawl dependency.** The discovery loop now calls a paid third-party API. Failure mode is deliberately soft (fail-open thin dossiers, no run failure), but quota exhaustion would silently degrade dossiers back to thin — watch `opt_cache.json` growth and Firecrawl usage; no in-repo monitoring exists.
 - **Neither secret's expiry date is checkable programmatically.** GitHub deliberately doesn't expose a fine-grained PAT's expiry via `gh`/the API, and Firecrawl has no such API either — confirmed 2026-08-22, not assumed. This needs a one-time **manual** check by the human: `JARVIS_PUSH_TOKEN` at github.com/settings/tokens, `FIRECRAWL_API_KEY` on Firecrawl's own dashboard. Recorded here as a dated, visible gap rather than a silent one.
