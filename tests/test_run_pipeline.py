@@ -331,8 +331,20 @@ def test_select_exact_quota_reports_shortfall_and_returns_nothing_when_a_bucket_
     this_run, deferred, shortfall = run_pipeline._select_exact_quota(items, quota={"Other": 2})
 
     assert this_run == []
-    assert deferred == items  # everything deferred, including the sole Other candidate
+    assert deferred == []  # the sole candidate is held back, not a debate loser
     assert shortfall == {"Other": 1}
+
+
+def test_select_exact_quota_shortfall_defers_only_real_losers():
+    """Short bucket held back uncharged, but a candidate that really lost its
+    bucket's comparison (Other has 3 for a quota of 2, AI/ML is short) is still
+    deferred — only a shortfall-held candidate is exempt."""
+    other = [_listing_with_date(f"o{i}", d) for i, d in enumerate((300, 200, 100))]
+    this_run, deferred, shortfall = run_pipeline._select_exact_quota(other, quota={"Other": 2, "AI/ML": 1})
+
+    assert this_run == []
+    assert shortfall == {"AI/ML": 1}
+    assert [l.date_posted for _, l in deferred] == [100]  # oldest Other lost to two real competitors
 
 
 def test_select_exact_quota_bucket_missing_from_quota_is_fully_deferred():
@@ -726,7 +738,10 @@ def test_run_once_all_or_nothing_short_bucket_writes_nothing(tmp_path, monkeypat
 
     assert record["written_count"] == 0
     assert record["quota_shortfall"] == {"Other": 1}
-    assert record["deferred_count"] == 2  # both AI/ML candidates deferred, not written
+    assert record["deferred_count"] == 0  # held back, not debate losers
+    # Regression (Finding 1): a short pool used to charge every candidate a
+    # debate loss each run; 48 runs excluded them forever with nothing written.
+    assert run_pipeline.load_debate_losses(kwargs["state_dir"]) == {}
     dossiers_dir = kwargs["jarvis_dir"] / "10_Areas/Career/Internships/List/Dossiers"
     assert not dossiers_dir.exists() or not list(dossiers_dir.glob("**/*.md"))
 
