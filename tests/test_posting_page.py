@@ -9,6 +9,7 @@ from core.relevance import stage1_reject
 from ingestion.posting_page import (
     _content_fetch_url,
     extract_content,
+    extract_deadline,
     fetch_posting_markdown,
     opt_exclusion,
     phd_only_exclusion,
@@ -352,3 +353,50 @@ def test_extract_content_with_no_internal_structure_stays_one_block():
     content = extract_content(md)
     assert "###" not in content
     assert "About Five Rings" in content
+
+
+# --- extract_deadline: every positive string below is verbatim from a live vault
+# dossier's stored posting text, read 2026-10-03; reference_date is that
+# dossier's own date_found. ---
+
+@pytest.mark.parametrize(
+    "text, date_found, expected",
+    [
+        # real — Walleye Capital Quantic Quantitative Developer Intern (Greenhouse). Found 2026-08-04,
+        # AFTER its own July 31 deadline: the year-less date must resolve to 2026, not roll to 2027.
+        ("**The deadline to apply for this opportunity is Friday, July 31 at 11:59pm ET.** For questions",
+         "2026-08-04", "2026-07-31"),
+        # real — Castleton Commodities Data Science Machine Learning Intern (Workday), found 2026-07-22
+        ("**Application Deadline: September 1, 11:59pm EST**", "2026-07-22", "2026-09-01"),
+        # real — LPL Financial Data Engineer Intern, found 2026-08-11 (priority date, rolling review)
+        ("_**Priority Application Date**: September 21 at 11:59 PM PST_", "2026-08-11", "2026-09-21"),
+        # real — Moog Intern, Software Engineering (Workday run-on label, as fetched), found 2026-07-25
+        ("time typeFull time\nposted onPosted 3 Days Ago\ntime left to applyEnd Date: July 29, 2026 "
+         "(3 days left to apply)\njob requisition idR-26-18885", "2026-07-25", "2026-07-29"),
+        # constructed — explicit year wins over the nearest-year rule; Dec -> Jan year rollover
+        ("Application Deadline: January 5, 2027", "2026-12-20", "2027-01-05"),
+        ("Application Deadline: January 5", "2026-12-20", "2027-01-05"),
+        # constructed — earliest of several stated dates (priority date before the final deadline)
+        ("Priority Application Date: September 21. Application Deadline: October 15.", "2026-08-11", "2026-09-21"),
+    ],
+)
+def test_extract_deadline_real_phrasings(text, date_found, expected):
+    assert extract_deadline(text, date_found) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        # real — LPL's internship dates line is NOT an application deadline
+        "Internship dates: 6/1/2027 – 8/6/2027",
+        # real — Walleye's program length/dates, not a deadline
+        "_The internship is 10 weeks in length and will take place in Boston from June to August 2027._",
+        # a bare "End Date" without the Workday 'time left to apply' label is often an internship end date
+        "End Date: August 6, 2027",
+        "Application Deadline: Rolling",
+        "Application Deadline: February 30",  # not a real date
+    ],
+)
+def test_extract_deadline_none_when_posting_states_no_real_deadline(text):
+    assert extract_deadline(text, "2026-08-11") is None

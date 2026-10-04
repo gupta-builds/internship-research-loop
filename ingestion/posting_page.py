@@ -14,6 +14,7 @@ real data 2026-07-18: Palantir's US Government and Commercial internships
 differ on exactly this axis within the same company.
 """
 import re
+from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -144,6 +145,71 @@ def phd_only_exclusion(text: str):
     if re.search(r"bachelor|master|\bbs\b|\bms\b", window, re.I):
         return None
     return m.group(0)
+
+
+# Real stated-deadline phrasings, each read directly from a live vault dossier's
+# stored posting text on 2026-10-03 (not guessed) — the shapes below are
+# exactly the ones those dossiers use, nothing broader:
+#   - Walleye Capital "Quantic – Quantitative Developer Intern (Summer 2027)"
+#     (Greenhouse): "The deadline to apply for this opportunity is Friday,
+#     July 31 at 11:59pm ET."
+#   - Castleton Commodities "Data Science Machine Learning Intern"
+#     (SimplifyJobs/Workday): "Application Deadline: September 1, 11:59pm EST"
+#   - LPL Financial "Data Engineer Intern - Data" (SimplifyJobs/Workday):
+#     "Priority Application Date: September 21 at 11:59 PM PST" — a stated
+#     "apply by" date even though LPL reviews on a rolling basis, which is the
+#     same call the 2026-08-30 deadline-priority batch made for it.
+#   - Moog "Intern, Software Engineering" (zshah101/Workday): the ATS label run
+#     "time left to applyEnd Date: July 29, 2026 (3 days left to apply)". Only
+#     matched when anchored to that label — a bare "End Date" elsewhere is
+#     often an internship end date, not an application deadline.
+# Month-name dates only: no real example of a numeric (7/31) or ISO deadline
+# has been seen in a stored posting yet. Add one with a citation if it shows up.
+_DATE_RE = (
+    r"(?P<mon>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?"
+    r"|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+"
+    r"(?P<day>\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(?P<year>20\d{2}))?"
+)
+_WEEKDAY_RE = r"(?:(?:mon|tues?|wednes|thurs?|fri|sat(?:ur)?|sun)(?:day)?,?\s+)?"
+_DEADLINE_PATTERNS = (
+    re.compile(
+        r"\b(?:application\s+)?deadline(?:\s+to\s+apply)?(?:\s+for\s+this\s+\w+)?\s*(?:is|:)\W{0,6}"
+        r"(?:on\s+)?" + _WEEKDAY_RE + _DATE_RE, re.I),
+    re.compile(r"\bpriority\s+application\s+(?:date|deadline)\W{0,6}" + _DATE_RE, re.I),
+    re.compile(r"\btime\s+left\s+to\s+apply\W{0,3}end\s+date:\s*" + _DATE_RE, re.I),
+)
+_MONTH_NUMBERS = {m: i for i, m in enumerate(
+    ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"), 1)}
+
+
+def extract_deadline(text: str, reference_date: str):
+    """The posting's own stated application deadline as an ISO date, or None
+    when the text states none (permissive default — absence is not a signal).
+    reference_date is the dossier's date_found (ISO), used only to pick a year
+    when the posting omits one: the occurrence of that month/day nearest to
+    reference_date wins, because a posting can be found after its deadline has
+    already passed — the real Walleye dossier above was fetched 2026-08-04
+    stating "July 31", which is 2026-07-31 (4 days earlier), not 2027-07-31.
+    If several stated dates match (e.g. a priority date and a final deadline),
+    the earliest wins — it's the first real forcing date.
+
+    ponytail: month-name dates only and the phrasings above; extend with a
+    cited real example, not a guess."""
+    ref = date.fromisoformat(reference_date)
+    found = []
+    for pattern in _DEADLINE_PATTERNS:
+        for m in pattern.finditer(text or ""):
+            month, day = _MONTH_NUMBERS[m.group("mon")[:3].lower()], int(m.group("day"))
+            years = [int(m.group("year"))] if m.group("year") else [ref.year - 1, ref.year, ref.year + 1]
+            candidates = []
+            for y in years:
+                try:
+                    candidates.append(date(y, month, day))
+                except ValueError:  # e.g. "Feb 30" — not a real date, skip it
+                    pass
+            if candidates:
+                found.append(min(candidates, key=lambda d: abs((d - ref).days)))
+    return min(found).isoformat() if found else None
 
 
 def fetch_posting_markdown(url: str, api_key: str, http_post=None) -> str:

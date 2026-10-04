@@ -7,7 +7,7 @@ ValidationResult from validate.validate() before calling it.
 """
 import json
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -61,8 +61,17 @@ def company_slug(company: str) -> str:
     return re.sub(r"\s+", "-", s)
 
 
+# Going-forward forcing deadline for a freshly-discovered dossier whose posting
+# states none (2026-10-03 decision; field contract defined by the Codex
+# freshness sweep in Runs/Codex Prompts.md Task 6). date_found really is
+# "now" for a dossier this pipeline just wrote, so date_found + 7 days is a
+# real future date — unlike the one-time retroactive sweep over weeks-old
+# dossiers, which deliberately anchors on its own run date instead.
+OWN_DEADLINE_DAYS = 7
+
+
 def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str,
-                      preferred_companies: dict = None) -> dict:
+                      preferred_companies: dict = None, deadline_posted: str = None) -> dict:
     """uid and category are deliberately not rendered — uid stays available
     internally via the dossier_uids.json manifest (see write_dossier), and
     category was never surfaced to the reader anywhere else in the note.
@@ -73,7 +82,15 @@ def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str,
     `preference_tier` (Prompt 5 Task O) is the matched core/profile.yaml
     preferred_companies tier, or null — required like every other field
     here, not omitted when there's no match (fail-closed, same discipline
-    as REQUIRED_FRONTMATTER_FIELDS everywhere else in this file)."""
+    as REQUIRED_FRONTMATTER_FIELDS everywhere else in this file).
+    `deadline_posted` is the posting's own stated deadline (ISO, extracted by
+    ingestion/posting_page.py's extract_deadline from the fetched page) or None;
+    `own_deadline` is set only when deadline_posted is None, to date_found +
+    OWN_DEADLINE_DAYS — so exactly one of the two always carries a real value.
+    Both sit right after date_found, before matched_reason."""
+    own_deadline = None
+    if not deadline_posted:
+        own_deadline = (date.fromisoformat(date_found) + timedelta(days=OWN_DEADLINE_DAYS)).isoformat()
     return {
         "company": listing.company,
         "title": listing.title,
@@ -84,6 +101,8 @@ def build_frontmatter(listing, uid: str, date_found: str, matched_reason: str,
         "target_year": _yaml_list(listing.target_year),
         "date_posted": _iso_date(listing.date_posted),
         "date_found": date_found,
+        "deadline_posted": deadline_posted or None,
+        "own_deadline": own_deadline,
         "matched_reason": matched_reason,
         "status": "unreviewed",
         "next": None,
@@ -103,8 +122,10 @@ def dump_frontmatter(frontmatter: dict) -> str:
 
 
 def render_dossier(listing, uid: str, date_found: str, matched_reason: str, posting_content: str = "",
-                   classification_callout: str = "", preferred_companies: dict = None) -> str:
-    frontmatter = build_frontmatter(listing, uid, date_found, matched_reason, preferred_companies)
+                   classification_callout: str = "", preferred_companies: dict = None,
+                   deadline_posted: str = None) -> str:
+    frontmatter = build_frontmatter(listing, uid, date_found, matched_reason, preferred_companies,
+                                    deadline_posted=deadline_posted)
     frontmatter_yaml = dump_frontmatter(frontmatter)
     markdown = _template.render(
         frontmatter_yaml=frontmatter_yaml,

@@ -222,3 +222,37 @@ def test_format_compliance_rejects_missing_preference_tier_field(listing, uid):
     result = check_format_compliance(broken)
     assert result.passed is False
     assert "preference_tier" in result.reason
+
+
+# --- deadline_posted / own_deadline: fail-closed required, and exactly one is set ---
+
+@pytest.mark.parametrize("field", ["deadline_posted", "own_deadline"])
+def test_format_compliance_rejects_missing_deadline_field(listing, uid, field):
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    broken = "\n".join(l for l in md.splitlines() if not l.startswith(f"{field}:")) + "\n"
+    result = check_format_compliance(broken)
+    assert result.passed is False
+    assert field in result.reason
+
+
+def test_format_compliance_accepts_a_stated_deadline_with_no_own_deadline(listing, uid):
+    md = render_dossier(listing, uid, "2026-07-22", "reason", deadline_posted="2026-09-01")
+    assert check_format_compliance(md).passed is True
+
+
+def test_format_compliance_rejects_both_deadlines_set(listing, uid):
+    md = render_dossier(listing, uid, "2026-07-17", "reason")  # own_deadline: '2026-07-24'
+    both = md.replace("deadline_posted:\n", "deadline_posted: '2026-09-01'\n", 1)
+    result = check_format_compliance(both)
+    assert result.passed is False
+    assert "exactly one" in result.reason
+
+
+def test_format_compliance_rejects_neither_deadline_set(listing, uid):
+    md = render_dossier(listing, uid, "2026-07-17", "reason")
+    neither = "\n".join(
+        "own_deadline:" if l.startswith("own_deadline:") else l for l in md.splitlines()
+    ) + "\n"
+    result = check_format_compliance(neither)
+    assert result.passed is False
+    assert "exactly one" in result.reason

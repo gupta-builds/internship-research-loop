@@ -287,3 +287,40 @@ Content {label}
     assert p1.exists() and p2.exists()
     assert "Content A" in p1.read_text()
     assert "Content B" in p2.read_text()
+
+
+# --- deadline_posted / own_deadline (Internship Notes Standard §8) ---
+
+def test_build_frontmatter_sets_own_deadline_seven_days_after_date_found_when_no_posted_deadline(listing):
+    fm = build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason")
+    assert fm["deadline_posted"] is None
+    assert fm["own_deadline"] == "2026-07-24"
+
+
+def test_build_frontmatter_own_deadline_crosses_a_month_boundary(listing):
+    fm = build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-28", "reason")
+    assert fm["own_deadline"] == "2026-08-04"
+
+
+def test_build_frontmatter_stated_deadline_wins_and_leaves_own_deadline_null(listing):
+    fm = build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-22", "reason",
+                           deadline_posted="2026-09-01")
+    assert fm["deadline_posted"] == "2026-09-01"
+    assert fm["own_deadline"] is None
+
+
+def test_build_frontmatter_deadline_fields_sit_right_after_date_found(listing):
+    keys = list(build_frontmatter(listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason"))
+    assert keys.index("date_found") + 1 == keys.index("deadline_posted")
+    assert keys.index("deadline_posted") + 1 == keys.index("own_deadline")
+    assert keys.index("own_deadline") + 1 == keys.index("matched_reason")
+
+
+def test_render_dossier_renders_both_deadline_keys(listing):
+    md = render_dossier(listing, f"{listing.source}:{listing.raw_id}", "2026-07-17", "reason")
+    assert "deadline_posted:\n" in md  # blank scalar, same as every other null field
+    assert "own_deadline: '2026-07-24'" in md
+    md2 = render_dossier(listing, f"{listing.source}:{listing.raw_id}", "2026-07-22", "reason",
+                         deadline_posted="2026-09-01")
+    assert "deadline_posted: '2026-09-01'" in md2
+    assert "own_deadline:\n" in md2

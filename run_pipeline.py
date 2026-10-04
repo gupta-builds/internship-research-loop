@@ -34,7 +34,13 @@ from core.schema_drift import SchemaDriftError
 from core.schema_drift import check_all as check_schema_drift
 from ingestion.freehire import fetch_freehire
 from ingestion.interndock import fetch_interndock_drop, fetch_interndock_drop_candidates, normalize_interndock
-from ingestion.posting_page import extract_content, fetch_posting_markdown, opt_exclusion, phd_only_exclusion
+from ingestion.posting_page import (
+    extract_content,
+    extract_deadline,
+    fetch_posting_markdown,
+    opt_exclusion,
+    phd_only_exclusion,
+)
 from ingestion.sources import (
     fetch_ai_jobs,
     fetch_applyguy,
@@ -715,7 +721,10 @@ def validate_and_write(new_listings, profile: dict, jarvis_dir, seen_ids: set, d
                 enriched = render_dossier(listing, uid, date_found,
                                           build_matched_reason(listing, profile), posting_content,
                                           classification_callout(bucket, signal),
-                                          preferred_companies=profile.get("preferred_companies"))
+                                          preferred_companies=profile.get("preferred_companies"),
+                                          # raw page_md, not posting_content: extract_content() caps at
+                                          # CONTENT_LIMIT and drops label lines a stated deadline can sit in.
+                                          deadline_posted=extract_deadline(page_md, date_found))
                 # The gate validated the thin render; re-check format on the
                 # enriched one — an extraction bug degrades to thin, never
                 # writes malformed markdown into the vault.

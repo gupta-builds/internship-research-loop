@@ -12,8 +12,8 @@ from core.identity import cross_source_key
 REQUIRED_LISTING_FIELDS = ("company", "title", "url", "source", "uid")
 REQUIRED_FRONTMATTER_FIELDS = (
     "company", "title", "url", "source", "terms", "locations",
-    "target_year", "date_posted", "date_found", "matched_reason", "status", "next", "notes",
-    "preference_tier", "tags",
+    "target_year", "date_posted", "date_found", "deadline_posted", "own_deadline",
+    "matched_reason", "status", "next", "notes", "preference_tier", "tags",
 )
 
 
@@ -99,6 +99,13 @@ def check_format_compliance(markdown: str) -> ValidationResult:
     missing = [f for f in REQUIRED_FRONTMATTER_FIELDS if f not in frontmatter]
     if missing:
         return ValidationResult(False, "format_compliance", f"frontmatter missing fields: {', '.join(missing)}")
+    # Internship Notes Standard §8: every dossier this pipeline writes carries
+    # exactly one real deadline value (a stated one, or the 7-day own_deadline).
+    # build_frontmatter() guarantees it; this catches a regression there.
+    if bool(frontmatter["deadline_posted"]) == bool(frontmatter["own_deadline"]):
+        return ValidationResult(
+            False, "format_compliance", "exactly one of deadline_posted/own_deadline must be set"
+        )
 
     body_lines = lines[closing_idx + 1:]
     if not body_lines or body_lines[0].strip() == "":
