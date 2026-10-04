@@ -21,8 +21,12 @@ jobs:
     steps:
       - name: Require explicit confirmation
         if: ${{ github.event.inputs.confirm != 'yes-drain-budget' }}
+        env:
+          # env indirection, not ${{ }} inside the script: the input is attacker-
+          # controllable text and must never be spliced into shell source.
+          CONFIRM: ${{ github.event.inputs.confirm }}
         run: |
-          echo "confirm input must be exactly 'yes-drain-budget' (got '${{ github.event.inputs.confirm }}') — aborting before any checkout or spend."
+          echo "confirm input must be exactly 'yes-drain-budget' (got '$CONFIRM') — aborting before any checkout or spend."
           exit 1
 
       - name: Checkout internship-research-loop
