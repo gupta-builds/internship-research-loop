@@ -901,6 +901,53 @@ def test_eligible_posting_gets_content_section(tmp_path):
     assert "Qualifications: Python." in dossier
 
 
+def test_dossier_gets_stated_deadline_from_fetched_page_and_no_own_deadline(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    # real Castleton Commodities phrasing, verbatim (vault dossier, 2026-10-03)
+    fetch = Mock(return_value=_page_with("**Application Deadline: September 1, 11:59pm EST**"))
+
+    written, _ = run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-22",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache={},
+    )
+
+    assert written == [uid]
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md")).read_text()
+    assert "deadline_posted: '2026-09-01'" in dossier
+    assert "own_deadline:\n" in dossier
+
+
+def test_dossier_with_no_stated_deadline_gets_own_deadline_seven_days_out(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    fetch = Mock(return_value=_page_with("Great role. Qualifications: Python."))
+
+    run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache={},
+    )
+
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md")).read_text()
+    assert "deadline_posted:\n" in dossier
+    assert "own_deadline: '2026-07-25'" in dossier
+
+
+def test_thin_dossier_when_fetch_fails_still_gets_own_deadline(tmp_path):
+    listing = normalize_simplify(_simplify_raw()[0])
+    uid = compute_uid(listing)
+    fetch = Mock(side_effect=ConnectionError("firecrawl down"))
+
+    run_pipeline.validate_and_write(
+        [(uid, listing)], PROFILE, tmp_path, seen_ids=set(), date_found="2026-07-18",
+        http_head=_fake_http_head_all_live, fetch_page_fn=fetch, opt_cache={},
+    )
+
+    dossier = next((tmp_path / "10_Areas/Career/Internships/List/Dossiers").glob("**/*.md")).read_text()
+    assert "No posting content fetched" in dossier
+    assert "own_deadline: '2026-07-25'" in dossier
+
+
 def test_cross_source_key_punctuation_insensitive_marmon_case():
     """Real dup from the 2026-07-18 audit: same Workday req via two routes,
     titled 'Intern Co-op' vs 'Intern/Co-op'."""
