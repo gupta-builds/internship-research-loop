@@ -202,12 +202,15 @@ def _select_exact_quota(new_listings: list, quota: dict, preferred_companies: di
     Returns (this_run, deferred, shortfall). shortfall is
     {bucket: missing_count} for any bucket whose real candidate pool this
     run is smaller than its quota target. If shortfall is non-empty,
-    this_run is [] and deferred is EVERY item in new_listings — a partial
-    fill (e.g. 4-of-5) is never written, per the 2026-09-07 all-or-nothing
-    decision. Candidates that would have won their bucket's slot still
-    land in deferred in this case, so they still count toward
-    MAX_DEBATE_LOSSES the same way a candidate cut for any other reason
-    already does — no special-casing needed downstream.
+    this_run is [] — a partial fill (e.g. 4-of-5) is never written, per the
+    2026-09-07 all-or-nothing decision. deferred is only the candidates that
+    lost a real comparison (ranked below their bucket's cut, or in a bucket
+    absent from quota); the ones that WOULD have been selected, including
+    every candidate of the short bucket itself, are held back without
+    counting toward MAX_DEBATE_LOSSES. They lost to nobody — a thin pool
+    would otherwise exclude them permanently after MAX_DEBATE_LOSSES runs
+    with nothing ever written (Session 1 Finding 1, 2026-10-03, reproduced
+    against the real functions; fix 2026-10-04).
 
     Deliberately does NOT carry over _prioritize_and_cap's reserved
     preferred-company slot (Task A): that mechanic adds one extra write on
@@ -231,13 +234,10 @@ def _select_exact_quota(new_listings: list, quota: dict, preferred_companies: di
             shortfall[bucket] = target - len(ordered)
         selected_by_bucket[bucket] = ordered[:target]
 
-    if shortfall:
-        return [], list(new_listings), shortfall
-
     this_run = [item for bucket in quota for item in selected_by_bucket[bucket]]
-    written_uids = {uid for uid, _listing in this_run}
-    deferred = [(uid, listing) for uid, listing in new_listings if uid not in written_uids]
-    return this_run, deferred, shortfall
+    selected_uids = {uid for uid, _listing in this_run}
+    deferred = [(uid, listing) for uid, listing in new_listings if uid not in selected_uids]
+    return ([] if shortfall else this_run), deferred, shortfall
 
 
 def count_dossiers_by_bucket(vault_root) -> dict:
