@@ -7,14 +7,22 @@ not vibes:
 
     python grade_resume.py jd.txt            # or: pbpaste | python grade_resume.py -
     python grade_resume.py jd.txt --resume "path/to/Main Resume.md"
+
+Without --resume, reads $JARVIS_DIR/20_Progress/Internship/Resumes/Main Resume.md.
 """
 import argparse
+import os
 import re
 import sys
 from collections import Counter
+from pathlib import Path
 
-DEFAULT_RESUME = ("/mnt/d/Users/_Anant/10_Areas/Documents/Jarvis/20_Progress/"
-                  "Internship/Resumes/Main Resume.md")
+# Vault-relative, resolved against JARVIS_DIR — the same env var run_pipeline.py,
+# recheck.py, revalidate.py and screen_report.py already use for "where is the
+# Jarvis checkout". This used to be a hardcoded /mnt/d/Users/_Anant/... path
+# that only existed on the original laptop (found 2026-10-03 during the
+# two-laptop migration audit: it fails outright on dell-latitude).
+RESUME_RELPATH = "20_Progress/Internship/Resumes/Main Resume.md"
 # Just enough stopwords to keep JD boilerplate from scoring; not a linguistics project.
 STOP = set("""a an and are as at be by for from has have in is it of on or our the
 to we will with you your this that they them their its into within using able
@@ -54,15 +62,27 @@ def grade(resume_md: str, jd_text: str) -> list:
     return sorted(scored, key=lambda s: -s[0])
 
 
+def resolve_resume_path(resume_arg, environ=None) -> str:
+    """--resume wins; otherwise $JARVIS_DIR/<RESUME_RELPATH>. Exits with a
+    clear message (never guesses a path) when neither is available."""
+    if resume_arg:
+        return resume_arg
+    environ = os.environ if environ is None else environ
+    jarvis_dir = environ.get("JARVIS_DIR")
+    if not jarvis_dir:
+        sys.exit("no resume path: pass --resume PATH, or set JARVIS_DIR to your Jarvis vault checkout")
+    return str(Path(jarvis_dir) / RESUME_RELPATH)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("jd", help="path to a file with the pasted JD, or '-' for stdin")
-    ap.add_argument("--resume", default=DEFAULT_RESUME)
+    ap.add_argument("--resume", default=None, help="path to Main Resume.md (default: $JARVIS_DIR/" + RESUME_RELPATH + ")")
     ap.add_argument("--top", type=int, default=5, help="bullets to recommend")
     args = ap.parse_args()
 
     jd_text = sys.stdin.read() if args.jd == "-" else open(args.jd, encoding="utf-8").read()
-    resume_md = open(args.resume, encoding="utf-8").read()
+    resume_md = open(resolve_resume_path(args.resume), encoding="utf-8").read()
     ranked = grade(resume_md, jd_text)
     if not ranked:
         sys.exit("no #skill-tagged bullets found in the resume file")
