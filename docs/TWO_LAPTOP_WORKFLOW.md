@@ -1,118 +1,121 @@
-# Two-laptop Git workflow
+# Two-laptop Git workflow (single host, one worktree per task)
 
-`origin/master` is the canonical shared state. A laptop checkout is a cache of that state, never another source of truth. Human work reaches `master` only through a pull request; scheduled GitHub Actions may still commit their owned `state/` and `logs/` updates directly.
+`origin/master` is the canonical shared state. Human work reaches `master` only through a pull request; scheduled GitHub Actions may still commit their owned `state/` and `logs/` updates directly.
 
-## One-time setup on each laptop
+This document supersedes the earlier two-independent-clones design and the `<machine>/<topic>` branch naming that older notes still mention.
+
+## Topology
+
+- The **Dell** (`DESKTOP-3VBG0JH`, WSL, Tailscale node `dell-wsl`) is the single canonical host. The only clone of this repo lives there, under `~/projects/work/internship-research-loop`.
+- The **Acer** (`gupta-builds`) is a display: it reaches the Dell with `ssh dell-wsl` over Tailscale SSH. **Nothing is cloned on the Acer**, including its WSL.
+- Identify the session you are in before touching anything:
+  ```bash
+  hostname                          # DESKTOP-3VBG0JH on the Dell, always, even over SSH
+  echo "${SSH_CONNECTION:-local}"   # "local" at the Dell, or the Acer's Tailscale IP (100.84.91.11) when remote
+  ```
+  Both laptops therefore work on the same filesystem and the same Git state. Two sessions are kept apart by task, using `git worktree`. No lock enforces this except the convention below.
+
+## The main checkout is the hub
+
+`~/projects/work/internship-research-loop` stays on `master`, is never edited, and is only updated with:
 
 ```bash
-git switch master
 git pull --ff-only origin master
-scripts/setup-two-laptop-git.sh
 ```
 
-The setup installs the tracked pre-push hook and makes ordinary pulls fast-forward-only. The hook blocks direct pushes to `master` and fails closed if it cannot run the test suite.
+It is where worktrees are created from and where the shared `.git/hooks` live. A dirty main checkout is a bug: see Recovery rules.
+
+## Worktree lifecycle
+
+One worktree per task, under `~/projects/work/.worktrees/`, named `internship-research-loop-<slug>`, where the slug is the branch's type and topic joined by a hyphen (`fix/recheck-partial-source-failure` becomes `internship-research-loop-fix-recheck-partial-source-failure`).
+
+```bash
+export GRAPHIFY_SKIP_HOOK=1
+cd ~/projects/work/internship-research-loop
+git fetch origin --prune
+W=~/projects/work/.worktrees
+git worktree add $W/internship-research-loop-<type>-<topic> -b <type>/<topic> origin/master
+git worktree lock --reason "owner: <session/phase> <date>" $W/internship-research-loop-<type>-<topic>
+
+# work, commit, test (see below)
+git push -u origin <type>/<topic>      # first push; plain `git push` afterwards
+
+# when the PR is merged, or the work is handed off:
+git worktree unlock $W/internship-research-loop-<type>-<topic>
+git worktree remove $W/internship-research-loop-<type>-<topic>
+git branch -d <type>/<topic>           # -D if a rebase merge hides the ancestry; check first that `git cherry -v origin/master <branch>` shows only "-" lines
+git fetch --prune
+git worktree prune
+```
 
 ## Branch names
 
-Name the task, not the machine:
+Name the task, never the machine:
 
 - `feature/<short-topic>`
 - `fix/<short-topic>`
 - `docs/<short-topic>`
 - `chore/<short-topic>`
 
-Examples: `fix/recheck-partial-source-failure`, `chore/uv-environment`, `docs/two-laptop-workflow`.
+Examples: `fix/recheck-partial-source-failure`, `chore/uv-environment`, `docs/codex-agent-memory`. Laptop identity does not belong in the branch name; the `<machine>/<topic>` form (for example `dell-latitude/...`) is retired.
 
-Laptop identity does not belong in the branch name. Branch ownership is temporary and recorded by who is actively working on it.
+## Per-worktree setup
 
-## Start every task
+Git hooks live in the shared `.git/hooks` (installed once from the tracked `scripts/hooks/pre-push` by `scripts/setup-two-laptop-git.sh`, run in the main checkout) and apply to every worktree. The pre-push hook blocks pushes to `master`, then runs the test suite, falling back to `uv run` when a worktree has no `.venv`. Three graphify hooks also write into the vault on commit, checkout and merge.
 
-First require a clean checkout:
-
-```bash
-git status --short
-```
-
-If this prints anything, stop. Commit the current task on its branch, stash it intentionally with a descriptive message, or finish the handoff procedure below. Never pull or switch branches merely to make uncommitted work disappear.
-
-Then synchronize and branch:
+In every new worktree:
 
 ```bash
-git fetch origin --prune
-git switch master
-git pull --ff-only origin master
-git switch -c <type>/<short-topic>
+export GRAPHIFY_SKIP_HOOK=1   # keeps commits from rebuilding graphify or writing into the vault
+uv sync
+uv run pytest -q
 ```
 
-The fetch matters because Actions and the other laptop can advance `master` between sessions. `--ff-only` turns unexpected divergence into a visible stop instead of an automatic merge commit.
+`uv`'s cache and the worktree root share a filesystem, so each `uv sync` is cheap.
 
-## While working
+## Commit cadence
 
-- One task per branch and one owning laptop per branch.
-- Never work on the same branch from both laptops concurrently.
-- Commit only files belonging to the task; inspect `git status` and `git diff --staged` before every commit.
-- Push the branch at useful checkpoints so it is backed up remotely.
-- Do not use `git add -A` in a checkout containing unrelated work.
+- One coherent change per commit, imperative subject, a body that says why.
+- Tests green at each commit.
+- Add explicit paths. Never `git add -A` or `git add .`. Read `git diff --staged` before every commit.
+- Run `git diff --check` before committing.
+- Push at every checkpoint so the branch is backed up on origin.
 
-Before opening or updating the PR:
+## One phase = one branch = one PR
 
-```bash
-git fetch origin --prune
-git rebase origin/master
-python -m pytest -q
-git push --force-with-lease
-```
+Open the PR when the phase's done condition holds, using `.github/pull_request_template.md`. Describe the change, the verification and anything deferred. Confirm CI passes and the branch is based on current `origin/master`, then **rebase-merge** it (`gh pr merge <n> --rebase`) to keep the history linear. After the merge:
 
-Use `.venv/bin/python -m pytest -q` when the project virtual environment is active. `--force-with-lease` is permitted only on the task branch after its rebase; never use plain `--force`, and never force-push `master`.
+1. Remove the worktree, delete the local branch and `git fetch --prune` (see the lifecycle above).
+2. Update the main checkout: `git pull --ff-only origin master`.
+3. Rebase **every other open worktree** onto the new master:
+   ```bash
+   git fetch origin --prune && git rebase origin/master && git push --force-with-lease
+   ```
+   `--force-with-lease` is allowed only on your own task branch and only after its remote exists. Never use plain `--force`, and never force-push `master`.
 
-## Pull request and merge
+## State and logs are bot-owned
 
-The PR targets `master`. It must describe the change, verification, and anything intentionally deferred. Confirm CI passes and the branch is based on current `origin/master`, then use a rebase merge to preserve the repository's linear history. Delete the remote task branch after merge.
+`state/` and `logs/` are tracked paths owned by the scheduled Actions. A feature branch does not edit them unless the task is a deliberate state repair. Any run of a pipeline script inside a worktree must use `--dry-run` or temporary paths, and must leave `git status` clean.
 
-Immediately synchronize the merging laptop:
+## Ownership
 
-```bash
-git switch master
-git pull --ff-only origin master
-git branch -d <type>/<short-topic>
-git fetch origin --prune
-```
+Ownership of a worktree is `git worktree lock`, and nothing else:
 
-The other laptop runs the same `master` synchronization before its next task.
-
-## Move an unfinished task to the other laptop
-
-This is a handoff, not concurrent collaboration.
-
-On the current owner:
-
-```bash
-git status --short
-git push -u origin <type>/<short-topic>
-```
-
-The worktree must be clean after the push. Tell the other laptop that ownership is transferred and do not make further commits there.
-
-On the receiving laptop:
-
-```bash
-git fetch origin --prune
-git switch --track origin/<type>/<short-topic>
-git status --short
-```
-
-Confirm the expected latest commit before editing. To hand it back, repeat the same clean-push-transfer sequence.
+- Never run two sessions in one worktree.
+- A session ends by pushing, confirming a clean tree (`git status --short` prints nothing) and unlocking the worktree.
+- Before using an existing worktree, check `git worktree list` for `locked`. A locked worktree belongs to another session: do not edit, unlock or remove it.
+- To switch displays, end the session as above and start a new one. The worktree stays on the Dell.
 
 ## Recovery rules
 
-- Dirty `master`: create a correctly named task branch immediately (`git switch -c <type>/<topic>`); do not commit the work on `master`.
+- Dirty `master` (main checkout): preserve the changes first (copy or patch outside the repo), then move them to a correctly named task branch in its own worktree. Do not commit on `master`.
 - `master` diverged from `origin/master`: stop and inspect both histories. Do not reset, rebase, or force-push until the unique commits are identified.
-- Same branch edited on both laptops: stop both writers. Push neither side. Compare commits and working-tree patches, choose one owner, then integrate deliberately on that branch.
-- Accidental direct push to `master`: stop new work, inspect the pushed commit, let CI finish, and synchronize both laptops. Never “repair” it with a force-push.
+- Same worktree used by two sessions: stop both writers. Push neither side. Compare commits and working-tree patches, choose one owner, then integrate deliberately on that branch.
+- Accidental direct push to `master`: stop new work, inspect the pushed commit, let CI finish, and update the main checkout. Never "repair" it with a force-push.
 - Unclear ownership or unexplained local changes: preserve them and ask. Unknown changes are evidence, not clutter.
 
 ## Why `master` is not server-protected
 
-`run.yml`, `recheck.yml`, and related scheduled automation commit pipeline-owned state/log updates directly to `master`. A blanket “PR required” rule would block those jobs unless a reliable bot bypass were configured. Until that is available and tested, the tracked local hook is the human-write guard and PR review is the integration gate.
+`run.yml`, `recheck.yml`, and related scheduled automation commit pipeline-owned state/log updates directly to `master`. A blanket "PR required" rule would block those jobs unless a reliable bot bypass were configured. Until that is available and tested, the tracked local hook is the human-write guard and PR review is the integration gate.
 
-Emergency bypass exists as `ALLOW_MASTER_PUSH=1 git push ...`, but it is for an explicitly reviewed recovery operation only—not ordinary development.
+Emergency bypass exists as `ALLOW_MASTER_PUSH=1 git push ...`, but it is for an explicitly reviewed recovery operation only, not ordinary development.
