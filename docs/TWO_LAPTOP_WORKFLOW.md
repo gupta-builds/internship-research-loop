@@ -114,6 +114,25 @@ Ownership of a worktree is `git worktree lock`, and nothing else:
 - Accidental direct push to `master`: stop new work, inspect the pushed commit, let CI finish, and update the main checkout. Never "repair" it with a force-push.
 - Unclear ownership or unexplained local changes: preserve them and ask. Unknown changes are evidence, not clutter.
 
+## PR gates
+
+`.github/workflows/pr-gates.yml` runs `scripts/ci/pr_gates.py` (stdlib + `gh`, no LLM) on every PR; `python3 scripts/ci/pr_gates.py --pr N` runs the same checks locally. Limits and their source data are in comments next to each rule in the script.
+
+| Gate | Checks | Draft PRs |
+|---|---|---|
+| `branch_name` | `feature|fix|docs|chore/kebab-case` (or `dependabot/*`); the old `<machine>/<topic>` form fails | checked |
+| `pr_title` | at most 90 chars, no trailing period, no WIP/Draft prefix | checked |
+| `commits` | one parent each, subject at most 100 chars, no `fixup!`/`squash!`/WIP, no `Test <test@example.com>` identity | checked |
+| `forbidden_paths` | `Cover Letters/`, `.env*`, keys, `graphify-out/`, `.worktrees/`, `*.orig|rej|bundle`, `recovery-*`, `.claude/settings.local.json` | checked |
+| `linked_issue` | `Closes/Fixes/Resolves/Refs #N` in the body | warn only until P1.5b; flip it by adding it to `GATES_ENFORCE` |
+| `template_sections` | `Verification` and `Repository conventions` present, no unchecked box (tick N/A boxes and write N/A) | skipped |
+| `size` | at most 36 files and 800 added+deleted lines | skipped |
+| `wip_limit` | no older open non-draft PR | skipped |
+
+Rules of use: one open PR at a time; open it as a draft and mark it ready only when `pytest` and `pr-gates` are green. Override labels: `large-ok` (size), `parallel-ok` (wip_limit), `no-issue` (linked_issue).
+
+The rulesets in `.github/rulesets/` are importable and **not applied**. The owner applies them: `gh api -X POST repos/gupta-builds/internship-research-loop/rulesets --input .github/rulesets/master.json`. Do this only after the bot-bypass decision below is made: on a user-owned repo the Actions app cannot be a bypass actor (probe 2026-11-21), so a ruleset with no bypass blocks the scheduled workflows' direct state/log commits to `master`. `branch_name_pattern` is not available on this plan, so branch names are enforced by the `branch_name` gate instead.
+
 ## Why `master` is not server-protected
 
 `run.yml`, `recheck.yml`, and related scheduled automation commit pipeline-owned state/log updates directly to `master`. A blanket "PR required" rule would block those jobs unless a reliable bot bypass were configured. Until that is available and tested, the tracked local hook is the human-write guard and PR review is the integration gate.
