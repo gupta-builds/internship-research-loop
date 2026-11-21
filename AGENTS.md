@@ -75,7 +75,7 @@ These notes used to live in the global `~/.Codex/settings.json` `autoMode` block
 
 - **Repository visibility**: PUBLIC — gupta-builds/internship-research-loop (github.com) — any push here is publishing; confidential material must not be committed.
 - **Secrets management**: CI secrets `FIRECRAWL_API_KEY` and `JARVIS_PUSH_TOKEN` referenced by name only in CI config — no values known here, never print/echo them.
-- **Default / protected branches**: default branch is `master`; it remains unprotected because scheduled workflows commit owned state/log files directly. Human work never pushes directly to `master`. Follow `docs/TWO_LAPTOP_WORKFLOW.md`; use task-based branch names, not laptop names.
+- **Default / protected branches**: default branch is `master`; it remains unprotected because scheduled workflows commit owned state/log files directly. Human work never pushes directly to `master`. Follow `docs/TWO_LAPTOP_WORKFLOW.md` (single host: main checkout stays on `master`, one locked `git worktree` per task, task-based branch names, never laptop names).
 - **CI/CD deploy targets**: GitHub Actions (`.github/workflows`) — `run.yml` (hourly), `recheck.yml` (daily), `test.yml` — writes to the gupta-builds/Jarvis vault repo via a scoped PAT (`JARVIS_PUSH_TOKEN`).
 - **Source control**: this repo (gupta-builds/internship-research-loop, public) and its origin remote only.
 - **Key internal services**: `freehire.me` and `boards-api.greenhouse.io` (hosts contacted by this project's ingestion) — job-posting data sources, not credentialed internal infra.
