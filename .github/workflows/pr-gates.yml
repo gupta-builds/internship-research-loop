@@ -1,0 +1,48 @@
+name: pr-gates
+# Deterministic PR gates (scripts/ci/pr_gates.py): stdlib + gh, zero LLM.
+# `pull_request` only, never `pull_request_target`. PR text (title, body, branch, commit
+# messages) is read from GITHUB_EVENT_PATH / the API inside the script and is never
+# interpolated into a `run:` script (same fix reseed.yml got in e115db4).
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+concurrency:
+  group: pr-gates-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-gates:  # name must stay exactly `pr-gates`: the master ruleset requires this context
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/ci/pr_gates.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  dependency-review:  # not a required check; steps run only when dependency files change
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changed
+        run: |
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE '^(requirements\.txt|pyproject\.toml|uv\.lock|\.github/workflows/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - if: steps.changed.outputs.run == 'true'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

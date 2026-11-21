@@ -200,7 +200,10 @@ def run(pr, repo):
         elif g == "linked_issue":
             results[g] = linked_issue(pr.get("body"), labels)
         elif g == "template_sections":
-            results[g] = template_sections(pr.get("body"))
+            # Dependabot bodies are machine-generated and can never carry the human checklist.
+            # No Dependabot PR exists yet (gh pr list, 2026-11-21): exemption is by design.
+            bot = pr.get("user", {}).get("login") == "dependabot[bot]"
+            results[g] = [] if bot else template_sections(pr.get("body"))
         elif g == "size":
             results[g] = size(pr["changed_files"], pr["additions"] + pr["deletions"], labels)
         elif g == "wip_limit":
