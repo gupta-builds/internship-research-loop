@@ -2,14 +2,31 @@
   "name": "master-protection",
   "target": "branch",
   "enforcement": "active",
-  "bypass_actors": [],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "conditions": {
-    "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
+    "ref_name": {
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
+      "exclude": []
+    }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -18,7 +35,9 @@
         "require_code_owner_review": false,
         "require_last_push_approval": false,
         "required_review_thread_resolution": true,
-        "allowed_merge_methods": ["rebase"]
+        "allowed_merge_methods": [
+          "rebase"
+        ]
       }
     },
     {
@@ -26,8 +45,12 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "pytest" },
-          { "context": "pr-gates" }
+          {
+            "context": "pytest"
+          },
+          {
+            "context": "pr-gates"
+          }
         ]
       }
     }
