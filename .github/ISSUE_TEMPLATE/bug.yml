@@ -1,0 +1,24 @@
+name: Bug
+description: Something in the pipeline or tooling behaves wrongly.
+labels: ["type:fix"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: Paste the exact error or the wrong output, with the run URL or commit if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Smallest steps or fixture. Real data only, no invented examples.
+    validations:
+      required: true
