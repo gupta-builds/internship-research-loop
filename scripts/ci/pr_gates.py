@@ -43,10 +43,11 @@ BAD_IDENTITY_NAMES = {"test"}
 BAD_IDENTITY_EMAILS = {"test@example.com"}
 
 # Public repo: none of these may ever land. Checked 2026-11-21: `git ls-files` matches
-# only graphify-out/.gitignore, which is untouched by PRs #12-#17.
+# only graphify-out/.gitignore (added by PR #12, harmless, and the only tracked file there),
+# so graphify-out/ is forbidden except that one file (recalibrated after `--pr 12` flagged it).
 FORBIDDEN_RES = [re.compile(p) for p in (
     r"^Cover Letters/", r"(^|/)[^/]*\.env($|\.)", r"\.mcp\.env", r"\.(pem|key)$",
-    r"^graphify-out/", r"^\.worktrees/", r"\.(orig|rej|bundle)$", r"recovery-",
+    r"^graphify-out/(?!\.gitignore$)", r"^\.worktrees/", r"\.(orig|rej|bundle)$", r"recovery-",
     r"^\.claude/settings\.local\.json$")]
 
 # Legit PRs #13-#17: 4-24 files, 157-541 lines (max: #13 541 lines/24 files; #17 511 lines
