@@ -72,7 +72,7 @@ def test_forbidden_paths():
               ".worktrees/x/y", "a.orig", "a.rej", "x.bundle", "state/recovery-2026.json",
               ".claude/settings.local.json"):
         assert g.forbidden_paths([p]), p
-    for p in ("core/filter.py", "docs/environment.md", "tests/test_pr_gates.py", ".claude/settings.json",
+    for p in ("graphify-out/.gitignore", "core/filter.py", "docs/environment.md", "tests/test_pr_gates.py", ".claude/settings.json",
               "state/seen_ids.json", ".github/workflows/test.yml"):
         assert g.forbidden_paths([p]) == [], p
 
