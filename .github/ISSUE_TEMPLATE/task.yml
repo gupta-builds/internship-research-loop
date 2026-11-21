@@ -1,0 +1,34 @@
+name: Task
+description: One unit of planned work. Every PR closes one of these.
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What changes and why, in a few lines. Link the vault note or design that justifies it.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: A checklist a reviewer can verify. Each item names the test or command that proves it.
+      placeholder: "- [ ] pytest passes\n- [ ] ..."
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Branch
+      description: "feature|fix|docs|chore/<topic>, one branch and one PR per task."
+      placeholder: "feature/tier-registry-and-limits"
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Blocked by or gated on
+      description: Other issues, owner decisions, or secrets this needs first. Write "none" if clear.
+    validations:
+      required: true

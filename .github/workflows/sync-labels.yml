@@ -1,0 +1,21 @@
+name: sync-labels
+# Keeps GitHub labels equal to .github/labels.yml. Zero LLM; only runs when the file changes.
+on:
+  push:
+    branches: [master]
+    paths: [".github/labels.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write  # gh label create --force
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pyyaml==6.0.3
+      - run: python3 scripts/github/sync_labels.py
+        env:
+          GH_TOKEN: ${{ github.token }}

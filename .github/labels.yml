@@ -1,0 +1,16 @@
+# Source of truth for this repo's labels. `python3 scripts/github/sync_labels.py` (and the
+# sync-labels workflow on push to master) creates or updates them; it never deletes.
+# Colors: type = blue family, override labels = yellow, automation = grey/green.
+- {name: "type:feature", color: "1d76db", description: "New capability"}
+- {name: "type:fix", color: "d73a4a", description: "Bug fix"}
+- {name: "type:docs", color: "0075ca", description: "Documentation only"}
+- {name: "type:chore", color: "cfd3d7", description: "Tooling, CI, repo hygiene"}
+- {name: "phase", color: "5319e7", description: "Parent issue for a build phase (P1.5, P2, ...)"}
+- {name: "blocked", color: "b60205", description: "Waiting on a decision or another phase"}
+- {name: "bot-alert", color: "ededed", description: "Auto-filed by run_pipeline.py / recheck.py / revalidate"}
+- {name: "governance", color: "0e8a16", description: "Workflows, rulesets, gates, templates"}
+# Overrides recognised by scripts/ci/pr_gates.py. Each use should be explained in the PR body.
+- {name: "large-ok", color: "fbca04", description: "Override the PR size gate"}
+- {name: "parallel-ok", color: "fbca04", description: "Override the one-open-PR gate"}
+- {name: "no-issue", color: "fbca04", description: "Override the linked-issue gate"}
+- {name: "no-tests-ok", color: "fbca04", description: "Override the tests-travel-with-code gate"}
