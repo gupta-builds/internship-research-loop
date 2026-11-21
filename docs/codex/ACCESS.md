@@ -9,7 +9,7 @@ Verified on 2026-10-03. “Exposed” is not the same as “safe” or “tested
 - Snapshot at the 2026-10-03 audit (not current): branch `master`, clean, aligned with `origin/master` at `a3664ca`. On 2026-11-21 `origin/master` was `dc5edc1`.
 - The repository is public. Never commit Jarvis personal data, contacts, secret values, or private application material.
 - Local test command: `.venv/bin/python -m pytest -q`; the 2026-10-03 audit snapshot was 499 passed (a count at a point in time; 499 passed again on `origin/master` `dc5edc1` on 2026-11-21).
-- The tracked pre-push hook runs tests only when `.venv/bin/python` exists; it fails open otherwise.
+- The tracked pre-push hook runs tests with `.venv/bin/python`, else `uv run`; with neither it fails closed and blocks the push (checked 2026-11-21).
 
 ## Jarvis MCP
 
