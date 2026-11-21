@@ -114,9 +114,20 @@ Ownership of a worktree is `git worktree lock`, and nothing else:
 - Accidental direct push to `master`: stop new work, inspect the pushed commit, let CI finish, and update the main checkout. Never "repair" it with a force-push.
 - Unclear ownership or unexplained local changes: preserve them and ask. Unknown changes are evidence, not clutter.
 
+## The loop: issue, branch, PR, merge
+
+1. **Issue first.** Every unit of work is a Task issue (form in `.github/ISSUE_TEMPLATE/`) in the milestone for the current build. Phases are parent issues labelled `phase`; tasks are their sub-issues.
+2. **Worktree and branch** named for the task (see above), created from a fresh `origin/master`.
+3. **Draft PR early**, body from the template with `Closes #N`. Commit small and often; push the branch.
+4. **Gates run on every push** (below). Fix red before asking for a review.
+5. **Ready for review** only when `pytest` and `pr-gates` are green. That is the one moment Copilot reviews (once; not on each push). Its instructions are in `.github/copilot-instructions.md` and `.github/instructions/`.
+6. **Rebase-merge**, branch auto-deleted, issue auto-closed by `Closes #N`, Project item moves to Done by the built-in workflows. Then remove the worktree.
+
+Only one non-draft PR is open at a time. If two phases truly must overlap, label the later one `parallel-ok` and say why in its body.
+
 ## PR gates
 
-`.github/workflows/pr-gates.yml` runs `scripts/ci/pr_gates.py` (stdlib + `gh`, no LLM) on every PR; `python3 scripts/ci/pr_gates.py --pr N` runs the same checks locally. Limits and their source data are in comments next to each rule in the script.
+`.github/workflows/pr-gates.yml` runs `scripts/ci/pr_gates.py` (stdlib + `gh`, no LLM) on every PR; `python3 scripts/ci/pr_gates.py --pr N` runs the same checks locally. Limits and their source data are in comments next to each rule in the script. Gates marked "warn" annotate but do not fail.
 
 | Gate | Checks | Draft PRs |
 |---|---|---|
@@ -124,17 +135,41 @@ Ownership of a worktree is `git worktree lock`, and nothing else:
 | `pr_title` | at most 90 chars, no trailing period, no WIP/Draft prefix | checked |
 | `commits` | one parent each, subject at most 100 chars, no `fixup!`/`squash!`/WIP, no `Test <test@example.com>` identity | checked |
 | `forbidden_paths` | `Cover Letters/`, `.env*`, keys, `graphify-out/`, `.worktrees/`, `*.orig`, `*.rej`, `*.bundle`, `recovery-*`, `.claude/settings.local.json` | checked |
-| `linked_issue` | `Closes/Fixes/Resolves/Refs #N` in the body | warn only until P1.5b; flip it by adding it to `GATES_ENFORCE` |
+| `linked_issue` | `Closes/Fixes/Resolves/Refs #N` in the body (Dependabot exempt) | checked |
+| `tests_with_code` | a change to `core/`, `ingestion/`, `vault_writer/`, `run_pipeline.py` or `recheck.py` also changes `tests/` (35 of 35 real commits did) | checked |
+| `workflow_lint` | each changed workflow: no `pull_request_target`, has `permissions:`, no `${{ github.event.* }}` in a `run:` script, actions pinned (third-party by SHA) | checked |
+| `conventions` | `check_conventions.py` check 1: no LLM import or API call in the unattended path | checked |
+| `conventions_advisory` | `check_conventions.py` checks 2-4 (warn only, heuristic) | checked |
 | `template_sections` | `Verification` and `Repository conventions` present, no unchecked box (tick N/A boxes and write N/A) | skipped |
 | `size` | at most 36 files and 800 added+deleted lines | skipped |
 | `wip_limit` | no older open non-draft PR | skipped |
 
-Rules of use: one open PR at a time; open it as a draft and mark it ready only when `pytest` and `pr-gates` are green. Override labels: `large-ok` (size), `parallel-ok` (wip_limit), `no-issue` (linked_issue).
+Override labels (defined in `.github/labels.yml`, explain each use in the PR body): `large-ok`, `parallel-ok`, `no-issue`, `no-tests-ok`.
 
-The rulesets in `.github/rulesets/` are importable and **not applied**. The owner applies them: `gh api -X POST repos/gupta-builds/internship-research-loop/rulesets --input .github/rulesets/master.json`. Do this only after the bot-bypass decision below is made: on a user-owned repo the Actions app cannot be a bypass actor (probe 2026-11-21), so a ruleset with no bypass blocks the scheduled workflows' direct state/log commits to `master`. `branch_name_pattern` is not available on this plan, so branch names are enforced by the `branch_name` gate instead.
+Known limit: with the `pull_request` trigger the gate script runs from the PR's own checkout, so a PR could edit the gate that checks it. For a solo repo the ruleset's required review thread resolution and the owner's own review are the backstop; the tamper-proof alternative (`pull_request_target` or a required workflow) is not worth its risk here.
 
-## Why `master` is not server-protected
+## Rulesets and tokens (owner steps)
 
-`run.yml`, `recheck.yml`, and related scheduled automation commit pipeline-owned state/log updates directly to `master`. A blanket "PR required" rule would block those jobs unless a reliable bot bypass were configured. Until that is available and tested, the tracked local hook is the human-write guard and PR review is the integration gate.
+The rulesets in `.github/rulesets/` are importable and **not applied by CI or by any agent**. The owner applies them, in this order:
+
+1. Create two fine-grained PATs: one for `gupta-builds/Jarvis` only, one for this repo only (Contents RW, Issues RW, Metadata R). Store them with `gh secret set JARVIS_PUSH_TOKEN` and `gh secret set REPO_BOT_TOKEN` (hidden prompt; never paste a value into a chat or file). Workflows push this repo with `REPO_BOT_TOKEN` and fall back to the default token while it is unset. The owner's global agent PAT is never used by a workflow.
+2. Verify the bot path with one manual run of `recheck.yml` (`workflow_dispatch`) before protecting `master`.
+3. `gh api -X POST repos/gupta-builds/internship-research-loop/rulesets --input .github/rulesets/master.json`
+4. `gh api -X POST repos/gupta-builds/internship-research-loop/rulesets --input .github/rulesets/copilot-review.json` (untested rule type; if the API returns 422, request Copilot per PR instead: `gh pr edit N --add-reviewer @copilot`).
+
+Why the ruleset bypasses the Repository admin role: on a user-owned repo the Actions app cannot be a bypass actor and the default `GITHUB_TOKEN` is rejected (probe 2026-11-21). A PAT acts as its owner, so the admin bypass lets the bot's `state/` and `logs/` commits through. The cost: any token of the owner can also push to `master`, including the agent PAT. The guards for that are the local `pre-push` hook and the agents' rules, not GitHub. The only design with no bypass at all is the bot writing to a separate `bot-state` branch.
+
+`branch_name_pattern` rules are not available on this plan, so branch names are enforced by the `branch_name` gate.
+
+## Reusing this in another repo
+
+1. Copy `.github/{labels.yml,pull_request_template.md,ISSUE_TEMPLATE/,workflows/pr-gates.yml,workflows/sync-labels.yml,dependabot.yml,copilot-instructions.md,instructions/,rulesets/}`, `scripts/ci/pr_gates.py`, `scripts/github/sync_labels.py` and the matching tests.
+2. Per-repo knobs, each re-measured from that repo's own history: the `CODE_RE` source paths and `tests/` rule, `SIZE_MAX_*`, `TITLE_MAX`, `SUBJECT_MAX`, `FORBIDDEN_RES`, the `CONVENTIONS_PATH` checker (drop `conventions` if there is none), the required check names in the ruleset, and the repo facts in `copilot-instructions.md`.
+3. `python3 scripts/github/sync_labels.py`, create the milestone and Project, then apply the rulesets.
+4. Run `python3 scripts/ci/pr_gates.py --pr N` on a few real PRs and calibrate with data before enforcing.
+
+## Why `master` is protected by ruleset, not by trust
+
+`run.yml`, `recheck.yml` and `reseed.yml` commit pipeline-owned state and logs directly to `master`. That is why protection waited for a tested bot path: the repo-scoped `REPO_BOT_TOKEN` plus the admin-role bypass above. The tracked local `pre-push` hook still blocks human pushes to `master` on every checkout.
 
 Emergency bypass exists as `ALLOW_MASTER_PUSH=1 git push ...`, but it is for an explicitly reviewed recovery operation only, not ordinary development.
