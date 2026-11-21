@@ -16,12 +16,18 @@ import re
 import subprocess
 import sys
 
-# One-line switch for P1.5b: add "linked_issue" here once the issue system exists.
-GATES_ENFORCE = {"branch_name", "pr_title", "commits", "forbidden_paths",
+# Gates in GATES_ENFORCE fail the check; the rest only annotate. linked_issue is enforced since
+# the issue system exists (labels, forms, phase issues #19-#27, 2026-11-21).
+# conventions_advisory is a heuristic (check_conventions.py checks 2-4 say "needs human
+# judgment"), so it warns; check 1 (zero-LLM) is a hard fail.
+GATES_ENFORCE = {"branch_name", "pr_title", "commits", "forbidden_paths", "linked_issue",
+                 "tests_with_code", "workflow_lint", "conventions",
                  "template_sections", "size", "wip_limit"}
-ALL_GATES = ["branch_name", "pr_title", "commits", "forbidden_paths",
-             "linked_issue", "template_sections", "size", "wip_limit"]
-DRAFT_GATES = {"branch_name", "pr_title", "commits", "forbidden_paths", "linked_issue"}
+ALL_GATES = ["branch_name", "pr_title", "commits", "forbidden_paths", "linked_issue",
+             "tests_with_code", "workflow_lint", "conventions", "conventions_advisory",
+             "template_sections", "size", "wip_limit"]
+# Cheap and substantive: run on drafts too. Only the "is it ready" gates wait for ready-for-review.
+DRAFT_GATES = set(ALL_GATES) - {"template_sections", "size", "wip_limit"}
 
 # Real data: current branches chore/pr-gates-and-ruleset, fix/deadline-quota-and-reseed,
 # docs/two-laptop-workflow pass. The retired machine-prefixed form of PR #12
@@ -58,6 +64,17 @@ SIZE_MAX_LINES = 800
 
 REQUIRED_SECTIONS = ("Verification", "Repository conventions")
 ISSUE_RE = re.compile(r"\b(closes|fixes|resolves|refs)\s+#\d+", re.I)
+
+# CLAUDE.md: tests/ mirrors core/, ingestion/, vault_writer/ file-for-file. Measured 2026-11-21:
+# 35 of 35 human commits since 2026-07-01 that touched these files also touched tests/.
+CODE_RE = re.compile(r"^(core|ingestion|vault_writer)/.+\.py$|^(run_pipeline|recheck)\.py$")
+# Third-party actions must be pinned to a full SHA; actions/* and github/* may use version tags.
+# Measured 2026-11-21: all 5 existing workflows use only actions/checkout@v4 and actions/setup-python@v5.
+FIRST_PARTY_OWNERS = {"actions", "github"}
+SHA_RE = re.compile(r"[0-9a-f]{40}")
+# PR text must never reach a shell: same class of bug fixed in reseed.yml (e115db4).
+UNSAFE_EXPR_RE = re.compile(r"\$\{\{\s*(github\.event\.|github\.head_ref)")
+CONVENTIONS_PATH = ".claude/skills/review-loop-change/scripts/check_conventions.py"
 
 
 def branch_name(branch):
@@ -149,11 +166,75 @@ def linked_issue(body, labels):
     return ["no 'Closes/Fixes/Resolves/Refs #N' in the body (label no-issue overrides)"]
 
 
+def tests_with_code(paths, labels):
+    if "no-tests-ok" in labels:
+        return []
+    if any(CODE_RE.match(p) for p in paths) and not any(p.startswith("tests/") for p in paths):
+        return ["unattended-path code changed but nothing under tests/ did "
+                "(tests mirror code; label no-tests-ok overrides)"]
+    return []
+
+
+def workflow_lint(path, text):
+    """Static checks for one workflow file. shortcut: YAML + regex only, no expression
+    evaluation; upgrade to actionlint if the workflows get complex."""
+    import yaml
+    try:
+        doc = yaml.safe_load(text) or {}
+    except yaml.YAMLError as e:
+        return [f"{path}: invalid YAML ({e})"]
+    out = []
+    on = doc.get(True, doc.get("on"))  # YAML 1.1 parses the key `on` as boolean True
+    triggers = set(on) if isinstance(on, (dict, list)) else {on}
+    if "pull_request_target" in triggers:
+        out.append(f"{path}: pull_request_target is forbidden (runs PR code with secrets)")
+    jobs = doc.get("jobs") or {}
+    if "permissions" not in doc and not all("permissions" in (j or {}) for j in jobs.values()):
+        out.append(f"{path}: no `permissions:` block (default token is too broad)")
+    for jname, job in jobs.items():
+        for step in (job or {}).get("steps") or []:
+            if UNSAFE_EXPR_RE.search(step.get("run") or ""):
+                out.append(f"{path}: job {jname} interpolates PR-controlled text into a run script; use env:")
+            uses = step.get("uses")
+            if uses and not uses.startswith("./"):
+                owner, ref = uses.split("/")[0], uses.rpartition("@")[2]
+                if "@" not in uses or ref in ("main", "master"):
+                    out.append(f"{path}: `{uses}` is unpinned")
+                elif owner not in FIRST_PARTY_OWNERS and not SHA_RE.fullmatch(ref):
+                    out.append(f"{path}: third-party action `{uses}` must be pinned to a full SHA")
+    return out
+
+
+def conventions(diff_text):
+    """Mechanical CLAUDE.md conventions via the repo's own check_conventions.py (single
+    source of truth). Returns (enforced, advisory): check 1 (zero-LLM) is a hard fail,
+    checks 2-4 are heuristics."""
+    import importlib.util
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    spec = importlib.util.spec_from_file_location("check_conventions", os.path.join(root, CONVENTIONS_PATH))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["check_conventions"] = mod  # dataclasses needs the module registered
+    spec.loader.exec_module(mod)
+    hunks = mod.parse_diff(diff_text)
+    enforced = [f"{f.file}:{f.line_no} {f.detail}" for f in mod.check_1_zero_llm(hunks)]
+    advisory = [f"{f.file}:{f.line_no} [{f.check}] {f.detail}"
+                for f in mod.check_2_permissive_default(hunks) + mod.check_3_write_gate_order(hunks)
+                + mod.check_4_cited_real_data(hunks)]
+    return enforced, advisory
+
+
 # ---- thin I/O layer ---------------------------------------------------------------
 
 def gh_api(path):
     r = subprocess.run(["gh", "api", path], capture_output=True, text=True, check=True)
     return json.loads(r.stdout)
+
+
+def gh_text(path, accept="raw"):
+    """Raw file contents (accept=raw) or a unified diff (accept=diff) from the API."""
+    mime = "application/vnd.github.raw" if accept == "raw" else "application/vnd.github.diff"
+    return subprocess.run(["gh", "api", "-H", f"Accept: {mime}", path],
+                          capture_output=True, text=True, check=True).stdout
 
 
 def gh_pages(path):
@@ -188,6 +269,12 @@ def run(pr, repo):
     labels = {l["name"] for l in pr.get("labels", [])}
     gates = [g for g in ALL_GATES if not draft or g in DRAFT_GATES]
     results = {}
+    # Dependabot bodies are machine-generated: they can never carry the human checklist or
+    # an issue link. No Dependabot PR exists yet (gh pr list, 2026-11-21): exemption is by design.
+    bot = pr.get("user", {}).get("login") == "dependabot[bot]"
+    files = gh_pages(f"repos/{repo}/pulls/{n}/files") if set(gates) & {
+        "forbidden_paths", "tests_with_code", "workflow_lint"} else []
+    live = [f["filename"] for f in files if f["status"] != "removed"]
     for g in gates:
         if g == "branch_name":
             results[g] = branch_name(pr["head"]["ref"])
@@ -196,20 +283,26 @@ def run(pr, repo):
         elif g == "commits":
             results[g] = commits(load_commits(repo, n))
         elif g == "forbidden_paths":
-            files = gh_pages(f"repos/{repo}/pulls/{n}/files")
-            results[g] = forbidden_paths([f["filename"] for f in files if f["status"] != "removed"])
+            results[g] = forbidden_paths(live)
+        elif g == "tests_with_code":
+            results[g] = tests_with_code(live, labels)
+        elif g == "workflow_lint":
+            results[g] = [v for p in live if re.match(r"^\.github/workflows/[^/]+\.ya?ml$", p)
+                          for v in workflow_lint(p, gh_text(f"repos/{repo}/contents/{p}?ref={pr['head']['sha']}"))]
+        elif g in ("conventions", "conventions_advisory"):
+            if "_conv" not in results:
+                results["_conv"] = conventions(gh_text(f"repos/{repo}/pulls/{n}", accept="diff"))
+            results[g] = results["_conv"][0 if g == "conventions" else 1]
         elif g == "linked_issue":
-            results[g] = linked_issue(pr.get("body"), labels)
+            results[g] = [] if bot else linked_issue(pr.get("body"), labels)
         elif g == "template_sections":
-            # Dependabot bodies are machine-generated and can never carry the human checklist.
-            # No Dependabot PR exists yet (gh pr list, 2026-11-21): exemption is by design.
-            bot = pr.get("user", {}).get("login") == "dependabot[bot]"
             results[g] = [] if bot else template_sections(pr.get("body"))
         elif g == "size":
             results[g] = size(pr["changed_files"], pr["additions"] + pr["deletions"], labels)
         elif g == "wip_limit":
             opens = gh_pages(f"repos/{repo}/pulls?state=open")
             results[g] = wip_limit(n, [{"number": p["number"], "draft": p["draft"]} for p in opens], labels)
+    results.pop("_conv", None)
     return results, draft
 
 
