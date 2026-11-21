@@ -2,6 +2,10 @@
 
 -
 
+## Linked issue
+
+Closes #
+
 ## Verification
 
 - [ ] Branch is based on current `origin/master`
