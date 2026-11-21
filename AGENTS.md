@@ -13,12 +13,12 @@ These are load-bearing design decisions, not style preferences. `/review-loop-ch
 
 ## Note-template contracts (for `/promote-dossier`, `promotion`, and any future vault-writing code)
 
-When writing Program, Contact, or Tracker/Each One notes into the Jarvis vault, every field below is **required and must always be present**, even as `null`/`[]` — same fail-closed-on-missing-fields discipline as `vault_writer/validate.py`'s `REQUIRED_FRONTMATTER_FIELDS` for dossiers. Full field-by-field templates with body structure live in `.Codex/skills/promote-dossier/reference/note-templates.md`; this is the contract summary.
+When writing Program, Contact, or Tracker/Each One notes into the Jarvis vault, every field below is **required and must always be present**, even as `null`/`[]` — same fail-closed-on-missing-fields discipline as `vault_writer/validate.py`'s `REQUIRED_FRONTMATTER_FIELDS` for dossiers. Full field-by-field templates with body structure live in `.codex/skills/promote-dossier/reference/note-templates.md`; this is the contract summary.
 
-**Program note** (`Programs/Serious/` or `Programs/Considering/`) — copied from the vault's own `30_Order/Templates/Career/Program Template.md`:
+**Program note** (`Programs/Serious/` or `Programs/Considering/`) — repository contract; compare it with the live `30_Order/Templates/Career/Internship/Program Template.md` before writing because the two currently drift:
 `name, company, program_type, eligible_classes, grad_year, role_type, wave, opens_date, deadline_posted, deadline_real, pay_per_week, pay_currency, duration_weeks, benefits, application_url, careers_page, list_origin, applying_note, recruiter_contact, tags`. No `status`/`next` field — Program notes are durable/static, they change only when a fact about the program itself changes.
 
-**Contact note** (`Contacts/Each One/`) — copied from `30_Order/Templates/Career/Contact Template.md`:
+**Contact note** (`Contacts/Each One/`) — repository contract; compare it with the live `30_Order/Templates/Career/Internship/Contact Template.md` before writing because the live template currently omits `related_programs`:
 `type: contact, name, role, company, linkedin_url, email, how_found, relationship, related_programs, last_contact_date, tags, next`.
 
 **Tracker/Each One note** (`Tracker/Each One/`) — matches the vault's `30_Order/Standards/Internship/Internship Tracker Standard.md` and `Tracking Template.md`:
@@ -60,18 +60,20 @@ The instinct in this codebase has consistently been "write a deterministic scrip
 
 If a new piece of recurring toil shows up and it's mechanical/deterministic (another source feed, another filter rule), it's still Python first, same as everything in `core/` and `ingestion/` today — don't reach for an agent out of habit once a human's judgment isn't actually the bottleneck.
 
-## `.Codex/rules/` — steering wrappers, same pattern as the Jarvis vault's
+## Codex-local durable context
 
-Five files, each a thin pointer or narrowly-scoped addition — none restates content that already lives somewhere else, per the Jarvis build standard's anti-duplication principle ("if a sentence is true in both, one copy is wrong"):
-- **`rules/internship-loop.md`** — pointer to this file's own "Conventions this codebase enforces" section above. Exists so the always-loaded `rules/` mechanism reinforces it, not because the content lives twice.
-- **`rules/jarvis.md`** — the vault-reachability check (sibling checkout vs. `jarvis` MCP tools) every vault-writing agent needs, stated once instead of five times across `program-writer`/`tracking`/`promotion`/`applying`/`/promote-dossier`.
-- **`rules/autonomous.md`** — which agents are safe to run unattended (read-only: `loop-verifier`, `testing-tools`, `contact-researcher`) versus never-autonomous (write real vault data: `program-writer`, `tracking`, `promotion`, `applying`, all gated behind explicit human consent already documented in each one's own file).
-- **`rules/hooks.md`** — catalog of this repo's two hooks (`review-reminder.sh`, `vault-write-guard.sh`) and the shared rule behind both: hooks here inform, they never deny.
-- **`rules/mcp-permissions.md`** — why `.Codex/settings.json` pre-approves every `jarvis`/`jarvis-fs` call except `vault_delete`: the calling skill/agent's own consent gate is the real safety mechanism, not the MCP permission.
+Codex loads this `AGENTS.md` and discovers skills from `.codex/skills/`. Do not assume Claude's `.claude/rules/` or `.claude/settings*.json` are Codex policy, and do not create a parallel `.Codex/` tree (case matters on Linux).
+
+Three concise, repository-specific references live under `docs/codex/`:
+- **`ARCHITECTURE.md`** — authored-code map, runtime data flow, state ownership, and high-risk boundaries.
+- **`ACCESS.md`** — verified tool/repository/vault access versus exposed-but-unverified operations.
+- **`BUILD_PLAYBOOK.md`** — the mandatory read/implement/verify sequence for future heavy builds.
+
+These files summarize orientation; they do not override this file, live code, tests, or the Jarvis standards/templates. If a summary conflicts with live evidence, re-verify and update the summary in the same change.
 
 ## Auto-mode classifier notes (this repo only)
 
-These notes used to live in the global `~/.Codex/settings.json` `autoMode` block, where they didn't belong (Codex's auto-mode `environment`/`soft_deny` config is user-global only — there is no project-local override file, confirmed against the live docs) — they were pulled back here since they only make sense for this repo:
+These notes used to live in global Codex configuration, where they didn't belong; they were pulled back here since they only make sense for this repo:
 
 - **Repository visibility**: PUBLIC — gupta-builds/internship-research-loop (github.com) — any push here is publishing; confidential material must not be committed.
 - **Secrets management**: CI secrets `FIRECRAWL_API_KEY` and `JARVIS_PUSH_TOKEN` referenced by name only in CI config — no values known here, never print/echo them.
