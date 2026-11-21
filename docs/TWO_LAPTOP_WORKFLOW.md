@@ -120,7 +120,7 @@ Ownership of a worktree is `git worktree lock`, and nothing else:
 2. **Worktree and branch** named for the task (see above), created from a fresh `origin/master`.
 3. **Draft PR early**, body from the template with `Closes #N`. Commit small and often; push the branch.
 4. **Gates run on every push** (below). Fix red before asking for a review.
-5. **Ready for review** only when `pytest` and `pr-gates` are green. That is the one moment Copilot reviews (once; not on each push). Its instructions are in `.github/copilot-instructions.md` and `.github/instructions/`.
+5. **Ready for review** only when `pytest`, `pr-gates` and `dependency-review` are green. That is the one moment Copilot reviews (once; not on each push). Its instructions are in `.github/copilot-instructions.md` and `.github/instructions/`.
 6. **Rebase-merge**, branch auto-deleted, issue auto-closed by `Closes #N`, Project item moves to Done by the built-in workflows. Then remove the worktree.
 
 Only one non-draft PR is open at a time. If two phases truly must overlap, label the later one `parallel-ok` and say why in its body.

@@ -50,6 +50,9 @@
           },
           {
             "context": "pr-gates"
+          },
+          {
+            "context": "dependency-review"
           }
         ]
       }
