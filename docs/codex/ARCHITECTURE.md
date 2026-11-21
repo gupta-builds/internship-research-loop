@@ -4,7 +4,7 @@ Last deep-read: 2026-10-03. This is an orientation map, not a substitute for liv
 
 ## System boundary
 
-This repository is a single-user, deterministic internship-discovery service. GitHub Actions discovers and maintains dossier notes in the separate private Jarvis vault. Human judgment begins after discovery: screening, promotion, outreach, tailoring, applying, and outcomes remain consent-gated and evidence-only.
+This repository is a single-user, deterministic internship-discovery service. GitHub Actions discovers and maintains dossier notes in the separate Jarvis vault repository (public: `gh repo view gupta-builds/Jarvis` reported `PUBLIC` on 2026-11-21). Human judgment begins after discovery: screening, promotion, outreach, tailoring, applying, and outcomes remain consent-gated and evidence-only.
 
 ## Runtime flow
 

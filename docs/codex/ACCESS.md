@@ -6,9 +6,9 @@ Verified on 2026-10-03. “Exposed” is not the same as “safe” or “tested
 
 - Workspace write access: this repository and `/tmp`.
 - Git remote: `https://github.com/gupta-builds/internship-research-loop.git`.
-- Current branch at audit: `master`, clean, aligned with `origin/master` at `a3664ca`.
+- Snapshot at the 2026-10-03 audit (not current): branch `master`, clean, aligned with `origin/master` at `a3664ca`. On 2026-11-21 `origin/master` was `dc5edc1`.
 - The repository is public. Never commit Jarvis personal data, contacts, secret values, or private application material.
-- Local test command: `.venv/bin/python -m pytest -q`; audit baseline was 499 passed.
+- Local test command: `.venv/bin/python -m pytest -q`; the 2026-10-03 audit snapshot was 499 passed (a count at a point in time; 499 passed again on `origin/master` `dc5edc1` on 2026-11-21).
 - The tracked pre-push hook runs tests only when `.venv/bin/python` exists; it fails open otherwise.
 
 ## Jarvis MCP
@@ -25,7 +25,7 @@ Canonical live template paths include `30_Order/Templates/Career/Internship/Prog
 
 - GitHub MCP authentication was verified as `gupta-builds`; repository reads and branch listing work.
 - The MCP surface exposes broad repository, issue, PR, review, release, and mutation operations. Mutation was not tested and is never implied by read access.
-- Local `gh` CLI authentication was invalid at audit time. Workflows that depend on `gh issue create` or `gh workflow disable` may still work in Actions through `github.token`, but local CLI operations must be re-authenticated or use the GitHub MCP where appropriate.
+- Local `gh` CLI authentication was invalid at the 2026-10-03 audit, but is valid as of 2026-11-21 (`gh auth status`: logged in as `gupta-builds`). The workaround advice below applies only if it lapses again. Workflows that depend on `gh issue create` or `gh workflow disable` may still work in Actions through `github.token`, but local CLI operations must be re-authenticated or use the GitHub MCP where appropriate.
 - Branch `master` was reported unprotected by GitHub MCP. Treat direct pushes as publication.
 
 ## Secrets and remote writes
