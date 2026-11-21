@@ -20,6 +20,11 @@ while read -r _local_ref _local_oid remote_ref _remote_oid; do
   fi
 done
 
+# Git exports GIT_DIR to hooks; in a linked worktree it is an absolute path to
+# that worktree's gitdir, so tests that create throwaway repos (tests/test_git_ops.py)
+# would act on the real repo. Observed 2026-11-21: core.bare=true and a junk commit.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+
 if [ -x .venv/bin/python ]; then
   .venv/bin/python -m pytest tests/ -q
 elif command -v uv >/dev/null 2>&1 && [ -f pyproject.toml ]; then
