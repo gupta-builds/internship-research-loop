@@ -1,7 +1,22 @@
 name: test
-on: [push, pull_request]
+# Was `on: [push, pull_request]`, which ran pytest twice per PR (push + pull_request
+# on the same head commit). Observed 2026-11-21: PRs #15-#17 each got a push run and a
+# pull_request run (gh run list --workflow test.yml). Now: PRs via pull_request only,
+# master via push (catches the Actions bot's direct state/log commits too).
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  pytest:
+  pytest:  # job id and name must stay exactly `pytest`: the master ruleset requires this context
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
