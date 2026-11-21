@@ -120,10 +120,10 @@ Ownership of a worktree is `git worktree lock`, and nothing else:
 
 | Gate | Checks | Draft PRs |
 |---|---|---|
-| `branch_name` | `feature|fix|docs|chore/kebab-case` (or `dependabot/*`); the old `<machine>/<topic>` form fails | checked |
+| `branch_name` | `feature/`, `fix/`, `docs/` or `chore/` + kebab-case (or `dependabot/*`); the old `<machine>/<topic>` form fails | checked |
 | `pr_title` | at most 90 chars, no trailing period, no WIP/Draft prefix | checked |
 | `commits` | one parent each, subject at most 100 chars, no `fixup!`/`squash!`/WIP, no `Test <test@example.com>` identity | checked |
-| `forbidden_paths` | `Cover Letters/`, `.env*`, keys, `graphify-out/`, `.worktrees/`, `*.orig|rej|bundle`, `recovery-*`, `.claude/settings.local.json` | checked |
+| `forbidden_paths` | `Cover Letters/`, `.env*`, keys, `graphify-out/`, `.worktrees/`, `*.orig`, `*.rej`, `*.bundle`, `recovery-*`, `.claude/settings.local.json` | checked |
 | `linked_issue` | `Closes/Fixes/Resolves/Refs #N` in the body | warn only until P1.5b; flip it by adding it to `GATES_ENFORCE` |
 | `template_sections` | `Verification` and `Repository conventions` present, no unchecked box (tick N/A boxes and write N/A) | skipped |
 | `size` | at most 36 files and 800 added+deleted lines | skipped |
