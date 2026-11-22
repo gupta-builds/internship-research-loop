@@ -25,3 +25,12 @@ def test_gate_override_labels_and_form_labels_are_defined():
     assert overrides <= names
     for form in (ROOT / ".github/ISSUE_TEMPLATE").glob("[bt]*.yml"):
         assert set(yaml.safe_load(form.read_text())["labels"]) <= names, form.name
+
+
+def test_every_label_a_workflow_applies_is_defined():
+    """run.yml once failed silently (|| true) on a label missing from a fresh repo (Copilot, #18)."""
+    names = {lb["name"] for lb in sl.load()}
+    used = set()
+    for wf in (ROOT / ".github/workflows").glob("*.yml"):
+        used |= set(re.findall(r'--label\s+"?([A-Za-z0-9:_-]+)"?', wf.read_text()))
+    assert used and used <= names, used - names
