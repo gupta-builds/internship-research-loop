@@ -186,9 +186,12 @@ def workflow_lint(path, text):
     out = []
     on = doc.get(True, doc.get("on"))  # YAML 1.1 parses the key `on` as boolean True
     triggers = set(on) if isinstance(on, (dict, list)) else {on}
-    if "pull_request_target" in triggers:
-        out.append(f"{path}: pull_request_target is forbidden (runs PR code with secrets)")
     jobs = doc.get("jobs") or {}
+    if "pull_request_target" in triggers:  # runs the BASE workflow with a token; safe only if PR code is never checked out
+        for jname, job in jobs.items():
+            for step in (job or {}).get("steps") or []:
+                if str(step.get("uses", "")).startswith("actions/checkout") and (step.get("with") or {}).get("ref"):
+                    out.append(f"{path}: job {jname} checks out an explicit ref under pull_request_target (would run PR code with secrets)")
     if "permissions" not in doc and not all("permissions" in (j or {}) for j in jobs.values()):
         out.append(f"{path}: no `permissions:` block (default token is too broad)")
     for jname, job in jobs.items():
