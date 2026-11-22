@@ -14,14 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout internship-research-loop
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Repo-scoped fine-grained PAT (owner identity => ruleset admin bypass for state/ and logs/ commits).
           # Falls back to the default token until the secret exists. Never the global agent PAT.
           token: ${{ secrets.REPO_BOT_TOKEN || github.token }}
 
       - name: Checkout gupta-builds/Jarvis
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: gupta-builds/Jarvis
           token: ${{ secrets.JARVIS_PUSH_TOKEN }}
@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0  # full history — a shallow clone can fail `git pull --rebase`
                           # if the vault's own auto-commit cycle has diverged by more than one commit
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
