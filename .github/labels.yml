@@ -1,6 +1,7 @@
 # Source of truth for this repo's labels. `python3 scripts/github/sync_labels.py` (and the
 # sync-labels workflow on push to master) creates or updates them; it never deletes.
 # Colors: type = blue family, override labels = yellow, automation = grey/green.
+- {name: "dossier-ready", color: "0e8a16", description: "New dossier(s) found by run.yml, ready for /promote-dossier"}
 - {name: "type:feature", color: "1d76db", description: "New capability"}
 - {name: "type:fix", color: "d73a4a", description: "Bug fix"}
 - {name: "type:docs", color: "0075ca", description: "Documentation only"}
