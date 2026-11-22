@@ -8,8 +8,8 @@ g = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(g)
 
 GOOD = {"sha": "a" * 40, "subject": "Scrub GIT_* env in pre-push so worktree pushes cannot leak into tests",
-        "parents": 1, "author_name": "Anant Gupta", "author_email": "anantmahi721@gmail.com",
-        "committer_name": "Anant Gupta", "committer_email": "anantmahi721@gmail.com"}
+        "parents": 1, "author_name": "Dev Example", "author_email": "dev@example.invalid",
+        "committer_name": "Dev Example", "committer_email": "dev@example.invalid"}
 
 # PR #17 real body shape: both sections present, boxes ticked.
 BODY_OK = """## What changed
@@ -150,7 +150,9 @@ def test_workflow_lint_other_violations():
     assert g.workflow_lint("a.yml", base % "actions/checkout@main")
     assert g.workflow_lint("a.yml", base % "someone/act@v1")            # third party needs a SHA
     assert g.workflow_lint("a.yml", base % ("someone/act@" + "a" * 40)) == []
-    assert g.workflow_lint("a.yml", "on: pull_request_target\npermissions: {}\njobs: {}\n")
+    prt = "on: pull_request_target\npermissions: {}\njobs:\n  j:\n    runs-on: x\n    steps:\n      - uses: actions/checkout@v4%s\n"
+    assert g.workflow_lint("a.yml", prt % "") == []  # base checkout: the gate's own safe shape
+    assert g.workflow_lint("a.yml", prt % "\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}")
     assert g.workflow_lint("a.yml", "on: push\njobs:\n  j:\n    runs-on: x\n    steps: []\n")  # no permissions
     assert g.workflow_lint("a.yml", "on: [push\n")                      # invalid YAML
 
