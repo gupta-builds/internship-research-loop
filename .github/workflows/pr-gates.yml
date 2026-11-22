@@ -1,10 +1,13 @@
 name: pr-gates
 # Deterministic PR gates (scripts/ci/pr_gates.py): stdlib + gh, zero LLM.
-# `pull_request` only, never `pull_request_target`. PR text (title, body, branch, commit
-# messages) is read from GITHUB_EVENT_PATH / the API inside the script and is never
-# interpolated into a `run:` script (same fix reseed.yml got in e115db4).
+# `pull_request_target`: GitHub runs THIS file and the checked-out gate script from the base
+# branch (master), so a PR cannot edit the gate that judges it (Copilot review of #18, 2026-11-21).
+# That is safe only because nothing here checks out PR code: the script reads the PR through
+# the API / GITHUB_EVENT_PATH, and the `workflow_lint` gate rejects an explicit `ref:` checkout
+# under this trigger. PR text is never interpolated into a `run:` script (reseed.yml fix e115db4).
+# A change to this file or pr_gates.py takes effect only after it merges.
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 concurrency:
@@ -19,31 +22,8 @@ jobs:
   pr-gates:  # name must stay exactly `pr-gates`: the master ruleset requires this context
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4  # no `ref:` on purpose: base branch, never the PR head
       - run: pip install pyyaml==6.0.3  # workflow_lint gate
       - run: python3 scripts/ci/pr_gates.py
         env:
           GH_TOKEN: ${{ github.token }}
-
-  dependency-review:  # required check; its steps run only when dependency files change, otherwise it passes empty
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: changed
-        run: |
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE '^(requirements\.txt|pyproject\.toml|uv\.lock|\.github/workflows/)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      - if: steps.changed.outputs.run == 'true'
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high

@@ -137,7 +137,7 @@ Only one non-draft PR is open at a time. If two phases truly must overlap, label
 | `forbidden_paths` | `Cover Letters/`, `.env*`, keys, `graphify-out/`, `.worktrees/`, `*.orig`, `*.rej`, `*.bundle`, `recovery-*`, `.claude/settings.local.json` | checked |
 | `linked_issue` | `Closes/Fixes/Resolves/Refs #N` in the body (Dependabot exempt) | checked |
 | `tests_with_code` | a change to `core/`, `ingestion/`, `vault_writer/`, `run_pipeline.py` or `recheck.py` also changes `tests/` (35 of 35 real commits did) | checked |
-| `workflow_lint` | each changed workflow: no `pull_request_target`, has `permissions:`, no `${{ github.event.* }}` in a `run:` script, actions pinned (third-party by SHA) | checked |
+| `workflow_lint` | each changed workflow: `pull_request_target` never checks out an explicit ref, has `permissions:`, no `${{ github.event.* }}` in a `run:` script, actions pinned (third-party by SHA) | checked |
 | `conventions` | `check_conventions.py` check 1: no LLM import or API call in the unattended path | checked |
 | `conventions_advisory` | `check_conventions.py` checks 2-4 (warn only, heuristic) | checked |
 | `template_sections` | `Verification` and `Repository conventions` present, no unchecked box (tick N/A boxes and write N/A) | skipped |
@@ -146,7 +146,7 @@ Only one non-draft PR is open at a time. If two phases truly must overlap, label
 
 Override labels (defined in `.github/labels.yml`, explain each use in the PR body): `large-ok`, `parallel-ok`, `no-issue`, `no-tests-ok`.
 
-Known limit: with the `pull_request` trigger the gate script runs from the PR's own checkout, so a PR could edit the gate that checks it. For a solo repo the ruleset's required review thread resolution and the owner's own review are the backstop; the tamper-proof alternative (`pull_request_target` or a required workflow) is not worth its risk here.
+Tamper-proofing: `pr-gates.yml` uses `pull_request_target`, so GitHub runs the workflow and gate script from `master`, never from the PR. It is safe because nothing checks out PR code (the script reads the PR through the API) and `workflow_lint` rejects an explicit `ref:` checkout under that trigger. A change to the gate takes effect only after it merges. `dependency-review` and `pytest` need the PR's own code, so they stay on `pull_request`.
 
 ## Rulesets and tokens (owner steps)
 
