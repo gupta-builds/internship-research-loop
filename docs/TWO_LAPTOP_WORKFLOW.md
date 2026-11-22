@@ -148,6 +148,22 @@ Override labels (defined in `.github/labels.yml`, explain each use in the PR bod
 
 Tamper-proofing: `pr-gates.yml` uses `pull_request_target`, so GitHub runs the workflow and gate script from `master`, never from the PR. It is safe because nothing checks out PR code (the script reads the PR through the API) and `workflow_lint` rejects an explicit `ref:` checkout under that trigger. A change to the gate takes effect only after it merges. `dependency-review` and `pytest` need the PR's own code, so they stay on `pull_request`.
 
+## Copilot review and the review record
+
+Copilot is the one LLM step, and it runs once per PR, on the ready-for-review transition, never on every push. Everything it can be asked to check mechanically is a zero-LLM gate instead, so its comments are limited to judgment: behavior bugs, the four conventions, public-repo leaks, workflow safety, scope, and AI slop (code or prose that does not serve the mission). Its instructions are `.github/copilot-instructions.md` plus the path-scoped files in `.github/instructions/`; Copilot reads them from the PR's base branch, so a change to them takes effect after it merges.
+
+Per PR, the loop is: draft PR, gates green, mark ready, request Copilot as reviewer, fix or decline each comment, reply on the thread with the commit that fixed it (or the reason it was declined), resolve the thread, merge. Before merging, post one **review record** comment so the PR documents what the review changed:
+
+```
+Review record
+- Copilot findings: N (blocker B, should-fix S, nit T), fixed F, declined D
+- Declined: <finding> because <reason> (tracked in #issue if deferred)
+- Gates: 12/12 pass; extra checks run: <list>
+- Slop rating: 0-5 (0 = nothing found; 5 = review changed the design). Evidence: <commit shas>
+```
+
+Sprint proof is the board: Status moves Todo, In Progress, Done as the PR merges (the linked issue closes with `Closes #N`), and each merged PR carries its review record.
+
 ## Rulesets and tokens (owner steps)
 
 The rulesets in `.github/rulesets/` are importable and **not applied by CI or by any agent**. The owner applies them, in this order:
