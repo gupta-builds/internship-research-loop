@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout internship-research-loop
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout gupta-builds/Jarvis
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: gupta-builds/Jarvis
           token: ${{ secrets.JARVIS_PUSH_TOKEN }}
           path: jarvis-checkout
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

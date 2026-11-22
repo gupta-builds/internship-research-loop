@@ -22,7 +22,7 @@ jobs:
   pr-gates:  # name must stay exactly `pr-gates`: the master ruleset requires this context
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # no `ref:` on purpose: base branch, never the PR head
+      - uses: actions/checkout@v7  # no `ref:` on purpose: base branch, never the PR head
       - run: pip install pyyaml==6.0.3  # workflow_lint gate
       - run: python3 scripts/ci/pr_gates.py
         env:
