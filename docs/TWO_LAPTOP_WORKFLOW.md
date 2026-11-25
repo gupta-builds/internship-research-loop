@@ -166,7 +166,7 @@ Sprint proof is the board: Status moves Todo, In Progress, Done as the PR merges
 
 ## Rulesets and tokens (owner steps)
 
-The rulesets in `.github/rulesets/` are importable and **not applied by CI or by any agent**. The owner applies them, in this order:
+Both rulesets in `.github/rulesets/` are applied and active (`master-protection` id 27867647, `copilot-review` id 27867648; checked 2026-11-25), and the secrets `FIRECRAWL_API_KEY`, `JARVIS_PUSH_TOKEN` and `REPO_BOT_TOKEN` exist. They are importable and **never applied by CI or by any agent**. To reproduce them on a fresh repo, the owner runs, in this order:
 
 1. Create two fine-grained PATs: one for `gupta-builds/Jarvis` only, one for this repo only (Contents RW, Issues RW, Metadata R). Store them with `gh secret set JARVIS_PUSH_TOKEN` and `gh secret set REPO_BOT_TOKEN` (hidden prompt; never paste a value into a chat or file). Workflows push this repo with `REPO_BOT_TOKEN` and fall back to the default token while it is unset. The owner's global agent PAT is never used by a workflow.
 2. Verify the bot path with one manual run of `recheck.yml` (`workflow_dispatch`) before protecting `master`.
