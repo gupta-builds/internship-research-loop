@@ -102,6 +102,13 @@ def test_wip_limit():
     assert g.wip_limit(17, [{"number": 16, "draft": True}], set()) == []
 
 
+def test_wip_limit_ignores_dependabot():
+    # 2026-11-25: #44 and #45 are open non-draft Dependabot PRs (opened 2026-11-22); #62+ must not wait on them
+    bots = [{"number": 44, "draft": False, "bot": True}, {"number": 45, "draft": False, "bot": True}]
+    assert g.wip_limit(71, bots, set()) == []
+    assert g.wip_limit(71, bots + [{"number": 50, "draft": False, "bot": False}], set())
+
+
 def test_linked_issue_and_enforce_flag():
     assert g.linked_issue("Closes #12", set()) == []
     assert g.linked_issue("refs #3", set()) == []
