@@ -152,10 +152,12 @@ def size(files, lines, labels):
 
 
 def wip_limit(number, open_prs, labels):
-    """open_prs: [{number, draft}]. Real data: #15-#17 were opened together 2026-11-21."""
+    """open_prs: [{number, draft, bot?}]. Real data: #15-#17 were opened together 2026-11-21.
+    Dependabot PRs (bot) do not count: #44 and #45 sat open and non-draft from 2026-11-22, so
+    without this every later human PR would fail until they merged."""
     if "parallel-ok" in labels:
         return []
-    older = sorted(p["number"] for p in open_prs if not p["draft"] and p["number"] < number)
+    older = sorted(p["number"] for p in open_prs if not p["draft"] and not p.get("bot") and p["number"] < number)
     return [f"older open non-draft PR(s): {', '.join('#%d' % n for n in older)}; "
             "merge or draft them first (label parallel-ok overrides)"] if older else []
 
@@ -304,7 +306,8 @@ def run(pr, repo):
             results[g] = size(pr["changed_files"], pr["additions"] + pr["deletions"], labels)
         elif g == "wip_limit":
             opens = gh_pages(f"repos/{repo}/pulls?state=open")
-            results[g] = wip_limit(n, [{"number": p["number"], "draft": p["draft"]} for p in opens], labels)
+            results[g] = wip_limit(n, [{"number": p["number"], "draft": p["draft"],
+                                        "bot": p["user"]["login"] == "dependabot[bot]"} for p in opens], labels)
     results.pop("_conv", None)
     return results, draft
 
