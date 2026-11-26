@@ -61,12 +61,12 @@ Examples: `fix/recheck-partial-source-failure`, `chore/uv-environment`, `docs/co
 
 ## Per-worktree setup
 
-Git hooks live in the shared `.git/hooks` (installed once from the tracked `scripts/hooks/pre-push` by `scripts/setup-two-laptop-git.sh`, run in the main checkout) and apply to every worktree. The pre-push hook blocks pushes to `master`, then runs the test suite, falling back to `uv run` when a worktree has no `.venv`. Three graphify hooks also write into the vault on commit, checkout and merge.
+Git hooks live in the shared `.git/hooks` (installed once from the tracked `scripts/hooks/pre-push` by `scripts/setup-two-laptop-git.sh`, run in the main checkout) and apply to every worktree. The pre-push hook blocks pushes to `master`, then runs the test suite, falling back to `uv run` when a worktree has no `.venv`. Three graphify hooks rebuild `graphify-out/` in the main checkout on commit, checkout and merge; since 2026-11-26 none of them writes into the vault.
 
 In every new worktree:
 
 ```bash
-export GRAPHIFY_SKIP_HOOK=1   # keeps commits from rebuilding graphify or writing into the vault
+export GRAPHIFY_SKIP_HOOK=1   # keeps commits from rebuilding graphify
 uv sync
 uv run pytest -q
 ```
