@@ -103,6 +103,9 @@ ADDED = [
     ("B", "echo hi; $(git add -A)"),
     ("B", "FOO=1 git add -A"),
     ("B", "git -C /tmp/x add -A"),
+    ("B", 'bash -c "rm -rf build"'),
+    ("B", "sh -c 'git add -A && git commit -m x'"),
+    ("P", 'bash -c "uv run pytest -q"'),
     ("P", 'git commit -m "Mention graphify-out in the message only"'),
     ("P", "git config user.email"),
 ]

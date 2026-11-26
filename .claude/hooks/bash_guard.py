@@ -171,6 +171,8 @@ def check_segment(argv, piped, next_argv, cwd):
         return []
     prog, args = os.path.basename(argv[0]), argv[1:]
     problems = []
+    if prog in ("bash", "sh", "zsh") and "-c" in args[:-1]:
+        problems.extend(check_command(args[args.index("-c") + 1], cwd))   # the -c string is a command line
     if prog == "git":
         configs, sub, rest = git_parts(args)
         checks = {"add": lambda: check_git_add(rest),
