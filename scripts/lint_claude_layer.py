@@ -79,7 +79,6 @@ LEGACY = {
     ".claude/rules/hooks.md": ("C1", {"cited-skill"}),          # deleted in map Step 7
     ".claude/rules/mcp-permissions.md": ("C1", {"cited-skill"}),  # deleted in map Step 7
     "CLAUDE.md": ("C1", {"instruction", "cited-skill"}),  # rewritten in map Step 4
-    ".claude/settings.json": ("C1", {"settings"}),                     # rewritten in map Step 3
 }
 
 
