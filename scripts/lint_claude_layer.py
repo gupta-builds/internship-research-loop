@@ -76,8 +76,6 @@ LEGACY = {
     ".claude/skills/generating-resume-docx": ("C4", {"stale-path"}),
     ".claude/skills/generating-cover-letter-docx": ("C4", {"stale-path"}),
     ".claude/rules/jarvis.md": ("C2", {"cited-skill"}),
-    ".claude/rules/hooks.md": ("C1", {"cited-skill"}),          # deleted in map Step 7
-    ".claude/rules/mcp-permissions.md": ("C1", {"cited-skill"}),  # deleted in map Step 7
 }
 
 
