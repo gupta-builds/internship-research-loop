@@ -1,7 +1,7 @@
 ---
 applyTo: "core/**,ingestion/**,vault_writer/**,run_pipeline.py,recheck.py"
 ---
-These files run hourly or daily in GitHub Actions with no human present. Review them against the four conventions in `CLAUDE.md`:
+These files run hourly or daily in GitHub Actions with no human present. Review them against the four conventions in `.claude/rules/conventions.md`:
 
 1. **Zero LLM.** No model call of any kind, however elaborate the logic (`enrich.py` is the one manual-CLI exception and also stays zero-LLM).
 2. **Permissive by default.** An eligibility gate lets ambiguous or missing data pass; only an explicit negative signal (a denylist token, an explicit exclusion string) rejects. Flag any new rule that rejects on missing data: a false negative silently drops a real posting.
