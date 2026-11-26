@@ -73,6 +73,8 @@ uv run pytest -q
 
 `uv`'s cache and the worktree root share a filesystem, so each `uv sync` is cheap.
 
+A phase session is launched inside its worktree (`cd` into it, then start Claude Code), because a session runs the hooks, settings and path rules of the folder it starts in. In that session, edits to `CLAUDE.md`, `AGENTS.md`, `.claude/rules/`, `.claude/hooks/` or `.claude/settings.json` are blocked by a hook unless Claude Code was launched with `RULES_UNLOCK=1`.
+
 ## Commit cadence
 
 - One coherent change per commit, imperative subject, a body that says why.

@@ -3,8 +3,9 @@
 One-page reference for the data shapes and CI wiring this pipeline depends
 on. Every fact below is a direct citation (file+line, or an actual workflow
 file's content) — no paraphrase, no guessing. For note-template contracts
-(what a Program/Contact/Tracker/Applying note must contain), see `CLAUDE.md`'s
-"Note-template contracts" section — not repeated here.
+(what a Program/Contact/Tracker/Applying note must contain), see the Standards
+in the Jarvis vault's `30_Order/Standards/Internship/` and
+`.claude/skills/promote-dossier/reference/note-templates.md`; not repeated here.
 
 ## `core/profile.yaml` schema
 
@@ -54,5 +55,5 @@ state/logs back to this repo); `revalidate.yml` requests `contents: read`
 
 `validate()` runs five checks in cost order — `required_fields` →
 `not_duplicate` → `cross_source_duplicate` → `url_liveness` →
-`format_compliance`, first failure wins — see `CLAUDE.md`'s "Conventions
-this codebase enforces" §3 for the cost reasoning; not restated here.
+`format_compliance`, first failure wins — see `.claude/rules/conventions.md`
+for the cost reasoning; not restated here.

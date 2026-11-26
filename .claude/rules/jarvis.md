@@ -19,4 +19,4 @@ None of the agents above write a vault note without an explicit human go-ahead, 
 
 ## Note-shape contracts
 
-Field-by-field frontmatter for every note type this repo writes lives in `CLAUDE.md`'s "Note-template contracts" section and `.claude/skills/promote-dossier/reference/note-templates.md` — read one of those, not this file, for the actual fields.
+Field-by-field frontmatter for every note type this repo writes lives in the Standards in the Jarvis vault's `30_Order/Standards/Internship/` and in `.claude/skills/promote-dossier/reference/note-templates.md`. Read one of those, not this file, for the actual fields.
