@@ -55,5 +55,5 @@ state/logs back to this repo); `revalidate.yml` requests `contents: read`
 
 `validate()` runs five checks in cost order — `required_fields` →
 `not_duplicate` → `cross_source_duplicate` → `url_liveness` →
-`format_compliance`, first failure wins — see `.claude/rules/conventions.md`
+`format_compliance`, first failure wins; see `.claude/rules/conventions.md`
 for the cost reasoning; not restated here.
