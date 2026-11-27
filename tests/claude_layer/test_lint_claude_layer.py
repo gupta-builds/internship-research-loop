@@ -217,6 +217,7 @@ def test_legacy_entry_without_phase_fails(tree, monkeypatch):
 #### PENDING_OWNER table
 
 def test_pending_owner_excuses_an_unowned_skill(tree, monkeypatch):
+    """pending owner excuses an unowned skill."""
     write(tree, ".claude/skills/later/SKILL.md", "---\nname: later\ndescription: x\n---\n")
     assert "ownership" in checks(tree)
     monkeypatch.setattr(L, "PENDING_OWNER", {"later": "C4"})
@@ -224,16 +225,19 @@ def test_pending_owner_excuses_an_unowned_skill(tree, monkeypatch):
 
 
 def test_pending_owner_fails_once_an_agent_owns_the_skill(tree, monkeypatch):
+    """pending owner fails once an agent owns the skill."""
     monkeypatch.setattr(L, "PENDING_OWNER", {"doing-things": "C4"})
     assert checks(tree) == {"ownership"}
 
 
 def test_pending_owner_entry_for_missing_skill_fails(tree, monkeypatch):
+    """pending owner entry for missing skill fails."""
     monkeypatch.setattr(L, "PENDING_OWNER", {"gone": "C4"})
     assert checks(tree) == {"pending"}
 
 
 def test_pending_owner_entry_without_phase_fails(tree, monkeypatch):
+    """pending owner entry without phase fails."""
     write(tree, ".claude/skills/later/SKILL.md", "---\nname: later\ndescription: x\n---\n")
     monkeypatch.setattr(L, "PENDING_OWNER", {"later": ""})
     assert checks(tree) == {"pending"}

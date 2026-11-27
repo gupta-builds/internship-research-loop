@@ -23,8 +23,8 @@ Each line is `path:line [kind] token | context`.
 - A stronger verb than the source supports ("contributed" to "led").
 - A sentence that is false though every token matches.
 - A sentence-initial capitalized word, which is not checked as an entity.
-- An ambiguous English word (go, react, rust, swift), which is checked as a skill only in a Skills section or when capitalized.
-- A posting number used as past work. The script lets a number through when the letter sentence shares a word with the posting sentence, so read each such number and confirm the letter states a plan.
+- An ambiguous English word (go, react, rust, swift, spark, excel, unity, lambda), which is checked in a draft only in a Skills section or when capitalized, and traced only where a source capitalizes it ("learned to react" is not React).
+- A posting number used as past work. The script lets a number through when the letter sentence shares a word with the posting sentence, and prints a `note:` line for each one. Read every note and confirm the letter states a plan, not past work.
 
 For each, the reader compares the draft with the source sentence by sentence, using the ledger. A quote that does not carry the claim's verb, role and number together is a gap.
 
