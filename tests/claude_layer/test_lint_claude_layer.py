@@ -151,7 +151,7 @@ def test_missing_claude_md_fails(tree):
 
 
 def test_rule_file_citing_missing_skill_fails(tree):
-    write(tree, ".claude/rules/old.md", "Use `/promote-manual-find`.\n")
+    write(tree, ".claude/rules/old.md", "Use `/retired-skill-name`.\n")
     assert checks(tree) == {"cited-skill"}
 
 

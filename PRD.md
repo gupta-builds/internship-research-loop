@@ -77,7 +77,7 @@ Repo layout: `ingestion/` (`sources.py`, `normalize.py`, `posting_page.py`), `co
 - ~~Confirm the first scheduled recheck run behaves against the post-audit vault~~ — **done**: `recheck.yml` has run daily since, 10/10 most recent runs successful, now moving closed postings to `Viewed/` (2026-08-21)
 - ~~Confirm the first live discovery-time enriched write~~ — **done**: all 391 current dossiers carry real fetched posting content
 - Cadence decision on/after 2026-07-24 — still hourly, unchanged; over a month of clean runs since (20/20 recent success) makes this the settled default, though no explicit decision note exists
-- Layer 5 `enrich.py` first live end-to-end run — **still unconfirmed**; the `/promote-dossier` skill and `contact-researcher` agent (built on `enrich.py`'s functions, see `CLAUDE.md`) have run live for the Appian promotion, but no direct evidence `enrich.py`'s own CLI has been run end-to-end was found this pass
+- Layer 5 `enrich.py` first live end-to-end run — **still unconfirmed**; the earlier promotion skill and contact-research agent (built on `enrich.py`'s functions; since replaced by `/promote` and `company-researcher`) ran live for the Appian promotion, but no direct evidence `enrich.py`'s own CLI has been run end-to-end was found this pass
 
 ## Risks
 

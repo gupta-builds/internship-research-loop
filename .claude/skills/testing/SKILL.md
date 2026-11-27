@@ -6,11 +6,11 @@ trigger: /testing
 
 # /testing
 
-Thin entry point over the `testing-tools` subagent (`.claude/agents/testing-tools.md`), which owns the actual suite-running, failure-interpretation, and test-drafting logic — matching this repo's own `promoting-manual-find` → `promotion` and `tailoring-application` → `applying` pattern (a slash trigger for a human to type, delegating the real work to an agent scoped tightly to this codebase's own conventions).
+Thin entry point over the `testing-tools` subagent (`.claude/agents/testing-tools.md`), which owns the actual suite-running, failure-interpretation, and test-drafting logic — matching this repo's own `tailoring-application` → `applying` pattern (a slash trigger for a human to type, delegating the real work to an agent scoped tightly to this codebase's own conventions).
 
 ## Why this needed building (2026-09-06)
 
-This skill's folder existed but was empty — no `SKILL.md` — while `testing-tools.md`'s own agent file was real and complete. Unlike `tracking`/`program-writer` (correctly agent-only, invoked internally by `promotion`/`promote-dossier`, never by a human directly), `testing-tools` is described as something to "use proactively before committing new tests" — a standalone tool a human reaches for directly, same shape as `/review-loop-change`. That means it needed a real slash-trigger entry point; the empty folder was a genuine gap, not intentional agent-only scoping.
+This skill's folder existed but was empty — no `SKILL.md` — while `testing-tools.md`'s own agent file was real and complete. Unlike an agent that only a command dispatches, `testing-tools` is described as something to "use proactively before committing new tests" — a standalone tool a human reaches for directly, same shape as `/review-loop-change`. That means it needed a real slash-trigger entry point; the empty folder was a genuine gap, not intentional agent-only scoping.
 
 ## Steps
 

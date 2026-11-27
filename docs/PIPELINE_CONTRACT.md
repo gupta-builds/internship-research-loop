@@ -4,8 +4,8 @@ One-page reference for the data shapes and CI wiring this pipeline depends
 on. Every fact below is a direct citation (file+line, or an actual workflow
 file's content) — no paraphrase, no guessing. For note-template contracts
 (what a Program/Contact/Tracker/Applying note must contain), see the Standards
-in the Jarvis vault's `30_Order/Standards/Internship/` and
-`.claude/skills/promote-dossier/reference/note-templates.md`; not repeated here.
+in the Jarvis vault's `30_Order/Standards/Internship/` and the Templates under
+`30_Order/Templates/Career/`; not repeated here.
 
 ## `core/profile.yaml` schema
 

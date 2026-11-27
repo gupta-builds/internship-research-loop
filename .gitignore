@@ -11,10 +11,10 @@ __pycache__/
 jarvis-checkout/
 
 # Project-local agent memory (Claude Code's `memory: local` agent frontmatter field).
-# contact-researcher's company-research cache lives here — real people's found names/
-# emails/LinkedIn URLs, the same shape of found-PII the Contact note already stores in
-# the Jarvis vault. Keeping it out of this repo's git history is deliberate, not an
-# oversight — a second copy here would just be a place for it to drift.
+# No agent uses it now (the contact-research agent that did is retired). The folder can
+# linger in a checkout and may hold found names, emails and LinkedIn URLs, the same
+# shape of found-PII the Contact note stores in the Jarvis vault, so it stays out of
+# this repo's git history.
 .claude/agent-memory-local/
 
 # Machine-local settings and secrets. Per-user editor and agent config lives in each
