@@ -1639,6 +1639,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "SimplifyJobs:dae50b6f-3c3c-4e59-bfb9-a823062c400b": {
+    "checked": "2026-11-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "SimplifyJobs:de4cd0c6-05b6-4e77-9479-486a018a8683": {
     "checked": "2026-08-29",
     "signal": null,
@@ -1936,6 +1941,11 @@
   },
   "vanshb03:28be5b3d-d4a6-4a6f-8f9a-66e5f8e93a62": {
     "checked": "2026-07-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:28e0b616-5908-442e-9b2c-2f3a1e4b97f1": {
+    "checked": "2026-11-27",
     "signal": null,
     "verdict": "eligible"
   },
@@ -2316,6 +2326,11 @@
   },
   "vanshb03:ecbe71bf-241c-4edb-8608-d6c6b48a1c6f": {
     "checked": "2026-07-25",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:ed108e2d-5ad5-4fcd-bf0f-530ea7ecfb11": {
+    "checked": "2026-11-27",
     "signal": null,
     "verdict": "eligible"
   },
