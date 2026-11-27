@@ -9,6 +9,10 @@ Exit 0 pass, 1 findings, 2 the lint could not run.
 Files that exist today and are retired by a later phase sit in LEGACY with the
 phase that retires them and the checks they are excused from. The phase that
 deletes a file deletes its entry.
+
+Procedure skills whose owning agent a later phase ships sit in PENDING_OWNER with
+that phase. The entry fails the lint once an agent owns the skill, so the phase that
+ships the agent must delete it.
 """
 import argparse
 import json
@@ -69,6 +73,11 @@ LEGACY = {
     ".claude/skills/review-loop-change": ("C5", {"skill", "ownership"}),
     ".claude/skills/generating-resume-docx": ("C4", {"stale-path"}),
     ".claude/skills/generating-cover-letter-docx": ("C4", {"stale-path"}),
+}
+
+# skill: the phase that ships its owning agent (Design, Skills table: drafter and reviewer, C4)
+PENDING_OWNER = {
+    "humanizing-writing": "C4",
 }
 
 
@@ -191,6 +200,10 @@ def check_ownership(root, skills):
         count = len(owners.get(name, []))
         if name in COMMANDS or name in MAIN_SESSION:
             continue
+        if name in PENDING_OWNER:
+            if count:
+                out.append((rel, 0, "ownership", "owned by an agent now; delete its PENDING_OWNER entry"))
+            continue
         if count != 1:
             out.append((rel, 0, "ownership", f"owned by {count} agents, must be exactly 1"))
     return out
@@ -274,6 +287,18 @@ def check_legacy(root):
     return out
 
 
+def check_pending(skills):
+    """return findings for PENDING_OWNER entries that name no skill folder or no phase."""
+    out = []
+    for name, phase in sorted(PENDING_OWNER.items()):
+        rel = f".claude/skills/{name}"
+        if name not in skills:
+            out.append((rel, 0, "pending", "PENDING_OWNER entry names a missing skill; delete the entry"))
+        if not re.match(r"^C\d$", phase or ""):
+            out.append((rel, 0, "pending", "PENDING_OWNER entry has no phase"))
+    return out
+
+
 #### driver
 
 def excused(finding):
@@ -290,7 +315,7 @@ def lint(root):
     skills = skill_names(root)
     found = (check_agents(root, skills) + check_skills(root) + check_ownership(root, skills)
              + check_instructions(root, skills) + check_settings(root))
-    return [f for f in found if not excused(f)] + check_legacy(root)
+    return [f for f in found if not excused(f)] + check_legacy(root) + check_pending(skills)
 
 
 def main(argv=None):

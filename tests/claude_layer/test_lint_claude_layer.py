@@ -35,6 +35,7 @@ def write(root, rel, text):
 def tree(tmp_path, monkeypatch):
     """a minimal synthetic Claude layer that passes every check."""
     monkeypatch.setattr(L, "LEGACY", {})
+    monkeypatch.setattr(L, "PENDING_OWNER", {})
     write(tmp_path, ".claude/agents/helper.md",
           "---\nname: helper\ndescription: Does one thing.\ntools: Read, Grep\nskills:\n  - doing-things\n---\nBody.\n")
     write(tmp_path, ".claude/skills/doing-things/SKILL.md",
@@ -211,3 +212,28 @@ def test_legacy_entry_for_missing_file_fails(tree, monkeypatch):
 def test_legacy_entry_without_phase_fails(tree, monkeypatch):
     monkeypatch.setattr(L, "LEGACY", {".claude/agents/helper.md": ("", {"agent"})})
     assert checks(tree) == {"legacy"}
+
+
+#### PENDING_OWNER table
+
+def test_pending_owner_excuses_an_unowned_skill(tree, monkeypatch):
+    write(tree, ".claude/skills/later/SKILL.md", "---\nname: later\ndescription: x\n---\n")
+    assert "ownership" in checks(tree)
+    monkeypatch.setattr(L, "PENDING_OWNER", {"later": "C4"})
+    assert L.lint(tree) == []
+
+
+def test_pending_owner_fails_once_an_agent_owns_the_skill(tree, monkeypatch):
+    monkeypatch.setattr(L, "PENDING_OWNER", {"doing-things": "C4"})
+    assert checks(tree) == {"ownership"}
+
+
+def test_pending_owner_entry_for_missing_skill_fails(tree, monkeypatch):
+    monkeypatch.setattr(L, "PENDING_OWNER", {"gone": "C4"})
+    assert checks(tree) == {"pending"}
+
+
+def test_pending_owner_entry_without_phase_fails(tree, monkeypatch):
+    write(tree, ".claude/skills/later/SKILL.md", "---\nname: later\ndescription: x\n---\n")
+    monkeypatch.setattr(L, "PENDING_OWNER", {"later": ""})
+    assert checks(tree) == {"pending"}
