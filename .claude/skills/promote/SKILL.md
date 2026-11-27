@@ -15,13 +15,14 @@ Follow the steps in order. The main session asks every question and owns the con
 - A dossier: find it under `10_Areas/Career/Internships/List/Dossiers/` in `$JARVIS_DIR`, searching every subfolder. Read its frontmatter and body. Note `tier`, the role folder, the posting text and the dossier file name, which is the name of both notes.
 - A manual lead: ask for company, role, URL and where it came from. The Program note's `list_origin` reads `manual-web-find (Anant, <date>)`.
 - If `tier` is 3, stop and say so. A dossier may carry no `tier` key (none of the 357 dossiers read on 2026-11-26 did): then Step 1 asks Anant for it and a tier 3 answer stops here. If a Program note with this file name already exists, stop and say so: updating one is a separate request.
+- Compare `own_deadline` or `deadline_posted` with today's date. If it has passed, say so first: the posting may be closed, and a dossier is not ready to apply with a lapsed deadline. Step 2 then asks the researcher whether the posting page is still live.
 - If the dossier has no posting text ("No posting content fetched"), say so now. Research will have gaps, and Anant should know before he answers anything.
 
 ## Step 1: Questions
 - Ask with AskUserQuestion: (0) the tier, 1 or 2 or 3, only when the dossier has none; (a) `Serious/` or `Considering/`, shown as equals, because the split is timing and never rigor; (b) the role folder, with the dossier's own folder as the default answer and "keep as classified" as one option.
 
 ## Step 2: Research
-- Dispatch `company-researcher` with the dossier path, the posting text, the tier and the manual-lead facts if any. Do not pass this conversation. Show its fact sheet to Anant exactly as returned, and ask its `needs_input` questions in one list.
+- Dispatch `company-researcher` with the dossier path, the posting text, the tier, the dossier's deadline and the manual-lead facts if any. Do not pass this conversation. Show its fact sheet to Anant exactly as returned, and ask its `needs_input` questions in one list.
 - If it returns a fact with no source, send it back once. A fact that still has no source moves under Gaps.
 
 ## Step 3: Consent
