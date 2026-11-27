@@ -67,7 +67,7 @@ def test_own_words_exemption():
 
 def test_dashes_fail():
     code, out, _ = check("dash-fail.md", "resume")
-    assert code == 1 and out.count("[block/dash]") == 3
+    assert code == 1 and out.count("[block/dash]") == 4
 
 
 def test_year_ranges_and_hyphens_pass():
