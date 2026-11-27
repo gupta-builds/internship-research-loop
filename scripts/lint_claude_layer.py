@@ -77,6 +77,7 @@ LEGACY = {
 
 # skill: the phase that ships its owning agent (Design, Skills table: drafter and reviewer, C4)
 PENDING_OWNER = {
+    "checking-evidence": "C4",
     "humanizing-writing": "C4",
 }
 
