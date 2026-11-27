@@ -1,6 +1,6 @@
 ---
 name: humanizing-writing
-description: Checks a drafted resume plan, cover letter, outreach message or follow-up against the 12 checks of the Human Writing Standard and returns PASS or FAIL with line-level flags, each naming the exact phrase, the check number and a one-clause fix. Use when a draft for an application exists and before any DOCX is written or any message is shown for sending, or when asked whether a draft reads like a person wrote it. Never rewrites the draft. Do not use for notes in the vault or for facts and numbers.
+description: Checks a drafted resume plan, cover letter, outreach message or follow-up against the 12 checks of the Human Writing Standard and returns PASS or FAIL with line-level flags, each naming the exact phrase, the check number and a one-clause fix. Use when a draft for an application exists and before any DOCX is written or any message is shown for sending, or when asked whether a draft letter, message or follow-up reads like a person wrote it or like a template. Never rewrites the draft. Do not use for notes in the vault or for facts and numbers.
 ---
 # Humanizing writing
 The check that keeps application writing specific, honest and human. It checks tone and phrasing only. Evidence is checked separately by the checking-evidence skill.
