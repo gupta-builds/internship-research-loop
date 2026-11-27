@@ -109,3 +109,22 @@ def test_timeout_is_not_run(tmp_path, capsys):
         raise subprocess.TimeoutExpired(cmd, 1)
     assert N.main([str(note), "--timeout", "1"], env={"JARVIS_DIR": str(vault)}, runner=runner) == 2
     assert "did not finish in 1 seconds" in capsys.readouterr().out
+
+
+def test_partial_fit_is_exit_1(tmp_path):
+    vault, note = make_vault(tmp_path)         # mutation check 2026-11-27: "any non-zero fit passes" survived without this
+    code = N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(0, "FIT: 2/3 = 66.7%"))
+    assert code == 1
+
+
+def test_crashed_linter_that_printed_a_fit_line_is_not_run(tmp_path, capsys):
+    vault, note = make_vault(tmp_path)         # a non-zero exit is a crash even when a FIT line made it to stdout
+    code = N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(1, "FIT: 1/1 = 100.0%"))
+    assert code == 2
+    assert "VALIDATOR NOT RUN" in capsys.readouterr().out
+
+
+def test_only_a_line_that_starts_with_fit_is_read(tmp_path):
+    vault, note = make_vault(tmp_path)         # prose that merely mentions "fit: 0/1" must not decide the verdict
+    out = "Notes where fit: 0/1 are listed below\nFIT: 1/1 = 100.0%"
+    assert N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(0, out)) == 0
