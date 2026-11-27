@@ -23,7 +23,7 @@ def make_vault(tmp_path):
 class Done:
     """a fake CompletedProcess."""
 
-    def __init__(self, code=0, out="fit 1/1", err=""):
+    def __init__(self, code=0, out="FIT: 1/1 = 100.0%", err=""):
         self.returncode, self.stdout, self.stderr = code, out, err
 
 
@@ -57,11 +57,11 @@ def test_clean_run_prints_output_and_exits_0(tmp_path, capsys):
 
     def runner(cmd, **kw):
         seen["cmd"], seen["kw"] = cmd, kw
-        return Done(0, "all notes fit")
+        return Done(0, "Scanned 1 notes\nFIT: 1/1 = 100.0%")
     assert N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=runner) == 0
     out = capsys.readouterr().out
-    assert "all notes fit" in out and "vault-lint exit code: 0" in out
-    assert seen["cmd"][-2:] == ["--path", "10_Areas/Programs/Serious/Example.md"]   # vault-relative, not absolute
+    assert "FIT: 1/1" in out and "vault-lint exit code: 0" in out
+    assert seen["cmd"][-4:] == ["--path", "10_Areas/Programs/Serious/Example.md", "--list", "5"]   # vault-relative, not absolute
     assert seen["kw"]["timeout"] == N.TIMEOUT
 
 
@@ -70,14 +70,27 @@ def test_relative_note_path_is_accepted(tmp_path):
     got = []
     N.main(["10_Areas/Programs/Serious/Example.md"], env={"JARVIS_DIR": str(vault)},
            runner=lambda cmd, **kw: got.append(cmd) or Done())
-    assert got and got[0][-1] == "10_Areas/Programs/Serious/Example.md"
+    assert got and got[0][-3] == "10_Areas/Programs/Serious/Example.md"
 
 
-def test_nonzero_linter_exit_is_exit_1(tmp_path, capsys):
-    vault, note = make_vault(tmp_path)
-    code = N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(1, "missing-key: type"))
+def test_failing_note_is_exit_1_even_though_the_linter_exits_0(tmp_path, capsys):
+    vault, note = make_vault(tmp_path)      # real vault-lint exited 0 with FIT 0/1 on 2026-11-26
+    out = "FIT: 0/1 = 0.0%\n      5  1:missing-key"
+    code = N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(0, out))
     assert code == 1
-    assert "missing-key: type" in capsys.readouterr().out
+    assert "1:missing-key" in capsys.readouterr().out
+
+
+def test_output_with_no_fit_line_is_not_run(tmp_path, capsys):
+    vault, note = make_vault(tmp_path)
+    assert N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(0, "garbled")) == 2
+    assert "VALIDATOR NOT RUN" in capsys.readouterr().out
+
+
+def test_linter_crash_is_not_run(tmp_path, capsys):
+    vault, note = make_vault(tmp_path)
+    assert N.main([str(note)], env={"JARVIS_DIR": str(vault)}, runner=lambda cmd, **kw: Done(1, "", "boom")) == 2
+    assert "exited 1" in capsys.readouterr().out
 
 
 def test_missing_node_is_not_run(tmp_path, capsys):

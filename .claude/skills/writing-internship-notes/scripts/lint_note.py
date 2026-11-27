@@ -6,20 +6,24 @@ Topic: run the vault's own linter on one note and print what it says.
 Usage: python3 .claude/skills/writing-internship-notes/scripts/lint_note.py NOTE [--timeout SECONDS]
 NOTE is a path under $JARVIS_DIR, absolute or relative to it.
 Prints the linter's output as it came, then a line `vault-lint exit code: N`.
-Exit 0 the linter ran and exited 0, 1 it ran and exited non-zero, 2 it could not run
-(a line `VALIDATOR NOT RUN: <reason>` says why). No LLM call, no secret, no write to the vault.
+Exit 0 the note fits its Standard, 1 it does not, 2 the check could not run (a line
+`VALIDATOR NOT RUN: <reason>` says why). No LLM call, no secret, no write to the vault.
 
-The linter reads every note in the vault, so one run takes minutes. Run it once per
-finished note, in the background, never after each edit.
+The linter exits 0 even when a note fails, so the verdict comes from its `FIT: a/b`
+line, not from its exit code. It reads every note in the vault, so a run took 10 to 16
+minutes on 2026-11-26. Run it once per finished note, in the background, never
+after each edit.
 """
 import argparse
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
 LINTER = pathlib.Path("30_Order/System/vault-lint/vault-lint.js")   # relative to the vault root
-TIMEOUT = 900                                                        # seconds; one run took minutes on 2026-11-26
+TIMEOUT = 1800                                                       # seconds; runs took 9 min 55 s and 16 min 25 s on 2026-11-26
+FIT_RE = re.compile(r"^FIT: (\d+)/(\d+)", re.M)                       # the linter's summary line
 
 
 #### helpers
@@ -59,7 +63,7 @@ def main(argv=None, env=None, runner=subprocess.run):
         return not_run(f"{args.note} is not under {vault}")
     if not (vault / rel).is_file():
         return not_run(f"no such note: {rel}")
-    cmd = ["node", str(vault / LINTER), "--path", rel.as_posix()]
+    cmd = ["node", str(vault / LINTER), "--path", rel.as_posix(), "--list", "5"]   # --list names the failing keys per note
     try:
         # Source: https://docs.python.org/3/library/subprocess.html#subprocess.run (timeout kills the child and raises TimeoutExpired)
         done = runner(cmd, cwd=vault, capture_output=True, text=True, timeout=args.timeout, check=False)
@@ -71,7 +75,10 @@ def main(argv=None, env=None, runner=subprocess.run):
     if done.stderr.strip():
         print(done.stderr.rstrip(), file=sys.stderr)
     print(f"vault-lint exit code: {done.returncode}")
-    return 0 if done.returncode == 0 else 1
+    fit = FIT_RE.search(done.stdout)
+    if done.returncode != 0 or fit is None:                # a crash, or output with no verdict, is not a pass
+        return not_run(f"the linter exited {done.returncode} and printed no FIT line")
+    return 0 if fit.group(1) == fit.group(2) else 1
 
 
 if __name__ == "__main__":

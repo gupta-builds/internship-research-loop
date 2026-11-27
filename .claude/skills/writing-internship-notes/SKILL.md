@@ -1,6 +1,6 @@
 ---
 name: writing-internship-notes
-description: Writes one Program, Contact, Applying or Tracker note in the Jarvis vault from facts Anant already approved, following the vault's Standard for that family, and lints the result. Use when a promotion or a submission needs a vault note. Never creates a Tracker before submission.
+description: Writes one Program, Contact, Applying or Tracker note in the Jarvis vault from facts Anant already approved, following the vault's Standard for that family, and lints the result. Use when asked to write, create or update a Program, Contact, Applying or Tracker note, for example after a promotion is approved or an application is submitted. Never creates a Tracker before submission.
 ---
 # Writing internship notes
 The vault's Standards own every field list and heading. This skill points at them and holds only the traps writers keep falling into.
@@ -16,7 +16,7 @@ The vault's Standards own every field list and heading. This skill points at the
 3. Read `references/gotchas.md`, then fill the Template. Leave a key blank when the fact is unknown. Never write the string `null`. Keep every wikilink on one line.
 4. Check the target path before you write: `git -C "$JARVIS_DIR" check-ignore -q "<path>"`. Exit 0 means ignored. Exit 1 means the public vault repo would track it: write only if your input says Anant acknowledged that, otherwise stop and return it under needs_input.
 5. Write the note with the jarvis vault write tool. Read it back from the vault.
-6. Run `python3 .claude/skills/writing-internship-notes/scripts/lint_note.py "<path>"` and return its output. It reads the whole vault, so give it a long timeout. If it prints VALIDATOR NOT RUN, say so and stop on that item.
+6. Run `python3 .claude/skills/writing-internship-notes/scripts/lint_note.py "<path>"` and return its output. It reads the whole vault (10 to 16 minutes), so run it in the background with a long timeout. Its exit code is 0 for a note that fits, 1 for one that does not, 2 when it could not run. If it prints VALIDATOR NOT RUN, say so and stop on that item.
 7. Return the path, the fields set, any field left blank and why.
 
 ## Output contract
