@@ -145,6 +145,23 @@ def test_zero_width_blocks_and_curly_quotes_warn():
     assert check("chars-pass.md", "resume")[0] == 0
 
 
+#### misses the C3 red team found, kept as fixtures
+
+def test_inflected_banned_word_blocks():
+    code, out, _ = check("redteam-inflection-fail.md", "followup", "--channel", "message")
+    assert code == 1 and "delved" in out
+
+
+def test_spaced_hyphen_used_as_a_dash_blocks():
+    code, out, _ = check("redteam-spaced-hyphen-fail.md", "resume")
+    assert code == 1 and "[block/dash]" in out
+
+
+def test_two_asks_in_one_sentence_block():
+    code, out, _ = check("redteam-two-asks-one-sentence-fail.md", "followup")
+    assert code == 1 and "2 asks" in out
+
+
 #### could not run
 
 @pytest.mark.parametrize("args", [

@@ -112,9 +112,18 @@ def load_phrases():
         if len(parts) < 2 or parts[0] not in ("block", "warn", "hws"):
             raise NotRun(f"banned_phrases.txt line {n} is not tier<TAB>phrase")
         words = [re.escape(w) for w in re.split(r"[\s-]+", parts[1].strip().lower())]
+        if len(words) == 1 and words[0].isalpha():
+            words[0] = inflected(words[0])             # delve also catches delves, delved, delving
         pattern = re.compile(r"(?<!\w)" + r"[\s-]+".join(words) + r"(?!\w)", re.IGNORECASE)
         rows.append((parts[0], parts[1].strip(), pattern, parts[2].strip() if len(parts) > 2 else ""))
     return rows
+
+
+def inflected(word):
+    """return a pattern for a single word and its -s, -ed and -ing forms."""
+    if word.endswith("e"):
+        return word[:-1] + r"(?:e|es|ed|ing)"
+    return word + r"(?:s|es|ed|ing)?"
 
 
 def load_limits(kind):
@@ -193,7 +202,7 @@ def check_phrases(text, kind, sources):
 def check_dashes(text):
     """return a finding for each em or en dash, or a double hyphen, that is not inside a date range."""
     out = []
-    for m in re.finditer(rf"[{DASHES}]|(?<=\w)\s?--\s?(?=\w)", text):
+    for m in re.finditer(rf"[{DASHES}]|(?<=\w)\s?--\s?(?=\w)|(?<=\w) - (?=\w)", text):
         left = text[max(0, m.start() - 12):m.start()]
         right = text[m.end():m.end() + 16]
         if DATE_END.search(left) and DATE_START.match(right):
@@ -256,9 +265,12 @@ def check_limits(text, kind, channel):
     if "min_words" in limits and words < limits["min_words"]:
         out.append((1, "block", "length", f"{words} words", f"{kind} needs at least {limits['min_words']}"))
     if "max_asks" in limits:
-        asks = [(n, s) for n, s in sentences(lines) if s.rstrip().endswith("?") or ASK.search(s)]
+        asks = []
+        for n, s in sentences(lines):
+            count = len(ASK.findall(s)) or (1 if s.rstrip().endswith("?") else 0)
+            asks.extend([(n, s)] * count)                # two requests in one sentence are two asks
         if len(asks) > limits["max_asks"]:
-            for n, s in asks:
+            for n, s in dict.fromkeys(asks):
                 out.append((n, "block", "ask", f"{len(asks)} asks", s[:80]))
     if limits.get("greeting_with_name"):
         first = lines[0][1].strip() if lines else ""
