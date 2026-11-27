@@ -4,7 +4,7 @@ Topic: check a generated resume or cover letter DOCX against the ATS baseline be
 
 Usage: python3 verify_docx.py FILE.docx --kind resume|cover
 Prints one finding per line as `path:0 [kind] token | context`, then a count line and
-the line "page count not verified".
+the lines "page count not verified" and what else is not checked.
 Exit 0 pass, 1 findings, 2 the check could not run (`VALIDATOR NOT RUN: <reason>`).
 Spec: Claude System Implementation Plan, Script specs; ATS baseline in the
 Application Documents Standard. Fonts and the resume word ceiling come from the two
@@ -24,6 +24,8 @@ MIN_TEXT_CHARS = 50                                    # less than this means th
 CONTACT = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\+?\d[\d\s().-]{7,}\d|linkedin\.com|github\.com|https?://",
                      re.IGNORECASE)
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+NOT_CHECKED = "not checked: font size, colour, section names, date format"
 OBJECTS = (("table", "w:tbl"), ("image", "w:drawing"), ("image", "w:pict"), ("textbox", "w:txbxContent"),
            ("image", "w:object"))
 
@@ -61,12 +63,15 @@ def load_module(name, path):
 
 
 def rules_for(kind):
-    """return (font allowlist, word ceiling or None) for a kind, read from its generator."""
+    """return (font allowlist, one-page word ceiling) for a kind, read from its generator."""
     if kind == "resume":
         gen = load_module("generate_resume_docx", HERE / "generate_resume_docx.py")
-        return gen.APPROVED_FONTS, gen.ONE_PAGE_WORD_CEILING
-    gen = load_module("generate_cover_letter_docx", COVER_GENERATOR)
-    return gen.APPROVED_FONTS, None                    # the Plan sets a word limit for a resume only
+    else:
+        gen = load_module("generate_cover_letter_docx", COVER_GENERATOR)
+    for name in ("APPROVED_FONTS", "ONE_PAGE_WORD_CEILING"):
+        if not hasattr(gen, name):
+            raise NotRun(f"{gen.__name__} no longer defines {name}")
+    return gen.APPROVED_FONTS, gen.ONE_PAGE_WORD_CEILING
 
 
 def open_docx(path):
@@ -141,20 +146,63 @@ def style_fonts(style):
     return names
 
 
+def theme_fonts(doc):
+    """return {"minor": name, "major": name} from the document theme, or an empty dict."""
+    from lxml import etree
+    for part in doc.part.package.parts:
+        if str(part.partname).startswith("/word/theme/"):
+            root = etree.fromstring(part.blob)
+            fonts = {}
+            for kind in ("minor", "major"):
+                latin = root.find(f".//{A}{kind}Font/{A}latin")
+                if latin is not None and latin.get("typeface"):
+                    fonts[kind] = latin.get("typeface")
+            return fonts
+    return {}
+
+
+def theme_ref(element):
+    """return "major" or "minor" if an element's rPr names a theme font, else None."""
+    refs = element.xpath("./w:rPr/w:rFonts/@w:asciiTheme")
+    return ("major" if refs[0].startswith("major") else "minor") if refs else None
+
+
+def effective_font(run, paragraph, defaults, theme):
+    """return the font a run renders in: explicit, then styles, then document defaults, then the theme."""
+    if run.font.name:
+        return run.font.name
+    if theme_ref(run._r):
+        return theme.get(theme_ref(run._r))
+    for start in (run.style, paragraph.style):
+        style = start
+        while style is not None:
+            if style.font.name:
+                return style.font.name
+            if theme_ref(style.element):
+                return theme.get(theme_ref(style.element))
+            style = style.base_style
+    return defaults or theme.get("minor")
+
+
 def check_fonts(doc, allowed):
     """return a finding for each font used that is not in the generator's allowlist."""
     used = set()
+    theme = theme_fonts(doc)
+    rfonts = doc.styles.element.xpath("w:docDefaults/w:rPrDefault/w:rPr/w:rFonts")
+    defaults = rfonts[0].get(f"{W}ascii") if rfonts else None
+    if rfonts and not defaults and rfonts[0].get(f"{W}asciiTheme"):
+        defaults = theme.get("major" if rfonts[0].get(f"{W}asciiTheme").startswith("major") else "minor")
     for p in doc.paragraphs:
-        used.update(style_fonts(p.style))
         for run in p.runs:
-            if run.font.name:
-                used.add(run.font.name)
+            if run.text.strip():
+                used.add(effective_font(run, p, defaults, theme))
             used.update(style_fonts(run.style))
     for rfonts in doc.element.body.xpath(".//w:rFonts"):
         for attr in ("ascii", "hAnsi"):
             if rfonts.get(f"{W}{attr}"):
                 used.add(rfonts.get(f"{W}{attr}"))
-    return [("font", name, f"allowed: {', '.join(sorted(allowed))}") for name in sorted(used - set(allowed))]
+    return [("font", name or "(unresolved)", f"allowed: {', '.join(sorted(allowed))}")
+            for name in sorted(used - set(allowed), key=str)]
 
 
 def check_size_and_text(path, text, ceiling):
@@ -166,8 +214,8 @@ def check_size_and_text(path, text, ceiling):
     if len(text.strip()) < MIN_TEXT_CHARS:
         out.append(("text", f"{len(text.strip())} characters", "the text layer extracts almost nothing"))
     words = len(text.split())
-    if ceiling is not None and words > ceiling:
-        out.append(("length", f"{words} words", f"a one-page resume is at most {ceiling} words"))
+    if words > ceiling:
+        out.append(("length", f"{words} words", f"one page is at most {ceiling} words (the generator's ceiling)"))
     return out
 
 
@@ -187,7 +235,10 @@ def run(path, kind):
 
 def main(argv=None):
     """print findings and return the exit code."""
-    ap = Parser(description="check a generated resume or cover letter DOCX against the ATS baseline")
+    ap = Parser(description="check a generated resume or cover letter DOCX for the ATS baseline's structure: "
+                            "contact in the body, no table, image or text box, one column, allowed fonts, "
+                            "size, a text layer and one page of words",
+                epilog="page count and " + NOT_CHECKED.replace("not checked: ", "") + " are not checked; read them by eye")
     ap.add_argument("docx", help="the generated .docx file")
     ap.add_argument("--kind", required=True, choices=("resume", "cover"), help="which generator's rules apply")
     args = ap.parse_args(argv)
@@ -202,6 +253,7 @@ def main(argv=None):
     # shortcut: page count is never measured (LibreOffice is not installed on the Dell); add a
     # LibreOffice render and count when a machine that runs this has it
     print("page count not verified")
+    print(NOT_CHECKED)
     return 1 if findings else 0
 
 

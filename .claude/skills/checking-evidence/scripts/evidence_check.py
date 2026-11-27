@@ -91,9 +91,12 @@ TECH = {"python", "java", "javascript", "typescript", "kotlin", "scala", "haskel
         "figma", "tableau", "power bi", "selenium", "playwright", "cypress", "jest",
         "pytest", "junit", "nginx", "prometheus", "grafana", "datadog", "splunk", "supabase", "firebase",
         "vercel", "heroku", "netlify", "stripe", "twilio", "strapi", "websocket", "websockets", "oauth",
-        "jwt", "html", "css", "sass", "ruby on rails", "express.js", ".net", "embeddings",
+        "jwt", "html", "css", "sass", "ruby on rails", "express.js", ".net", "asp.net", "embeddings",
         "computer vision", "nlp", "reinforcement learning", "transformers", "ros", "verilog", "vhdl",
         "fpga", "arduino", "raspberry pi", "embedded c", "rtos", "mqtt", "kotlin multiplatform"}
+# English words that are also tools: traced only where the sources capitalize them
+AMBIGUOUS = {"go", "react", "rust", "swift", "spark", "excel", "unity", "lambda", "next", "node", "express",
+             "flask", "rails"}
 TLDS = ("com", "org", "net", "io", "dev", "edu", "ai", "app", "co", "me", "xyz", "gov", "us", "uk", "ca",
         "in", "tech", "site", "page", "info")
 COUNTED_NOUN_WINDOW = 4                                # words after a source number that may hold the noun
@@ -151,6 +154,7 @@ def keep_lines(match):
 
 def normalize(text):
     """return text with frontmatter and comments blanked, dashes, quotes and spaces made plain."""
+    text = text.lstrip("\ufeff")                       # a byte-order mark must not hide frontmatter
     text = re.sub(r"\A---\n.*?\n---[ \t]*\n", keep_lines, text, flags=re.DOTALL)
     text = re.sub(r"<!--.*?-->", keep_lines, text, flags=re.DOTALL)
     for ch in DASH_CHARS:
@@ -179,7 +183,7 @@ def source_sections(text):
             drop_below = level
         current = [" / ".join(t for _, t in path), [line] if drop_below is None else []]
     sections.append((current[0], "\n".join(current[1])))
-    return [(title.lower(), (title + "\n" + body).lower()) for title, body in sections
+    return [(title.lower(), (title + "\n" + body).lower(), title + "\n" + body) for title, body in sections
             if body.strip() or title]
 
 
@@ -304,7 +308,9 @@ def number_traced(num, source_nums, source_text):
             continue
         if noun is None:
             return True
-        window = [singular(w) for w in WORD.findall(source_text[s_start:s_start + 120])[:COUNTED_NOUN_WINDOW + 1]]
+        end = source_text.find("\n", s_start)
+        line = source_text[s_start:end if end != -1 else len(source_text)]     # the noun sits on the number's line
+        window = [singular(w) for w in WORD.findall(line)[:COUNTED_NOUN_WINDOW + 1]]
         if noun in window:
             return True
     return False
@@ -363,7 +369,8 @@ class Check:
         self.sections = []
         for path in facts:
             self.sections += source_sections(read_text(path))
-        self.source = "\n".join(body for _, body in self.sections)
+        self.source = "\n".join(body for _, body, _ in self.sections)
+        self.source_cased = "\n".join(cased for _, _, cased in self.sections)
         if not re.search(r"\w", self.source):
             raise NotRun("the --facts files hold no source text after cleaning")
         if jd and kind == "resume":
@@ -378,7 +385,7 @@ class Check:
                 continue
             if "=" in line:
                 self.allow_aliases.append({p.strip() for p in line.split("=") if p.strip()})
-            elif re.fullmatch(r"[a-z0-9-]+(\.[a-z0-9-]+)+(/\S*)?", line):
+            elif re.fullmatch(rf"[a-z0-9-]+(\.[a-z0-9-]+)*\.(?:{'|'.join(TLDS)})(/\S*)?", line):
                 self.allow_hosts.add(normalize_url(line))
             else:
                 self.allow_terms.add(line)
@@ -389,6 +396,7 @@ class Check:
         self.counts = dict.fromkeys(("number", "date", "entity", "skill", "url"), 0)
         self.allowed = self.by_jd = 0
         self.date_failed = False
+        self.jd_notes = []
         self.findings = []
 
     def find(self, n, kind, token, ctx):
@@ -397,11 +405,28 @@ class Check:
 
     def traced(self, term, text):
         """return True if a term is in text; an alias from --allow counts as an acceptance."""
+        if term.lower() in AMBIGUOUS and text is self.source:
+            return self.traced_ambiguous(term)
         if term_in(term, text, self.aliases):
             return True
         if self.allow_aliases and term_in(term, text, self.aliases + self.allow_aliases):
             self.allowed += 1
             return True
+        return False
+
+    def traced_ambiguous(self, term):
+        """return True if an ambiguous word (go, react) is in the sources capitalized, or by an unambiguous alias."""
+        names = {term.lower()}
+        for group in self.aliases + self.allow_aliases:
+            if term.lower() in group:
+                names |= group
+        for name in names:
+            if name in AMBIGUOUS:
+                cased = re.compile(r"(?<![\w+#])" + re.escape(name[0].upper() + name[1:]) + r"(?![\w+#])")
+                if cased.search(self.source_cased):
+                    return True
+            elif term_pattern(name).search(self.source):
+                return True                            # "learned to react" is English, "React" is a tool
         return False
 
     def allowed_term(self, token):
@@ -417,8 +442,8 @@ class Check:
         """trace each URL and email on a line; return the line with them masked."""
         spans = []
         for m in list(EMAIL.finditer(line)) + list(URL.finditer(line)):
-            if any(a <= m.start() < b for a, b in spans):
-                continue                               # the host part of an email already checked
+            if any(a <= m.start() < b for a, b in spans) or self.is_tech(m.group(0)):
+                continue                               # an email's host, or a tool such as ASP.NET
             spans.append(m.span())
             self.counts["url"] += 1
             token = m.group(0)
@@ -465,6 +490,7 @@ class Check:
             if number_traced(num, numbers(sentence, False), sentence):
                 if words & shared_words(sentence):
                     self.by_jd += 1
+                    self.jd_notes.append((line, num[2]))
                     return True
         return False
 
@@ -472,6 +498,9 @@ class Check:
         """return True if an entity is in the sources, or in the posting for a letter or message."""
         if self.traced(entity, self.source):
             return True
+        parts = re.split(r"\s+(?:and|&)\s+", entity)
+        if len(parts) > 1:
+            return all(self.entity_known(part) for part in parts)   # "Python and Docker" is two names
         if self.is_tech(entity):
             return False                               # the posting never supplies a skill or tool
         if self.jd and self.kind != "resume" and term_in(entity, self.jd, []):
@@ -505,7 +534,7 @@ class Check:
                 missing = True
         if missing or not parts or self.date_failed:
             return                                     # a part already failed on its own
-        for _, body in self.sections:
+        for _, body, _ in self.sections:
             if all(term_in(p, body, self.aliases + self.allow_aliases) for p in parts) and \
                     all(date_traced(d[0], d[1], dates(body))[0] for d in found_dates):
                 return
@@ -600,6 +629,9 @@ def main(argv=None):
         return 2
     for n, kind, token, ctx in findings:
         print(f"{args.draft}:{n} [{kind}] {token} | {ctx}")
+    for line, token in check.jd_notes:                   # not findings: the reader confirms each one
+        print(f"note: {token} was accepted from --jd; confirm the sentence states a plan, not past work | "
+              f"{re.sub(chr(32) + '+', ' ', line).strip()[:80]}")
     c = check.counts
     print(f"{len(findings)} finding(s); checked {c['number']} numbers, {c['date']} dates, {c['entity']} entities, "
           f"{c['skill']} skills, {c['url']} urls; {check.allowed} accepted by --allow, {check.by_jd} by --jd")

@@ -34,7 +34,8 @@ ZERO_WIDTH = "​‌‍⁠﻿"
 CURLY = {"“": '"', "”": '"', "‘": "'", "’": "'"}
 MONTH = (r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?")
 DATE_END = re.compile(r"(?:\b(?:19|20)\d\d)\s*$")       # left side of a date range
-DATE_START = re.compile(rf"^\s*(?:(?:19|20)\d\d\b|{MONTH}\s+(?:19|20)\d\d\b|present\b|current\b|now\b)",
+DATE_START = re.compile(rf"^\s*(?:(?:19|20)\d\d\b|{MONTH}\s+(?:19|20)\d\d\b|(?:spring|summer|fall|autumn|winter)\s+"
+                        rf"(?:19|20)\d\d\b|\d{{1,2}}/(?:19|20)\d\d\b|present\b|current\b|now\b)",
                         re.IGNORECASE)
 STRUCTURE = (
     (re.compile(r"\bnot only\b[^.!?\n]{0,80}?\bbut\b", re.IGNORECASE), "not only X but also Y"),
@@ -47,14 +48,18 @@ STRUCTURE = (
 TRIPLET = re.compile(r"\b[\w'-]+(?:\s+[\w'-]+){0,3},\s+[\w'-]+(?:\s+[\w'-]+){0,3},?\s+(?:and|or)\s+[\w'-]+",
                      re.IGNORECASE)
 PLACEHOLDERS = re.compile(r"\[[A-Z][^\]\n]{0,40}\](?!\()|\{\{|\}\}|\bXYZ\b|\bTODO\b|\bTBD\b|"
-                          r"<[A-Z][A-Za-z ]{1,30}>|\blorem ipsum\b|\[insert", re.IGNORECASE)
+                          r"<[A-Z][A-Za-z ]{1,30}>|(?i:\blorem ipsum\b|\[insert)")   # case matters: <br> and [x] are not slots
 ASK = re.compile(r"\b(?:would you|could you|can you|will you|are you open|are you available|"
                  r"would it be possible|let me know if|i would love to|i'd love to|"
                  r"please (?:let|share|send|consider|connect|reply|forward))\b", re.IGNORECASE)
-GREETING = re.compile(r"^(?i:hi|hello|hey|dear)\s+([A-Z][\w'-]*)")
-NOT_A_NAME = {"hiring", "team", "sir", "madam", "recruiter", "recruiting", "there", "all", "everyone",
+GREETING = re.compile(r"^(?i:hi|hello|hey|dear),?\s+([A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)*)")
+NOT_A_NAME = {"hiring", "team", "sir", "madam", "recruiter", "recruiting", "there", "all", "everyone", "manager",
+              "platform", "engineering", "university", "campus", "people", "staff", "committee", "department",
               "friend", "to", "whom", "hr", "talent"}
 WORD = re.compile(r"[A-Za-z0-9][\w'.-]*")
+# the same sections evidence_check.py drops from the sources
+GUIDANCE = re.compile(r"legacy|deprecated|outdated|retired|positioning|preferences|customi[sz]ation|"
+                      r"tailoring notes|logged gaps|\bgaps\b|\barchive", re.IGNORECASE)
 BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 
 
@@ -86,6 +91,7 @@ def read_text(path):
 
 def blank_out(text):
     """return text with frontmatter and HTML comments replaced by newlines, so line numbers hold."""
+    text = text.lstrip("\ufeff")                       # a byte-order mark must not hide frontmatter
     text = re.sub(r"\A---\n.*?\n---[ \t]*\n", keep_lines, text, flags=re.DOTALL)
     return re.sub(r"<!--.*?-->", keep_lines, text, flags=re.DOTALL)
 
@@ -116,6 +122,8 @@ def load_phrases():
             words[0] = inflected(words[0])             # delve also catches delves, delved, delving
         pattern = re.compile(r"(?<!\w)" + r"[\s-]+".join(words) + r"(?!\w)", re.IGNORECASE)
         rows.append((parts[0], parts[1].strip(), pattern, parts[2].strip() if len(parts) > 2 else ""))
+    if not rows:
+        raise NotRun("banned_phrases.txt holds no phrase rows")
     return rows
 
 
@@ -129,13 +137,32 @@ def inflected(word):
 def load_limits(kind):
     """return the limits dict for one kind from limits.json."""
     try:
-        return json.loads(read_text(DATA / "limits.json")).get(kind, {})
+        limits = json.loads(read_text(DATA / "limits.json"))
     # Source: https://docs.python.org/3/library/json.html (JSONDecodeError subclasses ValueError)
     except ValueError as e:
         raise NotRun(f"limits.json does not parse: {e}") from e
+    if not isinstance(limits.get(kind), dict):
+        raise NotRun(f"limits.json has no entry for {kind}")
+    return limits[kind]
 
 
 #### helpers
+
+def own_words(text):
+    """return a source's text without guidance sections (Tailoring Notes, Logged Gaps, positioning and the like)."""
+    kept, drop_below = [], None
+    for line in text.splitlines():
+        m = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m:
+            level = len(m.group(1))
+            if drop_below is not None and level <= drop_below:
+                drop_below = None
+            if drop_below is None and GUIDANCE.search(m.group(2)):
+                drop_below = level
+        if drop_below is None:
+            kept.append(line)
+    return "\n".join(kept)
+
 
 def line_of(text, pos):
     """return the 1-based line number of a character offset."""
@@ -186,17 +213,19 @@ def sentences(lines):
 #### checks: each returns a list of (line, tier, kind, token, context)
 
 def check_phrases(text, kind, sources):
-    """return phrase findings; a phrase also present in the sources is exempt."""
-    out = []
+    """return phrase findings, one per span and the strongest tier; a phrase in the sources is exempt."""
+    by_span = {}
     for tier, _, pattern, hint in load_phrases():
         if tier == "hws":
             tier = "warn" if kind == "resume" else "block"
         if sources and pattern.search(sources):
             continue                                   # Anant's own words are not overridden
         for m in pattern.finditer(text):
+            if m.start() in by_span and by_span[m.start()][1] == "block":
+                continue                               # leveraged matches the hws and the block row
             ctx = context(text, m.start()) + (f" (swap: {hint})" if hint else "")
-            out.append((line_of(text, m.start()), tier, "phrase", m.group(0), ctx))
-    return out
+            by_span[m.start()] = (line_of(text, m.start()), tier, "phrase", m.group(0), ctx)
+    return list(by_span.values())
 
 
 def check_dashes(text):
@@ -208,7 +237,8 @@ def check_dashes(text):
         right = text[m.end():m.end() + 16]
         if DATE_END.search(left) and DATE_START.match(right):
             continue                                   # a range between dates is exempt
-        out.append((line_of(text, m.start()), "block", "dash", m.group(0).strip(), context(text, m.start())))
+        near = text[max(0, m.start() - 30):m.end() + 30].replace("\n", " ").strip()
+        out.append((line_of(text, m.start()), "block", "dash", m.group(0).strip(), near))
     return out
 
 
@@ -276,7 +306,7 @@ def check_limits(text, kind, channel):
     if limits.get("greeting_with_name"):
         first = lines[0][1].strip() if lines else ""
         m = GREETING.match(first)
-        if not m or m.group(1).lower() in NOT_A_NAME:
+        if not m or any(w.lower().rstrip("s") in NOT_A_NAME or w.lower() in NOT_A_NAME for w in m.group(1).split()):
             out.append((lines[0][0] if lines else 1, "block", "greeting", first[:30] or "(none)",
                         "open with the person's name, such as 'Hi <first name>,'"))
     if limits.get("subject_for_email") and channel == "email":
@@ -294,7 +324,7 @@ def run(draft_path, kind, channel, source_paths):
     text = normalize(blank_out(raw))
     if not WORD.search(text):
         raise NotRun(f"{draft_path} has no text")
-    sources = " ".join(normalize(blank_out(read_text(p))) for p in source_paths)
+    sources = " ".join(own_words(normalize(blank_out(read_text(p)))) for p in source_paths)
     found = (check_phrases(text, kind, sources) + check_dashes(text) + check_structure(text)
              + check_characters(blank_out(raw)) + check_placeholders(text) + check_limits(text, kind, channel))
     return sorted(found, key=lambda f: (f[0], f[2]))
