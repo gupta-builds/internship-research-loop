@@ -2,7 +2,7 @@
 """
 internship-research-loop: contact signals
 Topic: public GitHub organization members and a mail-domain check for one company.
-Ported from the retired contact-researcher agent; it reuses enrich.py and adds no search surface.
+Ported from the retired contact-research agent; it reuses enrich.py and adds no search surface.
 
 Usage: uv run python .claude/skills/researching-companies/scripts/contact_signals.py "<company>" [--domain example.com]
 Prints one finding per line, then a count line. Exit 0 the lookup ran, 2 it could not run.

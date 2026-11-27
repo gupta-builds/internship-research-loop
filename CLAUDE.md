@@ -35,7 +35,7 @@ This repo finds internship postings with a zero-LLM pipeline and prepares applic
 - CI secrets are referenced by name only (`FIRECRAWL_API_KEY`, `JARVIS_PUSH_TOKEN`). Never print or echo them.
 - `master` is the default branch. Work happens on task branches in worktrees, one PR per phase; Anant merges.
 - An issue that `run_pipeline.py` or `recheck.py` would file from a failure path is reviewed by Anant, not created by a session (`gh issue create` asks first).
-- Vault writes go only through the consent-gated skills (`/promote-dossier`, `/promoting-manual-find`). Any other write into the Jarvis vault needs Anant's go-ahead first.
+- Vault writes go only through the consent-gated `/promote` command. Any other write into the Jarvis vault needs Anant's go-ahead first.
 
 ## Stop and ask
 - A request has two readings. A fact is missing. A command fails and you do not know why.

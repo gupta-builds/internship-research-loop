@@ -1,7 +1,7 @@
 """On-demand company-enrichment cache — sits alongside enrich.py (Layer 5,
 manual-CLI, never called from run_pipeline.py's unattended path), not wired
 into it yet. Standalone module only, per this session's own scope: no
-`.claude/` skill, no wiring into contact-researcher.md or enrich.py's actual
+`.claude/` skill, no wiring into the researching-companies skill or enrich.py's actual
 call flow — that's `.claude/` work, deferred until it resumes.
 
 Mirrors enrich.py's own real field shape verbatim (its main() computes
@@ -12,7 +12,7 @@ produces, without reshaping anything.
 
 A cache hit is a lead to build on, never a substitute for re-confirming a
 claim before it lands in a real Contact note — same rule
-.claude/agents/contact-researcher.md states for live enrichment: a wrong
+.claude/skills/researching-companies/SKILL.md states for live research: a wrong
 guess here is worse than an empty result, never infer a plausible name, and
 if nothing real turns up, say so. A cached "nothing found" is still saying
 so honestly; a cache hit is not itself grounds to skip re-confirming a

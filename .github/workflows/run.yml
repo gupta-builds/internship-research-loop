@@ -56,7 +56,7 @@ jobs:
           COUNT=$(tail -1 logs/runs.jsonl | python3 -c "import json,sys; print(json.load(sys.stdin).get('written_count', 0))" 2>/dev/null || echo 0)
           if [ "$COUNT" -gt 0 ] 2>/dev/null; then
             gh issue create \
-              --title "$COUNT new dossier(s) ready for /promote-dossier" \
+              --title "$COUNT new dossier(s) ready for /promote" \
               --body "Run at $(date -u +%Y-%m-%dT%H:%M:%SZ). See logs/runs.jsonl for detail." \
               --label "dossier-ready" || true
           fi

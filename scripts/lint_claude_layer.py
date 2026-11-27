@@ -60,22 +60,15 @@ PROJECT_DIR = "${CLAUDE_PROJECT_DIR}"
 
 LEGACY = {
     # path: (retiring phase, checks excused)
-    ".claude/agents/contact-researcher.md": ("C2", {"agent"}),
-    ".claude/agents/program-writer.md": ("C2", {"agent"}),
-    ".claude/agents/promotion.md": ("C2", {"agent"}),
-    ".claude/agents/tracking.md": ("C2", {"agent"}),
     ".claude/agents/applying.md": ("C4", {"agent"}),
     ".claude/agents/cover-letter-builder.md": ("C4", {"agent"}),
     ".claude/agents/loop-verifier.md": ("C5", {"agent"}),
     ".claude/agents/testing-tools.md": ("C5", {"agent"}),
-    ".claude/skills/promote-dossier": ("C2", {"skill", "ownership"}),
-    ".claude/skills/promoting-manual-find": ("C2", {"ownership"}),
     ".claude/skills/tailoring-application": ("C4", {"ownership"}),
     ".claude/skills/testing": ("C5", {"skill", "ownership"}),
     ".claude/skills/review-loop-change": ("C5", {"skill", "ownership"}),
     ".claude/skills/generating-resume-docx": ("C4", {"stale-path"}),
     ".claude/skills/generating-cover-letter-docx": ("C4", {"stale-path"}),
-    ".claude/rules/jarvis.md": ("C2", {"cited-skill"}),
 }
 
 
