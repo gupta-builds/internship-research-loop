@@ -3,15 +3,15 @@
 Written by hand until a later phase ships a handoff skill. The SessionStart hook prints the live git and run facts; they are not stored here.
 
 ## Current goal
-Land the C2 research and notes layer (issue #65): `finding-resources`, `researching-companies`, `writing-internship-notes`, the agents `company-researcher` and `note-writer`, and the `/promote` command.
+Land the C2 research and notes layer (issue #65, PR #84): `finding-resources`, `researching-companies`, `writing-internship-notes`, the agents `company-researcher` and `note-writer`, and the `/promote` command.
 
 ## Done
 - C1 (PR #77, merged): the lint, five hooks, `settings.json`, CLAUDE.md, three path rules.
-- C2, branch `chore/claude-research-and-notes` (PR open, not merged): the three skills with their references, `check_vault_reachability.py`, `contact_signals.py` and `lint_note.py` with 28 tests, the two agents, `/promote`. Six agents and skills retired with their LEGACY rows, plus `.claude/rules/jarvis.md`.
+- C2, branch `chore/claude-research-and-notes` (PR #84, not merged): the three skills with their references, `check_vault_reachability.py`, `contact_signals.py` and `lint_note.py` with 28 tests, the two agents, `/promote`. Six agents and skills retired with their LEGACY rows, plus `.claude/rules/jarvis.md`.
 - `/promote` was run end to end on one real dossier and stopped at the consent question with a sourced fact sheet; no vault note was written and no Tracker exists.
 
 ## Next
-1. Anant reviews and merges the C2 PR, then runs `git pull --ff-only` in the main checkout and `graphify update .` there.
+1. Anant reviews and merges PR #84, then runs `git pull --ff-only` in the main checkout and `graphify update .` there.
 2. C5 (`chore/claude-code-review`, issue #68) starts from a new worktree, launched inside it, per `docs/TWO_LAPTOP_WORKFLOW.md`.
 3. Before C4, `finding-resources` is preloaded by `application-drafter` as well as `company-researcher`; the lint requires exactly one owning agent, so C4 decides which one owns it.
 
