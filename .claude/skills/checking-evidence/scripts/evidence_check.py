@@ -23,8 +23,8 @@ LIMITS_TEXT = """what a pass means, and what this check cannot catch:
   wrong role in prose, a stronger verb than the source supports ("contributed" to
   "led"), or a sentence that is false though every token matches. "45m" reads as
   45 million. A sentence-initial capitalized word is not checked as an entity, and
-  an ambiguous English word (go, react, rust, swift) is checked as a skill only in a
-  Skills section or when capitalized. Those are for a reviewer to read.
+  an ambiguous English word (go, react, rust, swift, spark, excel, unity, lambda)
+  is checked as a skill only in a Skills section or when capitalized. Those are for a reviewer to read.
   --jd is a source only for company and role names, and for a number in a letter
   or message when the sentence shares a word of four or more letters with the
   posting sentence that holds it. It is never a source for a resume.
@@ -83,15 +83,15 @@ TECH = {"python", "java", "javascript", "typescript", "kotlin", "scala", "haskel
         "c++", "c#", "php", "perl", "matlab", "julia", "golang", "postgres", "postgresql", "mysql",
         "sqlite", "mongodb", "redis", "cassandra", "dynamodb", "elasticsearch", "kafka", "rabbitmq",
         "kubernetes", "k8s", "docker", "terraform", "ansible", "jenkins", "aws", "gcp", "azure",
-        "lambda", "graphql", "grpc", "fastapi", "django", "flask", "spring boot", "node.js", "nodejs",
+        "graphql", "grpc", "fastapi", "django", "flask", "spring boot", "node.js", "nodejs",
         "react.js", "next.js", "vue.js", "angular", "svelte", "tailwind", "pytorch", "tensorflow",
-        "keras", "scikit-learn", "pandas", "numpy", "spark", "hadoop", "airflow", "snowflake",
+        "keras", "scikit-learn", "pandas", "numpy", "hadoop", "airflow", "snowflake",
         "databricks", "llm", "llms", "rag", "langchain", "openai", "huggingface", "cuda", "opencv",
-        "linux", "bash", "git", "github actions", "ci/cd", "webassembly", "wasm", "solidity", "unity",
-        "unreal", "figma", "tableau", "power bi", "excel", "selenium", "playwright", "cypress", "jest",
+        "linux", "bash", "git", "github actions", "ci/cd", "webassembly", "wasm", "solidity", "unreal",
+        "figma", "tableau", "power bi", "selenium", "playwright", "cypress", "jest",
         "pytest", "junit", "nginx", "prometheus", "grafana", "datadog", "splunk", "supabase", "firebase",
         "vercel", "heroku", "netlify", "stripe", "twilio", "strapi", "websocket", "websockets", "oauth",
-        "jwt", "html", "css", "sass", "rust", "ruby on rails", "express.js", ".net", "embeddings",
+        "jwt", "html", "css", "sass", "ruby on rails", "express.js", ".net", "embeddings",
         "computer vision", "nlp", "reinforcement learning", "transformers", "ros", "verilog", "vhdl",
         "fpga", "arduino", "raspberry pi", "embedded c", "rtos", "mqtt", "kotlin multiplatform"}
 TLDS = ("com", "org", "net", "io", "dev", "edu", "ai", "app", "co", "me", "xyz", "gov", "us", "uk", "ca",

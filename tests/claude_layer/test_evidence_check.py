@@ -48,6 +48,26 @@ def test_passing_fixture(draft):
     assert code == 0 and out.startswith("0 finding(s)")
 
 
+def test_value_on_another_noun_fails():
+    # 120 is in the source, but bound to lab reports, not interns
+    code, out, _ = check("noun-moved-fail.md")
+    assert code == 1 and "bound to 'intern'" in out
+
+
+def test_range_ends_from_two_roles_fail():
+    # Jun 2024 starts one role and Current ends another; the range is in no source section
+    code, out, _ = check("range-pair-fail.md")
+    assert code == 1 and "not as one range" in out
+
+
+def test_ambiguous_english_words_in_prose_pass():
+    # C3 red team case 20: rust, react, go and swift are English words in lowercase prose
+    code, out, _ = check("redteam-ambiguous-pass.md", "followup")
+    assert code == 0, out
+    code, out, _ = check("skill-ambiguous-fail.md")
+    assert code == 1 and "[skill] Rust" in out                     # in a Skills section it is still checked
+
+
 #### the posting as a source
 
 def test_posting_never_supplies_a_skill():
