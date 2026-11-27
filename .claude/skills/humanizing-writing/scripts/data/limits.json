@@ -1,0 +1,25 @@
+{
+  "_about": "Length, ask and format limits read by humanizer_check.py. Each kind names who owns its numbers. references/limits.md explains them.",
+  "resume": {
+    "owner": "Length is checked on the DOCX by verify_docx.py against generate_resume_docx.py's one-page word ceiling, so no copy here."
+  },
+  "cover": {
+    "min_words": 250,
+    "max_words": 350,
+    "owner": "Application Documents Standard, Letter bank: a letter is 250 to 350 words unless the plan says why not."
+  },
+  "outreach": {
+    "max_words": 149,
+    "max_asks": 1,
+    "greeting_with_name": true,
+    "subject_for_email": true,
+    "owner": "Working heuristic, not a Standard: Handshake and WayUp advice (one purpose, one small ask) and one unattributed reply-rate analysis, recorded in the Claude System Design, Writing and outreach evidence. Under 150 words matches the follow-up rule."
+  },
+  "followup": {
+    "max_words": 149,
+    "max_asks": 1,
+    "greeting_with_name": true,
+    "subject_for_email": true,
+    "owner": "Implementation Plan, drafting-outreach Rules: a first follow-up stays under 150 words. A working heuristic."
+  }
+}

@@ -1,0 +1,115 @@
+# Banned and warned phrases read by humanizer_check.py.
+# One row per line: tier<TAB>phrase, with an optional third column <TAB>swap hint.
+# Tiers:
+#   block  a finding in every kind of draft
+#   warn   printed as a prompt to look; never fails the check
+#   hws    a Human Writing Standard check 3 word: warn in a resume, block in a letter or message
+# Matching ignores case, treats a space and a hyphen alike, and needs a word boundary at both ends.
+# A phrase that also appears in the --sources files is exempt (Anant's own words).
+# Groups and tiers follow the Implementation Plan's "Banned and warned phrases" table (2026-11-25).
+# This file is protected by protect_files.py.
+
+#### Human Writing Standard check 3 (hws)
+hws	transformative
+hws	robust
+hws	seamless
+hws	leverage
+hws	delve
+hws	landscape
+hws	journey
+hws	unlock
+hws	powerful
+hws	comprehensive
+hws	game-changer
+hws	cutting-edge
+hws	cutting edge
+hws	furthermore
+hws	passionate about
+hws	excited to
+hws	dynamic team player
+hws	results-driven
+hws	hardworking
+
+#### resume and letter cliches (block)
+block	results-oriented
+block	proven track record
+block	strong track record
+block	demonstrated ability to
+block	best practices
+block	significant impact
+block	measurable impact
+block	in today's fast-paced world
+block	unique opportunity
+block	perfect fit
+block	i am pleased to
+block	i am writing to express
+block	hit the ground running
+block	drive results
+block	i believe i would be a great fit
+block	leverage my skills
+block	move the needle
+block	north star
+block	actionable insights
+block	stakeholder alignment
+block	data-driven
+block	holistic
+
+#### inflated verbs (block, with a swap hint)
+block	leveraged	used
+block	leveraging	using
+block	leverages	uses
+block	spearheaded	led, started
+block	spearheading	leading
+block	spearhead	lead
+block	facilitated	ran, organized
+block	facilitating	running
+block	orchestrated	set up, ran
+block	championed	pushed for, led
+block	utilized	used
+block	utilizing	using
+block	utilizes	uses
+block	utilize	use
+
+#### stock vocabulary (warn)
+warn	tapestry
+warn	pivotal
+warn	game changer
+warn	additionally
+warn	moreover
+warn	synergy
+warn	synergies
+warn	innovative
+warn	groundbreaking
+warn	testament
+warn	underscore
+warn	underscores
+warn	meticulous
+warn	vibrant
+warn	intricate
+warn	empower
+warn	streamline
+warn	elevate
+
+#### outreach and follow-up (block)
+block	just checking in
+block	just following up
+block	touching base
+block	circling back
+block	i hope this message finds you well
+block	i hope this email finds you well
+block	i hope this finds you well
+block	dear hiring manager
+block	picking your brain
+block	pick your brain
+
+#### chat residue (block)
+block	certainly!
+block	great question
+block	i hope this helps
+block	let me know if you'd like
+block	as an ai
+block	here is the revised
+block	here's the revised
+block	here is a draft
+block	here's a draft
+block	feel free to adjust
