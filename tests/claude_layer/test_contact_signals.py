@@ -2,6 +2,7 @@
 The enrich module is replaced by a fake, so no network call is made. Names are invented."""
 import importlib.util
 import pathlib
+import sys
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[2] / ".claude/skills/researching-companies/scripts/contact_signals.py"
 spec = importlib.util.spec_from_file_location("contact_signals", SCRIPT)
@@ -69,3 +70,17 @@ def test_main_exits_2_when_the_lookup_fails(capsys):
     code = C.main(["Acme"], enrich=FakeEnrich(boom=RuntimeError("rate limited")), env={})
     err = capsys.readouterr().err
     assert code == 2 and "could not run" in err and "rate limited" in err
+
+
+def test_every_member_enrich_returns_is_reported():
+    people = [("Pat Example", "https://github.com/pat"), ("Sam Example", "https://github.com/sam"),
+              ("Kim Example", "https://github.com/kim")]
+    lines = C.lookup("Acme", None, FakeEnrich(org="acme-inc", members=people), {})
+    assert [l for l in lines if l.startswith("[github-member]")] == [f"[github-member] {n} | {u}" for n, u in people]
+
+
+def test_main_exits_2_when_enrich_cannot_be_imported(monkeypatch, capsys):
+    monkeypatch.setitem(sys.modules, "enrich", None)       # a None entry makes `import enrich` raise ImportError
+    code = C.main(["Acme"], env={})                         # mutation check 2026-11-27: returning 0 here left every test green
+    assert code == 2
+    assert "could not run" in capsys.readouterr().err
