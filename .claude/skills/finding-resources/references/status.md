@@ -11,6 +11,6 @@ This file is dated. Check each line again before you rely on it, and replace the
 - **`contact_signals.py`** uses the public GitHub search without a token (60 requests an hour). Its best-match organization can be wrong: a search for "Nuro" returned `NurOS-Linux` on 2026-11-26. Read the organization page before you cite it.
 
 ## Vault state
-- Git-ignored in the vault repo (checked with `check-ignore`): `Contacts/`. Not ignored: `Programs/` and `Applying/`. Treat both as private anyway; see the Privacy line in `jarvis-map.md`.
+- Vault repo ignore rules (checked with `check-ignore` on 2026-11-27): `Resumes/`, `Contacts/` (except `Mimic.md`), `Programs/`, `Applying/`, `Tracker/` and `Cover Letters/` are ignored. The last four were added on 2026-11-27 with Anant's approval. Files already tracked there stay tracked until Anant runs `git rm -r --cached` on them (on 2026-11-26 the repo tracked 33 Program, 4 Applying, 38 Tracker and 5 Cover Letter files), and `check-ignore` does not report a path that is still tracked. A new note at a new path is reported ignored. History already pushed is not rewritten.
 - Missing folders the Standards expect: `Tracker/Each One/Applied/` and `Result/`, `20_Progress/Internship/Sent/`, dossier folders `Applied` and `Archived`. The first move creates each.
 - `Cover Letters/Main Cover Letter.md` does not exist.

@@ -48,6 +48,11 @@ git fetch --prune
 git worktree prune
 ```
 
+Why a merged branch and its worktree are removed:
+- The pull request, its review record, its checks, its linked issue and its milestone are the record of the work. The branch is not.
+- A session runs the hooks, settings and path rules of the folder it starts in, so a stale worktree keeps running old ones after `master` has moved on.
+- The repo deletes the remote branch on merge (`delete_branch_on_merge` is true, read with `gh api` on 2026-11-27), so the local branch and the worktree are the only copies left to remove.
+
 ## Branch names
 
 Name the task, never the machine:
