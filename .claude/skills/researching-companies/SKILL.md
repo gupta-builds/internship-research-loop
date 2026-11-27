@@ -1,6 +1,6 @@
 ---
 name: researching-companies
-description: Researches one company and one internship role from fetched pages and returns a fact sheet where every fact has a source, plus gaps and questions. Use when a dossier or manual lead needs a Program or Contact note, or when a tier 1 or tier 2 application needs a company-specific opening. Does not write notes or contact anyone.
+description: Researches one company and one internship role from fetched pages and returns a fact sheet where every fact has a source, plus gaps and questions. Use when asked what a company builds, who recruits its interns, or which of its open source or product work Anant could mention; when a dossier or manual lead needs research before a Program or Contact note; or when a tier 1 or tier 2 application needs a company-specific opening. Does not write notes or contact anyone.
 ---
 # Researching companies
 Return facts Anant can say aloud in an interview, each with the page it came from. A short sheet with gaps beats a long one with guesses.
