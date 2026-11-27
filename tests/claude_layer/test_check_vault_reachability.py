@@ -70,3 +70,44 @@ def test_main_exits_0_and_names_the_env_way(tmp_path, capsys):
     out = capsys.readouterr().out
     assert code == 0
     assert "JARVIS_DIR:" in out and "POSSIBLE" in out
+
+
+def test_mcp_server_named_jarvis_fs_counts(tmp_path):
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"jarvis-fs": {}}}), encoding="utf-8")
+    ok, _ = R.check_mcp(tmp_path, tmp_path / "repo")        # mutation check 2026-11-27: ignoring jarvis-fs left every test green
+    assert ok
+
+
+def test_sibling_checkout_without_a_readable_origin_says_so(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (tmp_path / "Jarvis" / ".git").mkdir(parents=True)      # a .git folder that is not a real repository, so git fails
+    ok, detail = R.check_siblings(repo)
+    assert ok and "(remote unknown)" in detail
+
+
+def test_main_recommends_vault_list_when_only_mcp_is_registered(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"jarvis": {}}}), encoding="utf-8")
+    assert R.main(env={}, home=home, repo_root=repo) == 0
+    assert "mcp__jarvis__vault_list" in capsys.readouterr().out
+
+
+def test_main_recommends_the_checkout_when_one_exists(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (tmp_path / "Jarvis" / ".git").mkdir(parents=True)
+    assert R.main(env={}, home=tmp_path / "home", repo_root=repo) == 0
+    assert "git diff" in capsys.readouterr().out
+
+
+def test_main_names_the_env_way_in_its_recommendation(tmp_path, capsys):
+    vault = tmp_path / "vault"
+    (vault / "30_Order").mkdir(parents=True)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    R.main(env={"JARVIS_DIR": str(vault)}, home=tmp_path / "home", repo_root=repo)
+    assert "Read on paths under $JARVIS_DIR" in capsys.readouterr().out
