@@ -1,1 +1,12 @@
-{}
+{
+  "ApplyGuy:custom:microsoft:3e0836a94e9ca282ffae": {
+    "check": "cross_source_duplicate",
+    "count": 1,
+    "first_seen": "2026-11-27T02:40:05.644737+00:00"
+  },
+  "SimplifyJobs:de926b0a-99e7-4dbd-94cd-334ec565be9f": {
+    "check": "url_liveness",
+    "count": 1,
+    "first_seen": "2026-11-27T02:40:05.644737+00:00"
+  }
+}
