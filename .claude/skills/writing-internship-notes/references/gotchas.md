@@ -11,6 +11,8 @@ This file holds traps only. The field list, the headings and the limits are in t
 - Eligibility is taken from the posting, never inferred. A PhD, clearance or citizenship line goes first.
 - Company Information is specific: a project, a date, a link to the paired Contact note. A paragraph that would fit any company is wrong.
 - The note records no live status ("applied", "waiting"). That belongs on the Applying note.
+- Every value comes from the approved facts. A Template default (`role_type: internship`, a sample date, a sample checklist line) is not a fact: leave the key blank and list it under needs_input.
+- Prep Checklist lines come from requirements and duties the posting states. If the posting gives fewer than the Standard asks for, write fewer and say so under needs_input. Never invent a task to reach the count.
 - Traps & Gotchas needs a real trap, not a preference.
 - The file name is the dossier's file name. The Program Standard's text says `<year>-<Company>-<Role>` while the other three Standards and the notes made since say the dossier's file name. The two disagree; use the dossier's file name and report the disagreement to Anant.
 

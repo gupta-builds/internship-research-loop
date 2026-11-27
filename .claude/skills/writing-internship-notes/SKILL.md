@@ -27,6 +27,7 @@ The vault's Standards own every field list and heading. This skill points at the
 - Contact: one note per internship, status by folder. Every fact has a source. An empty search is a valid result. `Current Draft` is an unsent message under a reminder that nothing sends itself.
 - Applying: created when preparation starts. `stage` is never written into `status`. A document key is filled only when the file exists.
 - Tracker: created in `Tracker/Each One/Applied/` in the sitting the application is submitted, with `date_applied` set. Never create one earlier, and never in `Current/`.
+- Every value comes from the approved facts. A Template default or a sample line is not a fact; leave the key blank and ask under needs_input.
 - Never touch a second note. Report what the paired notes need and let the main session coordinate.
 - The Standard owns the numbers (how many lines, which keys). If the Standard and the Template disagree, follow the Standard and report the difference.
 
