@@ -64,6 +64,16 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "AIJobs:nvidia-phd-research-intern-efficient-deep-learning-2027-66ac9b03": {
+    "checked": "2026-11-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "AIJobs:nvidia-vlsi-cad-timing-intern-applied-ai-summer-2027-3583639d": {
+    "checked": "2026-11-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:varda-space-industries-applications-engineering-internship-spring-2027-15e3ab35": {
     "checked": "2026-08-07",
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
@@ -81,6 +91,11 @@
   },
   "AIJobs:varda-space-industries-cybersecurity-internship-spring-2027-0468e4c2": {
     "checked": "2026-08-07",
+    "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
+    "verdict": "excluded"
+  },
+  "AIJobs:varda-space-industries-cybersecurity-internship-summer-2027-5dccfa1e": {
+    "checked": "2026-11-27",
     "signal": "export-controlled items. Because our employees are provided access to export-controlled items, our policy is to only hire \u201cU.S. person",
     "verdict": "excluded"
   },
@@ -369,6 +384,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "ApplyGuy:4bc5914e-17bb-4d32-b3d6-4bb1d4d4b963": {
+    "checked": "2026-11-27",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "ApplyGuy:9304ace2-67d9-4693-af30-db4e7193aa99": {
     "checked": "2026-08-26",
     "signal": null,
@@ -386,6 +406,11 @@
   },
   "Freehire:data-science-phd-intern-2027-google-7ykbltph": {
     "checked": "2026-08-17",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "Freehire:hardware-engineering-intern-2027-google-jyxv3ufy": {
+    "checked": "2026-11-27",
     "signal": null,
     "verdict": "eligible"
   },
