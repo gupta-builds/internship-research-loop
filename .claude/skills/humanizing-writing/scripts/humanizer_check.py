@@ -202,7 +202,8 @@ def check_phrases(text, kind, sources):
 def check_dashes(text):
     """return a finding for each em or en dash, or a double hyphen, that is not inside a date range."""
     out = []
-    for m in re.finditer(rf"[{DASHES}]|(?<=\w)\s?--\s?(?=\w)|(?<=\w) - (?=\w)", text):
+    # a double hyphen is a dash with spaces on both sides or none; "-p --model" is a command flag
+    for m in re.finditer(rf"[{DASHES}]|(?<=\w)--(?=\w)|(?<=\w) -- (?=\w)|(?<=\w) - (?=\w)", text):
         left = text[max(0, m.start() - 12):m.start()]
         right = text[m.end():m.end() + 16]
         if DATE_END.search(left) and DATE_START.match(right):
