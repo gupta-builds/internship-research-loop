@@ -6,7 +6,7 @@
   },
   "vanshb03:689eae78-c5b9-4f49-b7d0-be63c13b1846": {
     "check": "url_liveness",
-    "count": 1,
+    "count": 2,
     "first_seen": "2026-11-28T03:01:51.876228+00:00"
   }
 }

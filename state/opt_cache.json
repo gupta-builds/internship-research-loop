@@ -69,6 +69,11 @@
     "signal": null,
     "verdict": "eligible"
   },
+  "AIJobs:nvidia-phd-research-intern-fundamental-generative-ai-2027-ff7b951a": {
+    "checked": "2026-11-28",
+    "signal": null,
+    "verdict": "eligible"
+  },
   "AIJobs:nvidia-vlsi-cad-timing-intern-applied-ai-summer-2027-3583639d": {
     "checked": "2026-11-27",
     "signal": null,
@@ -2121,6 +2126,11 @@
   },
   "vanshb03:75da2eba-bcac-49bf-940d-15df6c18051e": {
     "checked": "2026-08-03",
+    "signal": null,
+    "verdict": "eligible"
+  },
+  "vanshb03:7642e52a-ce30-4911-b256-ea05093084cb": {
+    "checked": "2026-11-28",
     "signal": null,
     "verdict": "eligible"
   },
